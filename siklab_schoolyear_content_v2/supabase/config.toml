@@ -1,0 +1,7 @@
+project_id = "siklab"
+
+[functions.controller-event]
+verify_jwt = false
+
+[functions.controller-command]
+verify_jwt = true

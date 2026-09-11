@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SikLab: Student Explorer</title>
+    <script src="assets/tailwind.js"></script>
+    <link rel="stylesheet" href="assets/fontawesome/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f9ff; }
+        .fun-font { font-family: "Trebuchet MS", "Segoe UI", sans-serif; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+        .floaty { animation: floaty 3.5s ease-in-out infinite; }
+        .lesson-rich p { margin: .65rem 0; }
+        .lesson-rich h3 { margin: 1.15rem 0 .45rem; font-size: 1.75rem; line-height: 1.2; font-weight: 900; color: #0c4a6e; }
+        .lesson-rich h4 { margin: 1rem 0 .4rem; font-size: 1.35rem; line-height: 1.25; font-weight: 900; color: #075985; }
+        .lesson-rich ul, .lesson-rich ol { margin: .75rem 0; padding-left: 1.6rem; }
+        .lesson-rich ul { list-style: disc; }
+        .lesson-rich ol { list-style: decimal; }
+        .lesson-rich img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen overflow-hidden bg-sky-50">
+
+    <!-- LOGIN: only shown for the normal student portal, never for teacher preview -->
+    <div id="student-login-screen" class="fixed inset-0 z-[100] bg-sky-950 flex items-center justify-center p-5">
+        <div class="bg-white rounded-[2.5rem] p-9 w-full max-w-md shadow-2xl border-b-8 border-orange-500 text-center">
+            <div class="w-24 h-24 mx-auto rounded-full bg-orange-500 border-4 border-yellow-300 text-white flex items-center justify-center text-5xl shadow-lg floaty">
+                <i class="fa-solid fa-rocket"></i>
+            </div>
+            <h1 class="text-5xl font-black text-sky-900 fun-font mt-5">SikLab</h1>
+            <p class="text-sky-600 font-black uppercase tracking-[0.18em] text-xs mt-1">Student Explorer</p>
+            <form onsubmit="handleStudentPortalLogin(event)" class="mt-8 space-y-5">
+                <div class="text-left">
+                    <label class="block font-black text-sky-900 mb-2">What is your name?</label>
+                    <input id="student-portal-name" required autocomplete="name" placeholder="Type your name here..." class="w-full px-5 py-4 rounded-2xl border-4 border-sky-100 focus:border-orange-400 outline-none font-bold text-lg bg-sky-50">
+                </div>
+                <button class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl text-xl shadow-[0_6px_0_#c2410c] active:shadow-none active:translate-y-[6px] transition-all">
+                    LET'S LEARN <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="student-app" class="hidden h-full w-full">
+        <div class="flex h-full w-full">
+            <aside class="w-24 lg:w-72 bg-sky-950 text-white flex flex-col shadow-2xl flex-shrink-0">
+                <div class="h-24 px-4 lg:px-7 flex items-center justify-center lg:justify-start border-b border-sky-900">
+                    <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center border-2 border-yellow-300 shadow-inner"><i class="fa-solid fa-fire text-2xl"></i></div>
+                    <div class="hidden lg:block ml-3"><div class="text-3xl font-black fun-font">SikLab</div><div id="student-year-side" class="text-[10px] uppercase tracking-wider font-black text-sky-300">School Year</div></div>
+                </div>
+
+                <nav class="flex-grow px-3 py-6 overflow-y-auto hide-scroll">
+                    <button onclick="showStudentHome()" id="student-nav-home" class="w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-2xl bg-orange-500 font-black shadow-[0_4px_0_#c2410c] mb-3">
+                        <i class="fa-solid fa-map-location-dot text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">My Science Map</span>
+                    </button>
+                    <div id="student-lesson-nav" class="space-y-2"></div>
+                </nav>
+
+                <div class="p-4 border-t border-sky-900">
+                    <button id="student-logout-button" onclick="logoutStudentPortal()" class="w-full p-3 rounded-xl bg-red-500/20 hover:bg-red-500 font-bold transition-colors"><i class="fa-solid fa-right-from-bracket"></i><span class="hidden lg:inline ml-2">Log Out</span></button>
+                    <div id="preview-mode-note" class="hidden text-[10px] text-sky-300 font-bold text-center leading-relaxed">Teacher Preview Mode<br>Drafts may be visible.</div>
+                </div>
+            </aside>
+
+            <main class="flex-grow h-full overflow-y-auto hide-scroll relative">
+                <header class="sticky top-0 z-30 px-5 md:px-8 py-4 bg-sky-50/90 backdrop-blur-md flex items-center justify-between border-b border-sky-100">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-orange-600 text-xl"><i class="fa-solid fa-user-astronaut"></i></div>
+                        <div><h2 id="student-header-name" class="font-black text-xl text-sky-950">Explorer</h2><p id="student-year-header" class="text-xs font-black uppercase tracking-wider text-orange-500">Loading school year...</p></div>
+                    </div>
+                    <div class="bg-yellow-400 text-yellow-950 px-5 py-2 rounded-full font-black shadow-[0_4px_0_#b45309] border-2 border-yellow-200"><i class="fa-solid fa-star text-white mr-2"></i><span id="student-star-count">0</span></div>
+                </header>
+
+                <section id="student-loading" class="min-h-[70vh] flex flex-col items-center justify-center text-sky-700">
+                    <i class="fa-solid fa-circle-notch fa-spin text-5xl text-orange-500"></i>
+                    <p class="font-black mt-4">Loading your science map...</p>
+                </section>
+
+                <section id="student-home-view" class="hidden p-6 md:p-8 max-w-6xl mx-auto space-y-8 pb-24">
+                    <div class="rounded-[2.5rem] p-8 md:p-10 bg-gradient-to-r from-sky-600 to-blue-500 text-white shadow-xl overflow-hidden relative">
+                        <div class="relative z-10 max-w-3xl">
+                            <span id="student-active-year-pill" class="inline-flex bg-yellow-400 text-yellow-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">Active School Year</span>
+                            <h1 class="text-4xl md:text-5xl font-black fun-font mt-4">Welcome, <span id="student-welcome-name">Explorer</span>!</h1>
+                            <p class="text-sky-100 text-lg md:text-xl font-bold mt-3">Choose a published lesson from your science map. Everything here comes directly from your teacher's Lesson Builder.</p>
+                        </div>
+                        <i class="fa-solid fa-earth-americas absolute right-8 -bottom-8 text-[180px] text-white/10"></i>
+                    </div>
+
+                    <div>
+                        <div class="flex items-end justify-between gap-4 mb-5"><div><h2 class="text-3xl font-black text-sky-950 fun-font">My Science Map</h2><p class="text-sky-700 font-bold mt-1">Published lessons for <span id="student-map-year">this school year</span>.</p></div><span id="student-lesson-count" class="bg-sky-100 text-sky-700 px-4 py-2 rounded-full text-sm font-black">0 Lessons</span></div>
+                        <div id="student-map-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                    </div>
+                </section>
+
+                <section id="student-lesson-view" class="hidden p-6 md:p-8 max-w-5xl mx-auto pb-24">
+                    <button onclick="showStudentHome()" class="mb-5 px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 font-black hover:bg-sky-50"><i class="fa-solid fa-arrow-left mr-2"></i>Back to My Map</button>
+                    <div id="student-lesson-container"></div>
+                </section>
+
+                <section id="student-empty-view" class="hidden min-h-[70vh] flex items-center justify-center p-6">
+                    <div class="bg-white rounded-[2.5rem] border-4 border-dashed border-sky-200 p-10 text-center max-w-xl shadow-sm">
+                        <div class="w-24 h-24 mx-auto bg-sky-100 text-sky-400 rounded-full flex items-center justify-center text-4xl"><i class="fa-solid fa-book-open"></i></div>
+                        <h2 class="text-3xl font-black text-sky-950 mt-5">No published lessons yet</h2>
+                        <p class="text-slate-500 font-bold mt-3">Your teacher is still preparing this school year's learning materials.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/supabase_client.js"></script>
+    <script src="security.js"></script>
+    <script src="js/student_portal.js"></script>
+</body>
+</html>

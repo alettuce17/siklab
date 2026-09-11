@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SikLab: Sense Detectives (Week 1) - Cloud</title>
+    
+    <!-- OFFLINE READY: Local Tailwind CSS (Notice the / at the start!) -->
+    <script src="/assets/tailwind.js"></script>
+    
+
+    <!-- Google Fonts (Will cache if loaded once, but system fallbacks added below) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <style>
+        /* OFFLINE READY: System Fallback Fonts */
+        body { font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; overflow: hidden; touch-action: none; background-color: #f8fafc; }
+        .detective-font { font-family: 'Special Elite', 'Courier New', Courier, monospace !important; }
+        
+        .draggable-controller { position: absolute; z-index: 50; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        
+        canvas { image-rendering: auto; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+    </style>
+        <!-- OFFLINE READY: Local FontAwesome (Notice the / at the start!) -->
+    <link rel="stylesheet" href="/assets/fontawesome/css/all.min.css">
+    
+</head>
+<body class="w-screen h-screen flex flex-col selection:bg-none text-slate-800 m-0 p-0 relative">
+
+    <!-- DASHBOARD-STYLE HEADER -->
+    <div class="bg-white h-20 px-6 md:px-8 flex justify-between items-center shadow-sm z-40 relative border-b border-orange-200">
+        <div class="flex items-center gap-4">
+            <div class="bg-blue-50 px-6 py-1 rounded-xl border border-blue-200 shadow-sm flex flex-col items-center">
+                <span id="lbl-p1-clues" class="text-[10px] text-blue-500 font-black uppercase tracking-widest leading-none mt-1">P1 Clues</span>
+                <span id="score-p1" class="text-2xl font-black text-blue-700 leading-none mb-1">0</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4 md:gap-8">
+            <button onclick="toggleControllers()" class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 flex items-center justify-center transition-colors shadow-sm" title="Toggle Virtual Controllers">
+                <i class="fa-solid fa-gamepad"></i>
+            </button>
+            
+            <!-- SIKLAB OFFICIAL BRANDING ADDED TO HEADER -->
+            <div class="text-center hidden md:flex flex-col items-center justify-center">
+                <div class="flex items-center justify-center gap-1.5 bg-slate-900 px-3 py-0.5 rounded-full shadow-inner mb-0.5">
+                    <i class="fa-solid fa-fire text-orange-500 text-sm"></i>
+                    <span class="text-white font-black tracking-wide text-sm">SikLab</span>
+                </div>
+                <h1 class="text-xl font-black tracking-wider text-slate-800 detective-font leading-none">SENSE DETECTIVES</h1>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-tight" id="header-subtitle">MATATAG Wk 1: 5 Senses</p>
+            </div>
+            
+            <button onclick="returnToMenu()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center transition-colors shadow-sm" title="Main Menu">
+                <i class="fa-solid fa-house"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4 flex-row-reverse">
+            <div class="bg-red-50 px-6 py-1 rounded-xl border border-red-200 shadow-sm flex flex-col items-center">
+                <span id="lbl-p2-clues" class="text-[10px] text-red-500 font-black uppercase tracking-widest leading-none mt-1">P2 Clues</span>
+                <span id="score-p2" class="text-2xl font-black text-red-700 leading-none mb-1">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAMEPLAY AREA -->
+    <div class="flex-grow bg-orange-50/50 flex items-center justify-center relative z-10 w-full h-full overflow-hidden p-6">
+        
+        <!-- DASHBOARD-STYLE MODALS -->
+        <div id="game-ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-20">
+            
+            <!-- Start Menu -->
+            <div id="center-message" class="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity">
+                <div id="menu-container" class="bg-white p-10 rounded-[2.5rem] border border-orange-100 text-center shadow-2xl pointer-events-auto flex flex-col items-center max-w-3xl w-full mx-4">
+                    
+                    <!-- SIKLAB BRANDING IN MAIN MENU -->
+                    <div class="flex items-center justify-center gap-2 bg-slate-900 px-6 py-2 rounded-full mb-6 shadow-md border-2 border-slate-700">
+                        <i class="fa-solid fa-fire text-orange-500 text-3xl"></i>
+                        <span class="text-3xl font-black text-white tracking-wide">SikLab</span>
+                    </div>
+
+                    <div class="flex items-center justify-center gap-4 mb-4 animate-float">
+                        <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <h2 class="text-5xl font-black text-slate-800 detective-font tracking-wide">SENSE DETECTIVES</h2>
+                    </div>
+                    <p class="text-lg text-slate-500 mb-8 font-bold w-full">Week 1: Describe objects using your 5 Senses!</p>
+                    <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
+                        <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
+                    </button>
+                    <p class="mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-circle-info text-orange-400 mr-1"></i> Questions synced from Dashboard</p>
+                </div>
+            </div>
+
+            <!-- Feedback Overlay -->
+            <div id="feedback-overlay" class="absolute inset-0 bg-slate-900/40 rounded-[2rem] flex items-center justify-center z-30 backdrop-blur-sm hidden pointer-events-none transition-opacity">
+                <div id="feedback-message" class="bg-white px-16 py-10 rounded-[2rem] border border-orange-200 shadow-2xl transform scale-110 transition-transform">
+                    <h2 id="feedback-text" class="text-5xl font-black uppercase text-center detective-font text-slate-800"></h2>
+                    <p id="feedback-subtext" class="text-xl font-bold text-center mt-3 text-orange-500 hidden"></p>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="1000" height="700" class="max-w-full max-h-full object-contain bg-white shadow-sm rounded-3xl border border-orange-200"></canvas>
+    </div>
+
+    <!-- AUDIO DEBUGGER PANEL -->
+    <div id="audio-debugger" class="fixed top-24 left-4 bg-stone-900/90 p-4 rounded-xl shadow-2xl border border-stone-700 text-white backdrop-blur-md" style="z-index: 9999;">
+        <h4 class="text-xs font-black text-orange-500 mb-2 uppercase tracking-widest flex justify-between items-center">
+            <span><i class="fa-solid fa-bug mr-1"></i> Audio Debugger</span>
+            <button onclick="document.getElementById('audio-debugger').style.display='none'" class="text-stone-500 hover:text-white ml-4"><i class="fa-solid fa-xmark"></i></button>
+        </h4>
+        <div class="grid grid-cols-2 gap-2">
+            <button onclick="requestControllerCommand('player1','g1correct')" class="bg-green-600 hover:bg-green-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">P1 Correct (C)</button>
+            <button onclick="requestControllerCommand('player1','g1wrong')" class="bg-red-600 hover:bg-red-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">P1 Wrong (W)</button>
+            <button onclick="requestControllerCommand('player2','g1correct')" class="bg-green-600 hover:bg-green-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">P2 Correct</button>
+            <button onclick="requestControllerCommand('player2','g1wrong')" class="bg-red-600 hover:bg-red-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">P2 Wrong</button>
+            <button onclick="requestControllerCommand('player1','g1track1')" class="bg-blue-600 hover:bg-blue-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">Play Track 1 (J)</button>
+            <button onclick="requestControllerCommand('player1','g1track2')" class="bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold py-2 px-3 rounded shadow-sm transition-colors cursor-pointer">Play Track 2 (T)</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD-STYLE VIRTUAL CONTROLLERS WITH JOYSTICKS -->
+    <div id="controller-p1" class="draggable-controller w-[360px] bg-white p-6 rounded-[2rem] shadow-2xl border border-slate-200" style="bottom: 20px; left: 20px; display: none;">
+        <div class="drag-handle flex justify-between items-center border-b border-slate-100 pb-3 mb-6 bg-slate-50 -mx-6 -mt-6 px-6 pt-4 rounded-t-[2rem]">
+            <h3 id="lbl-ctrl-p1" class="font-black tracking-widest text-slate-700 text-sm"><i class="fa-solid fa-grip-lines text-slate-300 mr-2"></i>PLAYER 1</h3>
+            <span class="text-[10px] text-slate-400 font-mono bg-slate-200 px-2 py-1 rounded">WASD + 12345</span>
+        </div>
+        <div class="flex justify-between items-center relative z-10">
+            <!-- INTERACTIVE JOYSTICK -->
+            <div id="p1-joystick-base" class="w-[120px] h-[120px] bg-gray-900 rounded-full border-4 border-black shadow-inner relative flex justify-center items-center touch-none">
+                <div id="p1-joystick-knob" class="w-16 h-16 bg-gray-700 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.8)] border-2 border-gray-600 relative pointer-events-none transition-transform duration-75">
+                    <div class="absolute top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-gray-400"></div>
+                    <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-400"></div>
+                    <div class="absolute left-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-r-[8px] border-transparent border-r-gray-400"></div>
+                    <div class="absolute right-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-l-[8px] border-transparent border-l-gray-400"></div>
+                </div>
+                <span class="absolute -bottom-6 text-[10px] text-gray-400 font-bold tracking-widest">JOYSTICK</span>
+            </div>
+            <div id="p1-buttons-container" class="grid grid-cols-3 gap-2 w-[170px]"></div>
+        </div>
+    </div>
+
+    <div id="controller-p2" class="draggable-controller w-[360px] bg-white p-6 rounded-[2rem] shadow-2xl border border-slate-200" style="bottom: 20px; right: 20px; display: none;">
+        <div class="drag-handle flex justify-between items-center border-b border-slate-100 pb-3 mb-6 bg-slate-50 -mx-6 -mt-6 px-6 pt-4 rounded-t-[2rem]">
+            <h3 id="lbl-ctrl-p2" class="font-black tracking-widest text-slate-700 text-sm"><i class="fa-solid fa-grip-lines text-slate-300 mr-2"></i>PLAYER 2</h3>
+            <span class="text-[10px] text-slate-400 font-mono bg-slate-200 px-2 py-1 rounded">ARROWS + 7890-</span>
+        </div>
+        <div class="flex justify-between items-center relative z-10">
+            <!-- INTERACTIVE JOYSTICK -->
+            <div id="p2-joystick-base" class="w-[120px] h-[120px] bg-gray-900 rounded-full border-4 border-black shadow-inner relative flex justify-center items-center touch-none">
+                <div id="p2-joystick-knob" class="w-16 h-16 bg-gray-700 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.8)] border-2 border-gray-600 relative pointer-events-none transition-transform duration-75">
+                    <div class="absolute top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-gray-400"></div>
+                    <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-400"></div>
+                    <div class="absolute left-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-r-[8px] border-transparent border-r-gray-400"></div>
+                    <div class="absolute right-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-l-[8px] border-transparent border-l-gray-400"></div>
+                </div>
+                <span class="absolute -bottom-6 text-[10px] text-gray-400 font-bold tracking-widest">JOYSTICK</span>
+            </div>
+            <div id="p2-buttons-container" class="grid grid-cols-3 gap-2 w-[170px]"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // SIKLAB CLOUD BRIDGE
+        //
+        // This game stays isolated inside the Teacher Dashboard iframe.
+        // Controller input arrives from the dashboard through postMessage.
+        // Audio commands are sent back to the dashboard through postMessage.
+        // Questions/history use the parent's Supabase client when available.
+        // ============================================================
+
+        function requestControllerCommand(player, command) {
+            const normalizedPlayer =
+                player === 'p1' ? 'player1' :
+                player === 'p2' ? 'player2' :
+                player;
+
+            if (!['player1', 'player2'].includes(normalizedPlayer)) {
+                console.warn('[SikLab] Invalid controller player:', player);
+                return;
+            }
+
+            const allowed = [
+                'g1correct',
+                'g1wrong',
+                'g1track1',
+                'g1track2',
+                'track1',
+                'track2'
+            ];
+
+            if (!allowed.includes(command)) {
+                console.warn('[SikLab] Invalid controller command:', command);
+                return;
+            }
+
+            // The game is expected to be hosted on the same Netlify origin
+            // as the Teacher Dashboard. js/11_esp32.js receives this message
+            // and invokes the Supabase controller-command Edge Function.
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'controller_command',
+                    player: normalizedPlayer,
+                    command
+                }, window.location.origin);
+            } else {
+                console.warn('[SikLab] Game is not inside the SikLab dashboard iframe.');
+            }
+        }
+
+        function getSikLabSupabase() {
+            try {
+                if (window.parent !== window && window.parent.supabaseClient) {
+                    return window.parent.supabaseClient;
+                }
+            } catch (error) {
+                console.warn('[SikLab] Could not access parent Supabase client:', error);
+            }
+
+            return window.supabaseClient || null;
+        }
+
+        async function resolveGameSchoolYearId() {
+            const params = new URLSearchParams(window.location.search);
+            const fromUrl = Number(params.get('school_year_id') || params.get('year') || 0);
+            if (Number.isSafeInteger(fromUrl) && fromUrl > 0) return fromUrl;
+
+            try {
+                const parentYear = Number(window.parent?.currentSchoolYearId || 0);
+                if (Number.isSafeInteger(parentYear) && parentYear > 0) return parentYear;
+            } catch (_) {}
+
+            const db = getSikLabSupabase();
+            if (!db) return null;
+            const { data } = await db.from('school_years')
+                .select('year_id')
+                .eq('is_active', true)
+                .maybeSingle();
+            return Number(data?.year_id || 0) || null;
+        }
+
+        const HARDWARE_BUTTONS = [
+            { id: 0, name: 'A', hex: '#ef4444', bgClass: 'bg-red-500 text-white border-white', icon: 'fa-a' },
+            { id: 1, name: 'B', hex: '#22c55e', bgClass: 'bg-green-500 text-white border-white', icon: 'fa-b' },
+            { id: 2, name: 'C', hex: '#ffffff', bgClass: 'bg-white text-slate-800 border-slate-300', icon: 'fa-c' },
+            { id: 3, name: 'D', hex: '#3b82f6', bgClass: 'bg-blue-500 text-white border-white', icon: 'fa-d' },
+            { id: 4, name: 'E', hex: '#eab308', bgClass: 'bg-yellow-500 text-white border-white', icon: 'fa-e' }
+        ];
+
+        function renderDynamicControllers() {
+            const positions = ['col-start-2', 'col-start-1', 'col-start-3', 'col-start-1 ml-4 mt-1', 'col-start-3 mr-4 mt-1'];
+            const p1 = document.getElementById('p1-buttons-container');
+            const p2 = document.getElementById('p2-buttons-container');
+            HARDWARE_BUTTONS.forEach((btn, index) => {
+                const pos = positions[index];
+                const html = `<div class="flex flex-col items-center ${pos}"><button onmousedown="handleActionDown('pX', ${btn.id})" onmouseup="handleActionUp('pX', ${btn.id})" onmouseleave="handleActionUp('pX', ${btn.id})" ontouchstart="handleActionDown('pX', ${btn.id}); event.preventDefault();" ontouchend="handleActionUp('pX', ${btn.id}); event.preventDefault();" class="w-12 h-12 ${btn.bgClass} rounded-full shadow-md hover:scale-105 transition-transform border-2"><i class="fa-solid ${btn.icon}"></i></button><span class="text-[10px] font-bold text-slate-400 mt-2 uppercase">${btn.name}</span></div>`;
+                p1.innerHTML += html.replace(/pX/g, 'p1'); p2.innerHTML += html.replace(/pX/g, 'p2');
+            });
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameLoopId;
+        
+        let gameState = 'MENU'; 
+        let scores = { p1: 0, p2: 0 };
+        
+        // Input Tracking
+        const KEYS = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, '1': false, '2': false, '3': false, '4': false, '5': false, '7': false, '8': false, '9': false, '0': false, '-': false };
+        const BTNS = { p1: [false,false,false,false,false], p2: [false,false,false,false,false] };
+        const BTNS_PRESSED_THIS_FRAME = { p1: [false,false,false,false,false], p2: [false,false,false,false,false] };
+
+        window.addEventListener('keydown', (e) => {
+            // Audio debugging is available through the on-screen debugger buttons.
+            // No letter shortcuts are used because W/A/S/D are Player 1 movement keys.
+            if (KEYS.hasOwnProperty(e.key)) {
+                KEYS[e.key] = true;
+                if (gameState !== 'MENU') {
+                    const map = {'1':['p1',0], '2':['p1',1], '3':['p1',2], '4':['p1',3], '5':['p1',4], '7':['p2',0], '8':['p2',1], '9':['p2',2], '0':['p2',3], '-':['p2',4]};
+                    if (map[e.key] && !BTNS[map[e.key][0]][map[e.key][1]]) {
+                        handleActionDown(map[e.key][0], map[e.key][1]);
+                    }
+                }
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (KEYS.hasOwnProperty(e.key)) {
+                KEYS[e.key] = false;
+                const map = {'1':['p1',0], '2':['p1',1], '3':['p1',2], '4':['p1',3], '5':['p1',4], '7':['p2',0], '8':['p2',1], '9':['p2',2], '0':['p2',3], '-':['p2',4]};
+                if(map[e.key]) handleActionUp(map[e.key][0], map[e.key][1]);
+            }
+        });
+
+        function handleActionDown(player, btnId) { BTNS[player][btnId] = true; BTNS_PRESSED_THIS_FRAME[player][btnId] = true; }
+        function handleActionUp(player, btnId) { BTNS[player][btnId] = false; }
+
+        // ============================================================
+        // ESP32 INPUT
+        // The virtual controllers remain fully active.
+        // Physical ESP32 input follows one path only:
+        // ESP32 -> Supabase Edge Function -> Realtime -> Dashboard -> postMessage -> Game
+        // ============================================================
+        let latestESP32State = {
+            p1: "000000000",
+            p2: "000000000"
+        };
+        const ESP_BTNS_HELD = {
+            p1: [false, false, false, false, false],
+            p2: [false, false, false, false, false]
+        };
+
+        window.addEventListener('message', (event) => {
+            // Only accept messages from the same SikLab origin.
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+
+            // When this game is inside the dashboard iframe,
+            // controller input must come from its parent dashboard.
+            if (window.parent !== window && event.source !== window.parent) {
+                return;
+            }
+
+            const data = event.data;
+
+            if (!data || data.type !== 'esp32_input') {
+                return;
+            }
+
+            const raw = data.player;
+            const player =
+                raw === 'player1'
+                    ? 'p1'
+                    : raw === 'player2'
+                        ? 'p2'
+                        : raw;
+
+            if (player !== 'p1' && player !== 'p2') {
+                console.warn('[ESP32] Invalid player ignored:', raw);
+                return;
+            }
+
+            const state = String(data.state ?? '');
+
+            if (!/^[01]{9}$/.test(state)) {
+                console.warn('[ESP32] Invalid controller state ignored:', state);
+                return;
+            }
+
+            latestESP32State[player] = state;
+        });
+
+        // --- DRAGGABLE VIRTUAL JOYSTICK LOGIC ---
+        function initJoystick(baseId, knobId, keys) {
+            const base = document.getElementById(baseId);
+            const knob = document.getElementById(knobId);
+            let active = false;
+            let maxDist = 35; 
+
+            function updateKnob(clientX, clientY) {
+                const rect = base.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                let dx = clientX - centerX;
+                let dy = clientY - centerY;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > maxDist) {
+                    dx = (dx / dist) * maxDist;
+                    dy = (dy / dist) * maxDist;
+                }
+                
+                knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+                const threshold = 15;
+                KEYS[keys.up] = dy < -threshold;
+                KEYS[keys.down] = dy > threshold;
+                KEYS[keys.left] = dx < -threshold;
+                KEYS[keys.right] = dx > threshold;
+            }
+
+            function resetKnob() {
+                active = false;
+                knob.style.transform = `translate(0px, 0px)`;
+                knob.style.transition = 'transform 0.1s ease-out';
+                KEYS[keys.up] = false;
+                KEYS[keys.down] = false;
+                KEYS[keys.left] = false;
+                KEYS[keys.right] = false;
+            }
+
+            base.addEventListener('mousedown', e => { 
+                active = true; 
+                knob.style.transition = 'none'; 
+                updateKnob(e.clientX, e.clientY); 
+            });
+            window.addEventListener('mousemove', e => { 
+                if(active) updateKnob(e.clientX, e.clientY); 
+            });
+            window.addEventListener('mouseup', e => { 
+                if(active) resetKnob(); 
+            });
+
+            base.addEventListener('touchstart', e => { 
+                e.preventDefault(); 
+                active = true; 
+                knob.style.transition = 'none'; 
+                updateKnob(e.touches[0].clientX, e.touches[0].clientY); 
+            }, {passive: false});
+            
+            window.addEventListener('touchmove', e => { 
+                if(active) {
+                    e.preventDefault(); 
+                    updateKnob(e.touches[0].clientX, e.touches[0].clientY); 
+                }
+            }, {passive: false});
+            
+            window.addEventListener('touchend', e => { 
+                if(active) resetKnob(); 
+            });
+        }
+
+        initJoystick('p1-joystick-base', 'p1-joystick-knob', {up:'w', down:'s', left:'a', right:'d'});
+        initJoystick('p2-joystick-base', 'p2-joystick-knob', {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight'});
+
+        let p1Name = "PLAYER 1"; let p1Short = "P1"; let p1Members = "";
+        let p2Name = "PLAYER 2"; let p2Short = "P2"; let p2Members = "";
+        let p1Participant = null;
+        let p2Participant = null;
+
+        try {
+            const savedP1 = localStorage.getItem('siklab_active_p1');
+            if (savedP1) { 
+                const d = JSON.parse(savedP1);
+                p1Participant = d;
+                p1Name = String(d.name || 'Player 1').toUpperCase(); 
+                p1Short = String(d.name || 'P1').split(' ')[0].toUpperCase(); 
+                if (d.members) p1Members = d.members;
+            }
+            const savedP2 = localStorage.getItem('siklab_active_p2');
+            if (savedP2) { 
+                const d = JSON.parse(savedP2);
+                p2Participant = d;
+                p2Name = String(d.name || 'Player 2').toUpperCase(); 
+                p2Short = String(d.name || 'P2').split(' ')[0].toUpperCase(); 
+                if (d.members) p2Members = d.members;
+            }
+        } catch(e) {}
+        
+        document.getElementById('lbl-p1-clues').innerText = `${p1Short} PTS`;
+        document.getElementById('lbl-p2-clues').innerText = `${p2Short} PTS`;
+        const p1Label = document.getElementById('lbl-ctrl-p1');
+        const p2Label = document.getElementById('lbl-ctrl-p2');
+
+        p1Label.innerHTML = '<i class="fa-solid fa-grip-lines text-slate-300 mr-2"></i>';
+        p1Label.appendChild(document.createTextNode(p1Name));
+
+        p2Label.innerHTML = '<i class="fa-solid fa-grip-lines text-slate-300 mr-2"></i>';
+        p2Label.appendChild(document.createTextNode(p2Name));
+
+        const DEFAULT_W1_QUESTIONS = [
+            { prompt: 'What color is the pencil\'s body?', ans: 0, img: '' },
+            { prompt: 'Does the pencil make a loud or soft sound when you tap it?', ans: 2, img: '' },
+            { prompt: 'Which sense would you use to know if a lemon is sour?', ans: 4, img: '' }
+        ];
+
+        const DEFAULT_W1_SETTINGS = { basePoints: 10, deduction: 2, stunDelay: 1.0, retryMultiplier: 0.5, roundTimer: 15 };
+        let dSettings = { ...DEFAULT_W1_SETTINGS };
+
+        function clampNumber(value, fallback, min, max) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return fallback;
+            return Math.min(max, Math.max(min, n));
+        }
+
+        function normalizeW1Settings(raw = {}) {
+            return {
+                basePoints: clampNumber(raw.basePoints, DEFAULT_W1_SETTINGS.basePoints, 0, 1000),
+                deduction: clampNumber(raw.deduction, DEFAULT_W1_SETTINGS.deduction, 0, 1000),
+                stunDelay: clampNumber(raw.stunDelay, DEFAULT_W1_SETTINGS.stunDelay, 0, 30),
+                retryMultiplier: clampNumber(raw.retryMultiplier, DEFAULT_W1_SETTINGS.retryMultiplier, 0, 1),
+                roundTimer: clampNumber(raw.roundTimer, DEFAULT_W1_SETTINGS.roundTimer, 1, 600)
+            };
+        }
+
+        async function loadW1Settings() {
+            try {
+                const db = getSikLabSupabase();
+                if (!db) throw new Error('Supabase client unavailable');
+
+                const yearId = await resolveGameSchoolYearId();
+                if (!yearId) throw new Error('No school year selected');
+                const { data, error } = await db
+                    .from('game_settings')
+                    .select('settings_json')
+                    .eq('school_year_id', yearId)
+                    .eq('game_module', 'W1')
+                    .maybeSingle();
+                if (error) throw error;
+
+                dSettings = normalizeW1Settings(data?.settings_json || {});
+                localStorage.setItem('siklab_game_settings_w1', JSON.stringify(dSettings));
+                return;
+            } catch (error) {
+                console.warn('[SikLab] Using cached/default W1 settings:', error.message || error);
+            }
+
+            try {
+                const cached = JSON.parse(localStorage.getItem('siklab_game_settings_w1') || '{}');
+                dSettings = normalizeW1Settings(cached);
+            } catch (_) {
+                dSettings = { ...DEFAULT_W1_SETTINGS };
+            }
+        }
+
+        let mgData = {}; 
+        let screenShake = 0;
+        let currentLoadedImage = null;
+        let lastFrameTime = 0;
+
+        function returnToMenu() {
+            gameState = 'MENU';
+            document.getElementById('center-message').classList.remove('hidden');
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            updateUI();
+            
+            document.getElementById('menu-container').innerHTML = `
+                <div class="flex items-center justify-center gap-2 bg-slate-900 px-6 py-2 rounded-full mb-6 shadow-md border-2 border-slate-700">
+                    <i class="fa-solid fa-fire text-orange-500 text-3xl"></i>
+                    <span class="text-3xl font-black text-white tracking-wide">SikLab</span>
+                </div>
+                <div class="flex items-center justify-center gap-4 mb-4 animate-float">
+                    <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <h2 class="text-5xl md:text-6xl font-black text-slate-800 detective-font tracking-wide">SENSE DETECTIVES</h2>
+                </div>
+                <p class="text-lg text-slate-500 mb-8 font-bold w-full">Week 1: Describe objects using your 5 Senses!</p>
+                <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
+                    <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
+                </button>
+                <p class="mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-circle-info text-orange-400 mr-1"></i> Questions synced from Dashboard</p>
+            `;
+        }
+
+        function updateUI() {
+            document.getElementById('score-p1').innerText = scores.p1;
+            document.getElementById('score-p2').innerText = scores.p2;
+        }
+
+        function showFeedback(winner, text, pointsEarned = null) {
+            const fb = document.getElementById('feedback-overlay');
+            const msg = document.getElementById('feedback-message');
+            const txt = document.getElementById('feedback-text');
+            const sub = document.getElementById('feedback-subtext');
+            
+            fb.classList.remove('hidden');
+            txt.innerText = text;
+            
+            if (pointsEarned !== null) {
+                sub.classList.remove('hidden');
+                sub.innerText = `+${pointsEarned} POINTS`;
+            } else {
+                sub.classList.add('hidden');
+            }
+            
+            msg.className = "bg-white px-16 py-10 rounded-[2rem] border shadow-2xl transform scale-110 transition-transform ";
+            if (winner === 'p1') { msg.classList.add('border-blue-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-blue-600'; }
+            else if (winner === 'p2') { msg.classList.add('border-red-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-red-600'; }
+            else { msg.classList.add('border-orange-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-orange-500'; }
+        }
+
+        function participantStudentId(participant) {
+            if (!participant || participant.members || String(participant.id || '').startsWith('g_')) return null;
+            const id = Number(participant.id);
+            return Number.isSafeInteger(id) && id > 0 ? id : null;
+        }
+
+        async function saveMatchHistory() {
+            const finalP1Name = p1Members ? `${p1Name} (${p1Members})` : p1Name;
+            const finalP2Name = p2Members ? `${p2Name} (${p2Members})` : p2Name;
+
+            const historyData = {
+                game: 'Sense Detectives (W1)',
+                p1Name: finalP1Name,
+                p2Name: finalP2Name,
+                p1Score: scores.p1,
+                p2Score: scores.p2,
+                winner: scores.p1 > scores.p2
+                    ? finalP1Name
+                    : (scores.p2 > scores.p1 ? finalP2Name : 'TIE'),
+                date: new Date().toLocaleString()
+            };
+
+            try {
+                const db = getSikLabSupabase();
+                if (!db) throw new Error('Supabase client unavailable');
+
+                let sessionId = null;
+                const yearId = await resolveGameSchoolYearId();
+                const sessionResult = await db
+                    .from('game_session')
+                    .insert([{ school_year_id: yearId }])
+                    .select('session_id')
+                    .single();
+
+                if (!sessionResult.error) sessionId = sessionResult.data?.session_id || null;
+
+                // One summary row feeds the Match History screen without creating duplicate cards.
+                const { error: summaryError } = await db
+                    .from('player_score')
+                    .insert({
+                        session_id: sessionId,
+                        final_score: Math.max(scores.p1, scores.p2),
+                        custom_game_data: historyData
+                    });
+                if (summaryError) throw summaryError;
+
+                // Individual matches also save one score row per student for Admin/Progress reports.
+                const scoreRows = [];
+                const p1StudentId = participantStudentId(p1Participant);
+                const p2StudentId = participantStudentId(p2Participant);
+
+                if (p1StudentId) {
+                    scoreRows.push({ session_id: sessionId, student_id: p1StudentId, final_score: scores.p1 });
+                }
+                if (p2StudentId) {
+                    scoreRows.push({ session_id: sessionId, student_id: p2StudentId, final_score: scores.p2 });
+                }
+
+                if (scoreRows.length) {
+                    const { error: scoreError } = await db.from('player_score').insert(scoreRows);
+                    if (scoreError) console.warn('[SikLab] Match saved, but student score rows failed:', scoreError);
+                }
+            } catch (error) {
+                console.warn('[SikLab] Match history saved locally:', error.message || error);
+
+                const localHistory = JSON.parse(
+                    localStorage.getItem('siklab_history') || '[]'
+                );
+
+                localHistory.unshift(historyData);
+                localStorage.setItem(
+                    'siklab_history',
+                    JSON.stringify(localHistory)
+                );
+            }
+        }
+
+        async function startMiniGame() {
+            document.getElementById('center-message').classList.add('hidden');
+            scores = { p1: 0, p2: 0 };
+            updateUI();
+
+            await loadW1Settings();
+
+            let qBank = [];
+
+            try {
+                const db = getSikLabSupabase();
+                if (!db) throw new Error('Supabase client unavailable');
+
+                const yearId = await resolveGameSchoolYearId();
+                if (!yearId) throw new Error('No school year selected');
+                const { data, error } = await db
+                    .from('custom_question')
+                    .select('prompt,correct_ans,image_url')
+                    .eq('school_year_id', yearId)
+                    .eq('game_module', 'W1');
+
+                if (error) throw error;
+
+                if (Array.isArray(data) && data.length > 0) {
+                    qBank = data.map(q => ({
+                        prompt: q.prompt,
+                        ans: Number(q.correct_ans),
+                        img: q.image_url || ''
+                    }));
+                }
+            } catch (error) {
+                console.warn('[SikLab] Using local/default W1 questions:', error.message || error);
+
+                const saved = localStorage.getItem('siklab_custom_q_w1');
+                if (saved) {
+                    try {
+                        qBank = JSON.parse(saved);
+                    } catch (_) {
+                        qBank = [];
+                    }
+                }
+            }
+            if(qBank.length === 0) qBank = [...DEFAULT_W1_QUESTIONS];
+
+            mgData = { 
+                round: 0, maxRounds: qBank.length,
+                p1StunMs: 0, p2StunMs: 0, 
+                animating: false, 
+                animEndTime: 0, 
+                winner: null,
+                cameraController: null,
+                rps: { p1Choice: null, p2Choice: null, resultTimer: 0, resultText: "" },
+                imgX: 0, imgY: 0, imgScale: 1.0,
+                pool: qBank.sort(() => 0.5 - Math.random())
+            };
+
+            gameState = 'PLAYING_RPS';
+            for (let i = 0; i < 5; i++) {
+                BTNS.p1[i] = false;
+                BTNS.p2[i] = false;
+                BTNS_PRESSED_THIS_FRAME.p1[i] = false;
+                BTNS_PRESSED_THIS_FRAME.p2[i] = false;
+                // Treat buttons already held at game start as held, not as a fresh press.
+                ESP_BTNS_HELD.p1[i] = latestESP32State.p1[4 + i] === '1';
+                ESP_BTNS_HELD.p2[i] = latestESP32State.p2[4 + i] === '1';
+            }
+            lastFrameTime = Date.now();
+            if (!gameLoopId) gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function startNextRound() {
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            
+            if (mgData.round >= mgData.maxRounds || mgData.pool.length === 0) {
+                gameState = 'GAMEOVER';
+                saveMatchHistory();
+
+                const winText = scores.p1 > scores.p2 ? `${p1Name} WINS THE MATCH!` : scores.p2 > scores.p1 ? `${p2Name} WINS THE MATCH!` : "TIE MATCH!";
+                document.getElementById('center-message').classList.remove('hidden');
+                document.getElementById('menu-container').innerHTML = `
+                    <div class="w-24 h-24 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    </div>
+                    <h2 class="text-5xl font-black text-slate-800 mb-2 detective-font">CASE CLOSED!</h2>
+                    <h3 class="text-2xl font-bold text-orange-600 mb-8 uppercase tracking-wide">${winText}</h3>
+                    <button onclick="returnToMenu()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-10 py-4 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
+                        <i class="fa-solid fa-house text-orange-400"></i> BACK TO MENU
+                    </button>`;
+                return;
+            }
+
+            if (mgData.round > 0) {
+                mgData.cameraController = (mgData.cameraController === 'p1') ? 'p2' : 'p1';
+            }
+
+            mgData.round++;
+            mgData.winner = null;
+            mgData.animating = false;
+            mgData.p1StunMs = 0; mgData.p2StunMs = 0;
+            mgData.imgX = 0; mgData.imgY = 0; mgData.imgScale = 1.0;
+            
+            gameState = `PLAYING`;
+            mgData.current = mgData.pool.shift();
+            
+            mgData.roundDurationMs = dSettings.roundTimer * 1000;
+            mgData.roundEndTime = Date.now() + mgData.roundDurationMs;
+
+            mgData.currentPointPool = dSettings.basePoints;
+            mgData.attempts = { p1: 0, p2: 0 };
+
+            for(let i=0;i<5;i++){ BTNS.p1[i]=false; BTNS.p2[i]=false; BTNS_PRESSED_THIS_FRAME.p1[i]=false; BTNS_PRESSED_THIS_FRAME.p2[i]=false; }
+            
+            currentLoadedImage = null;
+            if (mgData.current.img && mgData.current.img.trim() !== '') {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => { currentLoadedImage = img; };
+                img.src = mgData.current.img;
+            }
+        }
+
+        function triggerShake(intensity) { screenShake = intensity; }
+
+        // ---------- VISUAL EFFECTS: CONFETTI PARTICLES + SCREEN FLASH ----------
+        let particles = [];
+        let screenFlash = { color: null, alpha: 0 };
+
+        function spawnConfetti(x, y, colors, count = 45) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 7;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 5, // initial upward pop
+                    size: 4 + Math.random() * 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.4,
+                    life: 1,
+                    decay: 0.008 + Math.random() * 0.012
+                });
+            }
+        }
+
+        function triggerFlash(color, peakAlpha = 0.32) {
+            screenFlash = { color, alpha: peakAlpha };
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.vy += 0.18; // gravity
+                p.x += p.vx;
+                p.y += p.vy;
+                p.rotation += p.rotSpeed;
+                p.life -= p.decay;
+                if (p.life <= 0 || p.y > canvas.height + 50) particles.splice(i, 1);
+            }
+            if (screenFlash.alpha > 0) screenFlash.alpha = Math.max(0, screenFlash.alpha - 0.03);
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                ctx.restore();
+            });
+
+            if (screenFlash.alpha > 0 && screenFlash.color) {
+                ctx.save();
+                ctx.globalAlpha = screenFlash.alpha;
+                ctx.fillStyle = screenFlash.color;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+        }
+
+        function updatePhysics() {
+            const now = Date.now();
+            const resetPresses = () => { for(let i=0;i<5;i++){ BTNS_PRESSED_THIS_FRAME.p1[i]=false; BTNS_PRESSED_THIS_FRAME.p2[i]=false; } };
+            
+            // Physical input is tracked separately so it never overwrites keyboard/virtual input.
+            ['p1', 'p2'].forEach(p => {
+                const s = latestESP32State[p];
+                for (let i = 0; i < 5; i++) {
+                    const isPressed = s[4 + i] === '1';
+                    if (isPressed && !ESP_BTNS_HELD[p][i]) {
+                        BTNS_PRESSED_THIS_FRAME[p][i] = true;
+                    }
+                    ESP_BTNS_HELD[p][i] = isPressed;
+                }
+            });
+
+            if (gameState === 'GAMEOVER') return resetPresses();
+
+            if (gameState === 'PLAYING_RPS') {
+                if (mgData.rps.resultTimer > 0) {
+                    mgData.rps.resultTimer--;
+                    if (mgData.rps.resultTimer <= 0) {
+                        if (mgData.rps.resultText.includes("TIE")) {
+                            mgData.rps.p1Choice = null;
+                            mgData.rps.p2Choice = null;
+                            mgData.rps.resultText = "";
+                        } else {
+                            startNextRound();
+                        }
+                    }
+                    return resetPresses();
+                }
+
+                if (mgData.rps.p1Choice === null) {
+                    if (BTNS_PRESSED_THIS_FRAME.p1[0]) mgData.rps.p1Choice = 0; 
+                    if (BTNS_PRESSED_THIS_FRAME.p1[1]) mgData.rps.p1Choice = 1; 
+                    if (BTNS_PRESSED_THIS_FRAME.p1[2]) mgData.rps.p1Choice = 2; 
+                }
+                if (mgData.rps.p2Choice === null) {
+                    if (BTNS_PRESSED_THIS_FRAME.p2[0]) mgData.rps.p2Choice = 0; 
+                    if (BTNS_PRESSED_THIS_FRAME.p2[1]) mgData.rps.p2Choice = 1; 
+                    if (BTNS_PRESSED_THIS_FRAME.p2[2]) mgData.rps.p2Choice = 2; 
+                }
+
+                if (mgData.rps.p1Choice !== null && mgData.rps.p2Choice !== null) {
+                    const c1 = mgData.rps.p1Choice;
+                    const c2 = mgData.rps.p2Choice;
+                    if (c1 === c2) {
+                        mgData.rps.resultText = "TIE! SHOOT AGAIN!";
+                        mgData.rps.resultTimer = 90; 
+                        triggerShake(5);
+                    } else if ((c1 === 0 && c2 === 2) || (c1 === 1 && c2 === 0) || (c1 === 2 && c2 === 1)) {
+                        mgData.rps.resultText = p1Short + " WINS CAMERA!";
+                        mgData.cameraController = 'p1';
+                        mgData.rps.resultTimer = 120; 
+                    } else {
+                        mgData.rps.resultText = p2Short + " WINS CAMERA!";
+                        mgData.cameraController = 'p2';
+                        mgData.rps.resultTimer = 120; 
+                    }
+                }
+                return resetPresses();
+            }
+
+            if (mgData.animating) {
+                mgData.roundEndTime += (now - lastFrameTime); 
+                if (now > mgData.animEndTime) startNextRound();
+                lastFrameTime = now;
+                return resetPresses();
+            }
+
+            let panLeft = false, panRight = false, zoomIn = false, zoomOut = false;
+            
+            if (mgData.cameraController === 'p1') {
+                if (KEYS.a || latestESP32State.p1[2] === '1') panLeft = true;
+                if (KEYS.d || latestESP32State.p1[3] === '1') panRight = true;
+                if (KEYS.w || latestESP32State.p1[0] === '1') zoomIn = true;
+                if (KEYS.s || latestESP32State.p1[1] === '1') zoomOut = true;
+            } else if (mgData.cameraController === 'p2') {
+                if (KEYS.ArrowLeft || latestESP32State.p2[2] === '1') panLeft = true;
+                if (KEYS.ArrowRight || latestESP32State.p2[3] === '1') panRight = true;
+                if (KEYS.ArrowUp || latestESP32State.p2[0] === '1') zoomIn = true;
+                if (KEYS.ArrowDown || latestESP32State.p2[1] === '1') zoomOut = true;
+            }
+
+            if (panLeft) mgData.imgX -= 5;
+            if (panRight) mgData.imgX += 5;
+            if (zoomIn) mgData.imgScale += 0.02;
+            if (zoomOut) mgData.imgScale -= 0.02;
+
+            mgData.imgScale = Math.max(1.0, Math.min(3.0, mgData.imgScale));
+
+            const maxPanX = (360 * mgData.imgScale - 360) / 2;
+            const maxPanY = (240 * mgData.imgScale - 240) / 2;
+            mgData.imgX = Math.max(-maxPanX, Math.min(maxPanX, mgData.imgX));
+            mgData.imgY = Math.max(-maxPanY, Math.min(maxPanY, mgData.imgY));
+
+            const timeLeft = mgData.roundEndTime - now;
+            if (timeLeft <= 0) {
+                mgData.animating = true; mgData.winner = 'tie';
+                mgData.animEndTime = now + 2000;
+                showFeedback('tie', "TIME'S UP!");
+                lastFrameTime = now;
+                return resetPresses();
+            }
+
+            if (mgData.p1StunMs > 0) {
+                mgData.p1StunMs -= (now - lastFrameTime);
+                if (mgData.p1StunMs <= 0) {
+                    mgData.p1StunMs = 0;
+                    mgData.currentPointPool = Math.max(0, mgData.currentPointPool - dSettings.deduction);
+                }
+            }
+            if (mgData.p2StunMs > 0) {
+                mgData.p2StunMs -= (now - lastFrameTime);
+                if (mgData.p2StunMs <= 0) {
+                    mgData.p2StunMs = 0;
+                    mgData.currentPointPool = Math.max(0, mgData.currentPointPool - dSettings.deduction);
+                }
+            }
+
+            const penalty = (player) => {
+                mgData.attempts[player]++;
+                if(player==='p1') mgData.p1StunMs = dSettings.stunDelay * 1000; 
+                if(player==='p2') mgData.p2StunMs = dSettings.stunDelay * 1000; 
+                triggerShake(10);
+                triggerFlash('#ef4444', 0.3);
+                updateUI();
+                
+                // TELL HARDWARE TO PLAY WRONG SOUND
+                requestControllerCommand(player, 'g1wrong');
+            };
+
+            const reward = (player) => {
+                mgData.winner = player;
+                mgData.animating = true;
+                mgData.animEndTime = now + 2000; 
+                
+                let pointsEarned = mgData.currentPointPool;
+                if (mgData.attempts[player] > 0) {
+                    pointsEarned = Math.floor(mgData.currentPointPool * dSettings.retryMultiplier);
+                }
+                
+                scores[player] += pointsEarned;
+                triggerShake(5);
+                triggerFlash('#10b981', 0.22);
+                const winColors = player === 'p1' ? ['#3b82f6', '#93c5fd', '#facc15', '#ffffff'] : ['#ef4444', '#fca5a5', '#facc15', '#ffffff'];
+                spawnConfetti(player === 'p1' ? 250 : 750, 350, winColors, 60);
+                updateUI();
+                showFeedback(player, `${player === 'p1' ? p1Short : p2Short} GOT IT!`, pointsEarned);
+
+                // TELL HARDWARE TO PLAY CORRECT SOUND
+                requestControllerCommand(player, 'g1correct');
+            };
+
+            const rewardTie = () => {
+                mgData.winner = 'tie';
+                mgData.animating = true;
+                mgData.animEndTime = now + 2000; 
+                
+                let p1Pts = mgData.attempts.p1 > 0 ? Math.floor(mgData.currentPointPool * dSettings.retryMultiplier) : mgData.currentPointPool;
+                let p2Pts = mgData.attempts.p2 > 0 ? Math.floor(mgData.currentPointPool * dSettings.retryMultiplier) : mgData.currentPointPool;
+                
+                scores.p1 += p1Pts;
+                scores.p2 += p2Pts;
+                
+                triggerShake(10);
+                triggerFlash('#facc15', 0.28);
+                spawnConfetti(250, 350, ['#3b82f6', '#93c5fd', '#facc15', '#ffffff'], 45);
+                spawnConfetti(750, 350, ['#ef4444', '#fca5a5', '#facc15', '#ffffff'], 45);
+                updateUI();
+                showFeedback('tie', "PERFECT TIE! BOTH SCORE!");
+
+                // TELL BOTH HARDWARE CONTROLLERS TO PLAY CORRECT SOUND
+                requestControllerCommand('player1', 'g1correct');
+                requestControllerCommand('player2', 'g1correct');
+            };
+
+            let p1Correct = false, p1Wrong = false;
+            let p2Correct = false, p2Wrong = false;
+
+            [0, 1, 2, 3, 4].forEach(btnIdx => {
+                if (BTNS_PRESSED_THIS_FRAME.p1[btnIdx] && mgData.p1StunMs === 0) {
+                    if (btnIdx === mgData.current.ans) p1Correct = true; else p1Wrong = true;
+                }
+                if (BTNS_PRESSED_THIS_FRAME.p2[btnIdx] && mgData.p2StunMs === 0) {
+                    if (btnIdx === mgData.current.ans) p2Correct = true; else p2Wrong = true;
+                }
+            });
+
+            if (p1Wrong) penalty('p1');
+            if (p2Wrong) penalty('p2');
+
+            if (p1Correct && !p1Wrong && p2Correct && !p2Wrong) {
+                rewardTie();
+            } else if (p1Correct && !p1Wrong) {
+                reward('p1');
+            } else if (p2Correct && !p2Wrong) {
+                reward('p2');
+            }
+
+            if (screenShake > 0) screenShake--;
+            updateParticles();
+            lastFrameTime = now;
+            resetPresses();
+        }
+
+        function drawGame() {
+            if (gameState === 'MENU' || gameState === 'GAMEOVER') return;
+
+            ctx.save();
+            if (screenShake > 0) ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+
+            if (gameState === 'PLAYING_RPS') {
+                ctx.fillStyle = '#fff7ed'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffedd5'; ctx.fillRect(20, 20, canvas.width-40, canvas.height-40);
+                
+                ctx.fillStyle = '#ea580c'; ctx.font = 'bold 50px detective-font'; ctx.textAlign = 'center';
+                ctx.fillText("ROCK PAPER SCISSORS!", 500, 100);
+                ctx.fillStyle = '#1e293b'; ctx.font = 'bold 20px Poppins';
+                ctx.fillText("Winner gets to control the Camera! (BTNS 1, 2, or 3)", 500, 140);
+
+                ctx.fillStyle = '#eff6ff'; ctx.beginPath(); ctx.roundRect(50, 180, 420, 450, 20); ctx.fill();
+                ctx.lineWidth = 4; ctx.strokeStyle = '#bfdbfe'; ctx.stroke();
+                ctx.fillStyle = '#1d4ed8'; ctx.font = 'bold 36px Poppins'; ctx.fillText(p1Name, 260, 230);
+                
+                if (mgData.rps.p1Choice === null) {
+                    ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 20px Poppins';
+                    ctx.fillText("WAITING FOR INPUT...", 260, 320);
+                    ctx.fillStyle = '#93c5fd'; ctx.beginPath(); ctx.roundRect(110, 380, 300, 200, 10); ctx.fill();
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fillText("BTN 1 = 🪨 ROCK", 260, 430);
+                    ctx.fillText("BTN 2 = 📄 PAPER", 260, 480);
+                    ctx.fillText("BTN 3 = ✂️ SCISSORS", 260, 530);
+                } else if (mgData.rps.p2Choice === null) {
+                    ctx.fillStyle = '#10b981'; ctx.font = 'bold 40px Poppins';
+                    ctx.fillText("READY!", 260, 420);
+                } else {
+                    const emojis = ['🪨', '📄', '✂️'];
+                    ctx.font = '150px Arial'; ctx.fillText(emojis[mgData.rps.p1Choice], 260, 420);
+                }
+
+                ctx.fillStyle = '#fef2f2'; ctx.beginPath(); ctx.roundRect(530, 180, 420, 450, 20); ctx.fill();
+                ctx.lineWidth = 4; ctx.strokeStyle = '#fecaca'; ctx.stroke();
+                ctx.fillStyle = '#b91c1c'; ctx.font = 'bold 36px Poppins'; ctx.fillText(p2Name, 740, 230);
+                
+                if (mgData.rps.p2Choice === null) {
+                    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 20px Poppins';
+                    ctx.fillText("WAITING FOR INPUT...", 740, 320);
+                    ctx.fillStyle = '#fca5a5'; ctx.beginPath(); ctx.roundRect(590, 380, 300, 200, 10); ctx.fill();
+                    ctx.fillStyle = '#7f1d1d';
+                    ctx.fillText("BTN 1 = 🪨 ROCK", 740, 430);
+                    ctx.fillText("BTN 2 = 📄 PAPER", 740, 480);
+                    ctx.fillText("BTN 3 = ✂️ SCISSORS", 740, 530);
+                } else if (mgData.rps.p1Choice === null) {
+                    ctx.fillStyle = '#10b981'; ctx.font = 'bold 40px Poppins';
+                    ctx.fillText("READY!", 740, 420);
+                } else {
+                    const emojis = ['🪨', '📄', '✂️'];
+                    ctx.font = '150px Arial'; ctx.fillText(emojis[mgData.rps.p2Choice], 740, 420);
+                }
+
+                if (mgData.rps.resultText !== "") {
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; ctx.beginPath(); ctx.roundRect(100, 300, 800, 160, 20); ctx.fill();
+                    ctx.fillStyle = '#fde047'; ctx.font = 'bold 60px detective-font'; ctx.fillText(mgData.rps.resultText, 500, 380);
+                }
+                
+                ctx.restore();
+                return; 
+            }
+
+            ctx.fillStyle = '#fff7ed'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+            ctx.fillStyle = '#ffedd5'; ctx.fillRect(20, 20, canvas.width-40, canvas.height-40);
+            
+            const cx = 500;
+            const now = Date.now();
+            
+            ctx.fillStyle = mgData.cameraController === 'p1' ? '#3b82f6' : '#ef4444';
+            ctx.beginPath(); ctx.roundRect(350, 20, 300, 40, 10); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Poppins'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const controllerName = mgData.cameraController === 'p1' ? p1Short : p2Short;
+            ctx.fillText(`📷 ${controllerName} CONTROLS CAMERA`, 500, 40);
+
+            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(50, 70, 900, 20);
+            const timeLeft = Math.max(0, mgData.roundEndTime - now);
+            const timeRatio = timeLeft / mgData.roundDurationMs;
+            
+            ctx.fillStyle = timeRatio > 0.3 ? '#10b981' : '#ef4444';
+            ctx.fillRect(50, 70, 900 * timeRatio, 20);
+
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(800, 100, 150, 50, 10); ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#fed7aa'; ctx.stroke();
+            ctx.fillStyle = '#ea580c'; ctx.font = 'bold 24px Poppins'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(`${mgData.currentPointPool} PTS`, 875, 125);
+
+            ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 15; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 10;
+            ctx.beginPath(); ctx.rotate(-Math.PI/128); ctx.roundRect(cx - 200, 120, 400, 300, 20); ctx.fill();
+            ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+            
+            ctx.save();
+            ctx.clip(); 
+            
+            ctx.translate(cx, 270); 
+            ctx.scale(mgData.imgScale, mgData.imgScale);
+
+            if (currentLoadedImage) {
+                ctx.drawImage(currentLoadedImage, -180 + (mgData.imgX / mgData.imgScale), -140 + (mgData.imgY / mgData.imgScale), 360, 240);
+            } else {
+                ctx.fillStyle = '#f8fafc'; ctx.fillRect(-180, -140, 360, 240);
+                ctx.fillStyle = '#cbd5e1'; ctx.font = '60px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('🕹️', mgData.imgX / mgData.imgScale, mgData.imgY / mgData.imgScale - 20);
+            }
+
+            ctx.restore();
+            ctx.restore();
+
+            ctx.save();
+            ctx.fillStyle = '#ffffff'; 
+            ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
+            ctx.beginPath(); ctx.roundRect(100, 450, 800, 120, 20); ctx.fill();
+            ctx.strokeStyle = '#ffedd5'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.shadowColor = 'transparent';
+            
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(500, 460, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(498, 458, 3, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#1e293b'; ctx.font = 'bold 28px detective-font'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
+            const prompt = mgData.current.prompt;
+            if(prompt.length > 40) {
+                const words = prompt.split(' ');
+                const mid = Math.ceil(words.length / 2);
+                ctx.fillText(words.slice(0,mid).join(' '), cx, 500);
+                ctx.fillText(words.slice(mid).join(' '), cx, 540);
+            } else {
+                ctx.fillText(prompt, cx, 510);
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.roundRect(0, 600, canvas.width, 100, [0, 0, 20, 20]); ctx.fill();
+            ctx.strokeStyle = '#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,600); ctx.lineTo(canvas.width, 600); ctx.stroke();
+
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)'; ctx.fillRect(0, 620, canvas.width, 80);
+            HARDWARE_BUTTONS.forEach((btn, idx) => {
+                const x = 150 + idx * 175;
+                
+                // Draw pill background
+                ctx.fillStyle = btn.hex; 
+                ctx.beginPath(); 
+                ctx.roundRect(x - 30, 640, 60, 30, 5); 
+                ctx.fill();
+                
+                // If it's the white 'C' button, add a border so it doesn't blend in
+                if (btn.name === 'C') {
+                    ctx.strokeStyle = '#94a3b8'; 
+                    ctx.lineWidth = 2; 
+                    ctx.stroke();
+                    ctx.fillStyle = '#1e293b'; // Dark text inside pill
+                } else {
+                    ctx.fillStyle = '#ffffff'; // White text inside pill
+                }
+
+                // Draw inside pill text
+                ctx.font = 'bold 14px Poppins'; 
+                ctx.textAlign = 'center'; 
+                ctx.textBaseline = 'middle'; 
+                ctx.fillText(btn.name, x, 655);
+                
+                // Draw bottom text (A, B, C, D, E)
+                // Use a dark color for C so it shows up on the light background
+                ctx.fillStyle = btn.name === 'C' ? '#94a3b8' : btn.hex; 
+                ctx.font = 'bold 18px detective-font'; 
+                ctx.fillText(btn.name, x, 685);
+            });
+
+            if (mgData.p1StunMs > 0) { ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.fillRect(0,0,500,canvas.height); ctx.fillStyle='#ef4444'; ctx.font='bold 50px Poppins'; ctx.fillText(`${p1Short} STUNNED!`, 250, 350); }
+            if (mgData.p2StunMs > 0) { ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.fillRect(500,0,500,canvas.height); ctx.fillStyle='#ef4444'; ctx.font='bold 50px Poppins'; ctx.fillText(`${p2Short} STUNNED!`, 750, 350); }
+
+            drawParticles();
+        }
+
+        function gameLoop() {
+            if (gameState.startsWith('PLAYING')) updatePhysics();
+            if (gameState !== 'MENU') drawGame();
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function makeDraggable(elmntId) {
+            const elmnt = document.getElementById(elmntId);
+            const handle = elmnt.querySelector('.drag-handle');
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            handle.onmousedown = dragMouseDown; handle.ontouchstart = dragTouchStart;
+            function dragMouseDown(e) { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; }
+            function dragTouchStart(e) { pos3 = e.touches[0].clientX; pos4 = e.touches[0].clientY; document.ontouchend = closeDragElement; document.ontouchmove = elementTouchDrag; }
+            function elementDrag(e) { e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; elmnt.style.bottom="auto"; elmnt.style.right="auto"; elmnt.style.top=(elmnt.offsetTop-pos2)+"px"; elmnt.style.left=(elmnt.offsetLeft-pos1)+"px"; }
+            function elementTouchDrag(e) { pos1 = pos3 - e.touches[0].clientX; pos2 = pos4 - e.touches[0].clientY; pos3 = e.touches[0].clientX; pos4 = e.touches[0].clientY; elmnt.style.bottom="auto"; elmnt.style.right="auto"; elmnt.style.top=(elmnt.offsetTop-pos2)+"px"; elmnt.style.left=(elmnt.offsetLeft-pos1)+"px"; }
+            function closeDragElement() { document.onmouseup = null; document.onmousemove = null; document.ontouchend = null; document.ontouchmove = null; }
+        }
+        
+        let controllersVisible = false;
+        function toggleControllers() {
+            controllersVisible = !controllersVisible;
+            document.getElementById('controller-p1').style.display = controllersVisible ? 'block' : 'none';
+            document.getElementById('controller-p2').style.display = controllersVisible ? 'block' : 'none';
+        }
+
+        renderDynamicControllers();
+        makeDraggable('controller-p1'); 
+        makeDraggable('controller-p2');
+        lastFrameTime = Date.now();
+        gameLoopId = requestAnimationFrame(gameLoop); 
+    </script>
+</body>
+</html>

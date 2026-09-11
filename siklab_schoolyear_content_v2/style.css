@@ -1,0 +1,57 @@
+/* Custom Fonts and Backgrounds */
+body { 
+    font-family: 'Poppins', sans-serif; 
+    background-color: #fff7ed; 
+}
+
+/* Hide scrollbars but keep scroll functionality */
+.hide-scroll::-webkit-scrollbar { display: none; }
+.hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Spin Wheel Indicator - Fiery Red/Orange */
+.wheel-indicator {
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    background: linear-gradient(to bottom right, #ea580c, #dc2626) !important;
+}
+
+/* Custom Toggle Switch Styling - Fire Theme */
+input:checked ~ .dot { 
+    transform: translateX(1.5rem); 
+    background-color: #ea580c !important; 
+    box-shadow: 0 0 10px rgba(234, 88, 12, 0.6); 
+}
+input:checked ~ .block { 
+    background-color: #ffedd5 !important; 
+}
+
+/* Initial Session Loader - Dark Ember Glow */
+#loader-screen {
+    transition: opacity 0.3s ease;
+    background: radial-gradient(circle, #450a0a 0%, #0f172a 100%) !important;
+}
+
+#loader-screen i {
+    color: #ea580c !important; 
+    filter: drop-shadow(0 0 15px rgba(234,88,12,0.8));
+}
+
+#loader-screen p {
+    color: #fed7aa !important; 
+}
+
+/* School Year Selector Dropdown Arrow - Fire Tone */
+.school-year-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ea580c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em;
+}
+
+/* Removes the ugly focus rectangle and shadow when the dropdown is clicked */
+.school-year-select:focus,
+.school-year-select:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #ea580c !important;
+}

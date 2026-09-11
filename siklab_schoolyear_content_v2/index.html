@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SikLab: Teacher Dashboard</title>
+    
+    <!-- UI: Local Tailwind CSS -->
+    <script src="assets/tailwind.js"></script>
+    
+    <!-- UI: Local FontAwesome -->
+    <link rel="stylesheet" href="assets/fontawesome/css/all.min.css">
+
+    <!-- Supabase JS (Cloud Backend / Realtime / Auth) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- NEW: SheetJS for Excel Parsing -->
+    <script src="assets/xlsx.full.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; }
+        *:focus { outline: none !important; box-shadow: none !important; }
+        button, a, select, input, textarea { -webkit-tap-highlight-color: transparent !important; }
+    
+        /* =========================================================
+           SIKLAB SCIENCE AUTH SCREEN
+           ========================================================= */
+        .auth-science-grid {
+            background-image:
+                linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+            background-size: 36px 36px;
+        }
+
+        .science-orbit {
+            animation: scienceOrbit 14s linear infinite;
+        }
+
+        .science-orbit-reverse {
+            animation: scienceOrbitReverse 18s linear infinite;
+        }
+
+        @keyframes scienceOrbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes scienceOrbitReverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        .science-float {
+            animation: scienceFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes scienceFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .auth-input:focus {
+            border-color: #f97316 !important;
+            background: #fff7ed;
+        }
+
+        @media (max-width: 768px) {
+            .auth-science-panel {
+                display: none !important;
+            }
+        }
+
+    </style>
+
+</head>
+<body class="text-slate-800 antialiased h-screen overflow-hidden flex flex-col bg-slate-50" onload="initializeApp()">
+
+    <div id="loader-screen" class="fixed inset-0 z-50 bg-stone-900 flex flex-col items-center justify-center transition-opacity duration-300">
+        <i class="fa-solid fa-fire fa-fade text-6xl text-orange-500 mb-4 drop-shadow-[0_0_15px_rgba(234,88,12,0.8)]"></i>
+        <p class="text-orange-200 font-bold tracking-widest">IGNITING SESSION...</p>
+    </div>
+
+    <div id="toast" class="fixed top-4 right-4 z-[110] transform transition-transform translate-x-full opacity-0 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-3 transition-all duration-300">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Success!</span>
+    </div>
+    <div id="error-toast" class="fixed top-4 right-4 z-[110] transform transition-transform translate-x-full opacity-0 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-3 transition-all duration-300">
+        <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-toast-msg">Error!</span>
+    </div>
+
+    <!-- =========================================================
+         TEACHER AUTHENTICATION
+         SCIENCE SPLIT-SCREEN DESIGN
+         ========================================================= -->
+    <div id="auth-screen"
+         class="absolute inset-0 z-40 bg-stone-950 flex items-center justify-center transition-opacity duration-500 hidden opacity-0 p-4 md:p-8 overflow-y-auto">
+
+        <div class="w-full max-w-6xl min-h-[640px] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex relative">
+
+            <!-- LEFT: SCIENCE WELCOME PANEL -->
+            <section class="auth-science-panel hidden md:flex md:w-[47%] auth-science-grid bg-gradient-to-br from-stone-950 via-stone-900 to-orange-950 relative overflow-hidden text-white p-12 flex-col justify-between">
+
+                <div class="absolute -top-24 -right-24 w-72 h-72 bg-orange-600/30 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-28 -left-24 w-80 h-80 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <!-- Atom Decoration -->
+                <div class="absolute top-16 right-14 w-40 h-40 opacity-50 pointer-events-none">
+                    <div class="science-orbit absolute inset-0 rounded-full border border-orange-400/50">
+                        <span class="absolute -top-2 left-1/2 w-4 h-4 bg-orange-500 rounded-full shadow-[0_0_18px_#f97316]"></span>
+                    </div>
+
+                    <div class="science-orbit-reverse absolute inset-6 rounded-full border border-red-400/40">
+                        <span class="absolute top-1/2 -right-2 w-3 h-3 bg-red-500 rounded-full shadow-[0_0_15px_#ef4444]"></span>
+                    </div>
+
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shadow-[0_0_30px_rgba(249,115,22,.7)]">
+                            <i class="fa-solid fa-atom text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BRAND / WELCOME -->
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-16">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg transform rotate-3">
+                            <i class="fa-solid fa-fire-flame-curved text-2xl transform -rotate-3"></i>
+                        </div>
+
+                        <div>
+                            <h2 class="font-black text-2xl tracking-tight">SikLab</h2>
+                            <p class="text-[10px] uppercase font-bold tracking-[0.25em] text-orange-300">
+                                Science Learning Laboratory
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="max-w-sm">
+                        <span class="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 text-orange-300 text-xs font-black px-4 py-2 rounded-full uppercase tracking-widest">
+                            <i class="fa-solid fa-microscope"></i>
+                            Teacher Laboratory
+                        </span>
+
+                        <h1 class="text-5xl font-black leading-[1.08] mt-6 tracking-tight">
+                            Welcome to
+                            <span class="text-orange-500">SikLab.</span>
+                        </h1>
+
+                        <p class="text-stone-300 text-base leading-relaxed mt-5">
+                            Build lessons, manage your class, and turn science
+                            into an interactive learning experience.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SCIENCE DECORATIONS -->
+                <div class="relative z-10">
+                    <div class="flex items-end gap-4 mb-8">
+                        <div class="science-float w-20 h-20 bg-orange-500/10 border border-orange-400/20 rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-flask text-orange-400 text-3xl"></i>
+                        </div>
+
+                        <div class="science-float w-16 h-16 bg-red-500/10 border border-red-400/20 rounded-2xl flex items-center justify-center"
+                             style="animation-delay:.8s;">
+                            <i class="fa-solid fa-microscope text-red-400 text-2xl"></i>
+                        </div>
+
+                        <div class="science-float w-14 h-14 bg-amber-500/10 border border-amber-400/20 rounded-2xl flex items-center justify-center"
+                             style="animation-delay:1.5s;">
+                            <i class="fa-solid fa-atom text-amber-400 text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-5 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold text-stone-300">
+                                Secure Teacher Portal
+                            </p>
+                            <p class="text-[10px] text-stone-500">
+                                Authorized educators only
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT: AUTH FORMS -->
+            <section class="w-full md:w-[53%] flex items-center justify-center bg-white px-8 py-12 md:px-16 relative">
+
+                <div class="absolute -top-20 -right-20 w-48 h-48 bg-orange-50 rounded-full pointer-events-none"></div>
+
+                <div class="w-full max-w-md relative z-10">
+
+                    <!-- Mobile Logo -->
+                    <div class="md:hidden text-center mb-8">
+                        <div class="bg-gradient-to-br from-orange-500 to-red-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg transform rotate-3">
+                            <i class="fa-solid fa-fire-flame-curved text-3xl transform -rotate-3"></i>
+                        </div>
+                        <h1 class="text-3xl font-black text-slate-800">SikLab</h1>
+                        <p class="text-xs text-orange-500 font-black uppercase tracking-widest mt-1">Teacher Laboratory</p>
+                    </div>
+
+                    <!-- Heading -->
+                    <div class="mb-8">
+                        <div class="flex items-center gap-2 text-orange-600 font-black uppercase tracking-[0.2em] text-xs mb-3">
+                            <span class="w-8 h-[2px] bg-orange-500"></span>
+                            Teacher Access
+                        </div>
+
+                        <h2 id="auth-main-heading" class="text-4xl font-black text-slate-800 tracking-tight">
+                            Welcome Back
+                        </h2>
+
+                        <p id="auth-title" class="text-slate-400 font-medium mt-2">
+                            Sign in to continue to your science dashboard.
+                        </p>
+                    </div>
+
+                    <!-- LOGIN -->
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Email Address
+                            </label>
+
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+
+                                <input type="email"
+                                       id="login-email"
+                                       required
+                                       autocomplete="email"
+                                       placeholder="teacher@school.edu"
+                                       class="auth-input w-full pl-16 pr-4 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Password
+                            </label>
+
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+
+                                <input type="password"
+                                       id="login-pass"
+                                       required
+                                       autocomplete="current-password"
+                                       placeholder="Enter password"
+                                       class="auth-input w-full pl-16 pr-12 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('login-pass', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
+                                        title="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-black py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-base flex items-center justify-center gap-3 mt-2">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Sign In to SikLab
+                        </button>
+
+                        <div class="flex items-center gap-4 py-1">
+                            <div class="h-px bg-slate-200 flex-grow"></div>
+                            <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                                New to SikLab?
+                            </span>
+                            <div class="h-px bg-slate-200 flex-grow"></div>
+                        </div>
+
+                        <button type="button"
+                                onclick="toggleAuthMode()"
+                                class="w-full border-2 border-stone-800 hover:bg-stone-800 hover:text-white text-stone-800 font-bold py-3.5 rounded-xl transition-all">
+                            Create Teacher Account
+                        </button>
+                    </form>
+
+                    <!-- REGISTER -->
+                    <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Full Name
+                            </label>
+
+                            <div class="relative">
+                                <i class="fa-solid fa-id-badge absolute left-5 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                                <input type="text"
+                                       id="reg-name"
+                                       required
+                                       placeholder="Teacher full name"
+                                       class="auth-input w-full pl-14 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Email Address
+                            </label>
+
+                            <div class="relative">
+                                <i class="fa-solid fa-envelope absolute left-5 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                                <input type="email"
+                                       id="reg-email"
+                                       required
+                                       autocomplete="email"
+                                       placeholder="teacher@school.edu"
+                                       class="auth-input w-full pl-14 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                    Password
+                                </label>
+
+                                <div class="relative">
+                                    <input type="password"
+                                           id="reg-pass"
+                                           required
+                                           autocomplete="new-password"
+                                           placeholder="••••••••"
+                                           class="auth-input w-full px-4 pr-10 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
+
+                                    <button type="button"
+                                            onclick="togglePasswordVisibility('reg-pass', this)"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
+                                            title="Show or hide password">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                    Confirm
+                                </label>
+
+                                <div class="relative">
+                                    <input type="password"
+                                           id="reg-confirm"
+                                           required
+                                           autocomplete="new-password"
+                                           placeholder="••••••••"
+                                           class="auth-input w-full px-4 pr-10 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
+
+                                    <button type="button"
+                                            onclick="togglePasswordVisibility('reg-confirm', this)"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
+                                            title="Show or hide password">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] mt-2">
+                            <i class="fa-solid fa-flask-vial mr-2"></i>
+                            Create Teacher Account
+                        </button>
+
+                        <div class="text-center pt-2">
+                            <p class="text-sm text-slate-500">
+                                Already have an account?
+                                <button type="button"
+                                        onclick="toggleAuthMode()"
+                                        class="text-orange-600 font-black hover:underline">
+                                    Sign In
+                                </button>
+                            </p>
+                        </div>
+                    </form>
+
+                    <!-- Footer -->
+                    <div class="mt-8 pt-5 border-t border-slate-100 flex justify-center items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <i class="fa-solid fa-shield-halved text-emerald-500"></i>
+                        SikLab Secure Teacher Environment
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="dashboard-layout" class="hidden flex h-full w-full opacity-0 transition-opacity duration-500">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-24 lg:w-72 bg-stone-900 text-stone-100 flex flex-col shadow-2xl z-20 flex-shrink-0 transition-all duration-300 h-full">
+            <div class="h-20 flex items-center justify-center lg:justify-start lg:px-8 border-b border-stone-800 bg-stone-950 flex-shrink-0">
+                <i class="fa-solid fa-fire text-3xl text-orange-500"></i>
+                <span class="hidden lg:block ml-3 text-2xl font-black text-white tracking-wide">SikLab</span>
+            </div>
+            
+            <div class="py-6 flex flex-col gap-2 px-3 flex-grow overflow-y-auto hide-scroll">
+                <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl bg-orange-600 text-white font-bold transition-all shadow-md"><i class="fa-solid fa-chart-pie text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Overview</span></button>
+                <button onclick="switchTab('students')" id="nav-students" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-users text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Students</span></button>
+                <button onclick="switchTab('wheel')" id="nav-wheel" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all relative"><i class="fa-solid fa-dharmachakra text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Spin & Groups</span></button>
+                <button onclick="switchTab('content')" id="nav-content" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-pen-to-square text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Question Bank</span></button>
+                
+                <button onclick="switchTab('lesson-builder')" id="nav-lesson-builder" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all border border-orange-500/30">
+                    <i class="fa-solid fa-book-open-reader text-xl w-8 text-center text-orange-400"></i><span class="hidden lg:block ml-2 text-orange-100">Lesson Builder</span>
+                </button>
+
+                <button onclick="switchTab('curriculum')" id="nav-curriculum" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all">
+                    <i class="fa-solid fa-boxes-stacked text-xl w-8 text-center text-emerald-400"></i><span class="hidden lg:block ml-2">Curriculum Manager</span>
+                </button>
+
+                <button onclick="switchTab('student-preview')" id="nav-student-preview" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all">
+                    <i class="fa-solid fa-child-reaching text-xl w-8 text-center text-sky-400"></i><span class="hidden lg:block ml-2">Student Preview</span>
+                </button>
+
+                <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all mt-4"><i class="fa-solid fa-clock-rotate-left text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Match History</span></button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-gear text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Game Settings</span></button>
+
+                <button onclick="switchTab('device-setup'); initializeDeviceSetup();" id="nav-device-setup" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all border border-orange-500/20">
+                    <i class="fa-solid fa-microchip text-xl w-8 text-center text-orange-400"></i>
+                    <span class="hidden lg:block ml-2">ESP Player Setup</span>
+                </button>
+                
+                <!-- ADMIN & REPORTS TAB -->
+                <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all mt-4 border-t border-stone-700/50 pt-5">
+                    <i class="fa-solid fa-chart-line text-xl w-8 text-center text-emerald-400"></i><span class="hidden lg:block ml-2">Admin & Analytics</span>
+                </button>
+            </div>
+            
+            <div class="mt-auto px-3 pb-4">
+                <button onclick="handleLogout()" class="w-full flex items-center p-3 lg:px-5 lg:py-3 rounded-xl hover:bg-red-600 hover:text-white text-stone-400 font-bold transition-all group"><i class="fa-solid fa-right-from-bracket text-xl w-8 text-center group-hover:text-white transition-colors"></i><span class="hidden lg:block ml-2">Secure Logout</span></button>
+            </div>
+            
+            <div class="p-4 border-t border-stone-800 flex items-center justify-center lg:justify-start flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold uppercase" id="avatar-initial">T</div>
+                <div class="hidden lg:block ml-3"><p class="text-sm font-bold text-white leading-tight truncate w-40" id="teacher-display-name">Teacher</p><p class="text-xs text-orange-300">Administrator</p></div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-grow flex flex-col h-full bg-orange-50/50 relative overflow-y-auto hide-scroll">
+            
+            <header class="h-20 bg-white border-b border-orange-200 flex items-center px-8 shadow-sm justify-between sticky top-0 z-10 flex-shrink-0">
+                <div><h2 class="text-2xl font-black text-slate-800" id="header-title">Dashboard Overview</h2><p class="text-sm font-bold text-slate-400" id="header-subtitle">Welcome back to SikLab.</p></div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1 bg-white border-2 border-orange-200 rounded-full pl-4 pr-1 py-1 shadow-sm hover:border-orange-400 transition-colors">
+                        <select id="school-year-filter" onchange="changeSchoolYear(this.value)" class="school-year-select bg-transparent text-slate-700 font-bold py-1 pr-6 text-sm outline-none cursor-pointer">
+                            <option value="">Loading...</option>
+                        </select>
+                        <button onclick="openAddYearModal()" class="bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-full w-8 h-8 flex items-center justify-center transition-colors" title="Add New Year/Section"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    
+                    <!-- DUAL CONTROLLER LIVE TRACKERS -->
+                    <div class="flex items-center gap-2">
+                        <div id="ui-status-p1" class="bg-slate-100 text-slate-500 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 border border-slate-200 transition-colors shadow-sm">
+                            <i class="fa-solid fa-gamepad"></i> P1: OFF
+                        </div>
+                        <div id="ui-status-p2" class="bg-slate-100 text-slate-500 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 border border-slate-200 transition-colors shadow-sm">
+                            <i class="fa-solid fa-gamepad"></i> P2: OFF
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- VIEW: OVERVIEW -->
+            <div id="view-overview" class="view-section p-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-user-graduate"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Total Students</p><h3 class="text-3xl font-black text-slate-800" id="stat-students">0</h3></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-gamepad"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Active Game</p><h3 class="text-xl font-black text-slate-800 mt-1" id="stat-game">Eco-Patrol</h3></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-bolt"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Cloud Status</p><h3 id="stat-cloud-status" class="text-2xl font-black text-emerald-500 mt-1">Connecting...</h3></div></div>
+                </div>
+
+                <div id="live-match-setup-box" class="bg-white p-6 rounded-3xl shadow-sm border-2 border-dashed border-orange-300 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-users-viewfinder text-orange-500"></i> Live Match Setup
+                        </h3>
+                        <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                            <button id="toggle-indiv" onclick="setMatchType('individual')" class="px-5 py-1.5 text-sm font-bold rounded-lg bg-white text-orange-600 shadow-sm transition-all">Individuals</button>
+                            <button id="toggle-group" onclick="setMatchType('group')" class="px-5 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Stored Groups</button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-8 items-center">
+                        <div class="flex-1 w-full text-center">
+                            <p class="text-xs font-black text-blue-500 uppercase tracking-widest mb-3">Player 1 (Blue Slot)</p>
+                            <div id="p1-display-card" onclick="openSelectorModal(1)" class="group cursor-pointer bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 flex flex-col items-center transition-all hover:border-blue-400 hover:bg-blue-100/50 active:scale-95 h-full min-h-[180px] justify-center">
+                                <div id="p1-avatar" class="w-16 h-16 rounded-full bg-white shadow-sm border-2 border-blue-100 flex items-center justify-center text-blue-400 text-2xl mb-3 transition-transform group-hover:scale-110"><i class="fa-solid fa-user-plus"></i></div>
+                                <h4 id="p1-display-name" class="font-black text-blue-900 text-lg">Select Participant</h4>
+                                <p id="p1-display-sub" class="text-xs font-bold text-blue-400 uppercase mt-1">Click to browse</p>
+                            </div>
+                        </div>
+
+                        <div class="text-3xl font-black text-slate-300 italic animate-pulse">VS</div>
+
+                        <div class="flex-1 w-full text-center">
+                            <p class="text-xs font-black text-red-500 uppercase tracking-widest mb-3">Player 2 (Red Slot)</p>
+                            <div id="p2-display-card" onclick="openSelectorModal(2)" class="group cursor-pointer bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex flex-col items-center transition-all hover:border-red-400 hover:bg-red-100/50 active:scale-95 h-full min-h-[180px] justify-center">
+                                <div id="p2-avatar" class="w-16 h-16 rounded-full bg-white shadow-sm border-2 border-red-100 flex items-center justify-center text-red-400 text-2xl mb-3 transition-transform group-hover:scale-110"><i class="fa-solid fa-user-plus"></i></div>
+                                <h4 id="p2-display-name" class="font-black text-red-900 text-lg">Select Participant</h4>
+                                <p id="p2-display-sub" class="text-xs font-bold text-red-400 uppercase mt-1">Click to browse</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full lg:w-auto self-stretch flex items-center">
+                            <button onclick="saveMatchSetup()" class="w-full lg:w-auto bg-stone-800 hover:bg-stone-900 text-white font-black px-10 py-6 rounded-2xl shadow-xl transition-all hover:shadow-orange-500/20 active:scale-95 flex items-center justify-center gap-3 h-fit">
+                                <i class="fa-solid fa-lock-open text-xl"></i> ASSIGN MATCH
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden mt-8">
+                    <div class="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4"><i class="fa-solid fa-rocket text-[200px]"></i></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div class="w-full md:w-2/3">
+                            <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-sm border border-white/30">System Initialization</span>
+                            <h2 class="text-4xl font-black mt-4 mb-6">Start the Class Session!</h2>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="w-full sm:w-1/3">
+                                    <label class="block text-xs font-bold text-orange-200 uppercase tracking-widest mb-1">Select Quarter</label>
+                                    <div class="relative">
+                                        <select id="launch-quarter" onchange="filterGamesByQuarter()" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-bold outline-none focus:border-yellow-400 transition-colors cursor-pointer appearance-none">
+                                            <option value="1">Quarter 1</option>
+                                            <option value="2">Quarter 2</option>
+                                            <option value="3">Quarter 3</option>
+                                            <option value="4">Quarter 4</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-orange-300 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                                <div class="w-full sm:w-2/3">
+                                    <label class="block text-xs font-bold text-orange-200 uppercase tracking-widest mb-1">Select Game Module</label>
+                                    <div class="relative">
+                                        <select id="launch-game" onchange="updateGameModeUI('launch-game')" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-bold outline-none focus:border-yellow-400 transition-colors cursor-pointer appearance-none">
+                                            <!-- Dynamically populated -->
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-orange-300 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full md:w-1/3 flex justify-end">
+                            <button onclick="launchGame()" class="w-full md:w-auto bg-white text-orange-700 hover:bg-orange-50 font-black text-xl px-10 py-6 rounded-2xl shadow-2xl transition-transform hover:scale-105 flex flex-col items-center justify-center gap-2 group">
+                                <i class="fa-solid fa-power-off text-3xl group-hover:text-red-600 transition-colors"></i> 
+                                <span>LAUNCH</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: STUDENTS (UPDATED FOR LRN & EXCEL BULK UPLOAD) -->
+            <div id="view-students" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="flex gap-8 h-full">
+                    <div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-orange-200 flex flex-col h-fit sticky top-0">
+                        <h3 id="form-student-title" class="text-xl font-black text-slate-800 mb-4 border-b border-orange-100 pb-4"><i class="fa-solid fa-user-plus text-orange-500 mr-2"></i> Enroll Student</h3>
+                        <form onsubmit="addStudent(event)" class="space-y-4">
+                            <input type="hidden" id="edit-student-id" value="">
+                            
+                            <!-- LRN Input Field -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">LRN (Student ID) <span class="text-[10px] text-slate-400">*Optional</span></label>
+                                <input type="text" id="new-student-lrn" inputmode="numeric" maxlength="12" minlength="12" pattern="[0-9]{12}" placeholder="e.g. 109876543210" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors">
+                            </div>
+                            
+                            <div><label class="block text-sm font-bold text-slate-600 mb-1">First Name</label><input type="text" id="new-student-first" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-1">Last Name</label><input type="text" id="new-student-last" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></div>
+                            
+                            <!-- Editable Section Field -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Grade & Section</label>
+                                <input type="text" id="new-student-sec" value="Matapat" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors">
+                            </div>
+                            
+                            <div class="flex gap-2 mt-4">
+                                <button type="button" onclick="cancelStudentEdit()" id="btn-cancel-student" class="hidden w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>
+                                <button type="submit" id="btn-save-student" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">Add to Class Roster</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="w-2/3 bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
+                            <h3 class="font-black text-slate-800"><i class="fa-solid fa-list-ul text-orange-400 mr-2"></i> Class Roster</h3>
+                            
+                            <div class="flex items-center gap-3">
+                                <!-- Bulk Excel Upload Button -->
+                                <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
+                                <button onclick="document.getElementById('excel-upload').click()" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors shadow-sm flex items-center">
+                                    <i class="fa-solid fa-file-excel mr-1"></i> Upload Excel
+                                </button>
+                                
+                                <span class="bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1 rounded-full border border-orange-200" id="roster-count">0 Students</span>
+                            </div>
+                        </div>
+                        <div class="flex-grow overflow-y-auto p-4" id="student-list-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SPIN WHEEL -->
+            <div id="view-wheel" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="flex gap-8 h-full">
+                    <div class="w-1/2 bg-white p-8 rounded-3xl shadow-sm border border-orange-200 flex flex-col items-center justify-center relative overflow-hidden">
+                        <div class="absolute top-4 left-4 bg-yellow-100 text-yellow-800 px-4 py-1 rounded-full font-bold text-sm border border-yellow-300"><i class="fa-solid fa-star"></i> Random Selector</div>
+                        <div class="relative mt-8"><div class="wheel-indicator w-8 h-10 bg-stone-800 absolute -right-4 top-1/2 transform -translate-y-1/2 z-10 shadow-lg border-2 border-white"></div><canvas id="spinCanvas" width="400" height="400" class="rounded-full shadow-2xl border-8 border-stone-800 transition-transform"></canvas><div class="absolute inset-0 m-auto w-16 h-16 bg-stone-800 rounded-full border-4 border-white shadow-inner flex items-center justify-center"><div class="w-4 h-4 bg-orange-500 rounded-full shadow-[0_0_10px_#ea580c]"></div></div></div>
+                        <div class="mt-10 flex flex-col items-center w-full"><h3 id="wheel-winner" class="text-3xl font-black text-orange-600 mb-6 h-10 empty:hidden"></h3><button onclick="handleSpinWheel()" id="btn-spin" class="bg-gradient-to-b from-orange-400 to-red-600 text-white font-black text-2xl py-4 px-16 rounded-full shadow-[0_8px_0_#991b1b] hover:translate-y-1 active:translate-y-2 w-3/4 max-w-sm border-4 border-orange-200 transition-all">SPIN!</button></div>
+                    </div>
+                    <div class="w-1/2 flex flex-col gap-6">
+                        <div class="bg-gradient-to-br from-orange-600 to-red-700 p-8 rounded-3xl shadow-lg text-white">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-2xl font-black"><i class="fa-solid fa-users-rays"></i> Random Grouping</h3>
+                                <select id="active-group-set" onchange="changeGroupSet()" class="bg-orange-900/50 border border-orange-400 text-orange-100 text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer focus:border-yellow-400 transition-colors">
+                                </select>
+                            </div>
+                            <p class="text-orange-200 mb-6">Instantly divide your class evenly into a specific number of teams.</p>
+                            <div class="flex items-end gap-4">
+                                <div class="flex-grow"><label class="block text-sm font-bold text-orange-200 mb-1">Total Number of Groups</label><input type="number" id="num-groups" value="4" min="2" max="10" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-black text-xl text-center outline-none focus:border-yellow-400 transition-colors"></div>
+                                <button onclick="handleGenerateGroups()" class="bg-white text-orange-700 hover:bg-orange-50 font-black px-8 py-3 rounded-xl shadow-lg h-[56px] transition-transform hover:scale-105">SAVE GROUPS</button>
+                            </div>
+                        </div>
+                        <div class="flex-grow bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden flex flex-col">
+                            <div class="bg-orange-50 p-4 border-b border-orange-100 flex justify-between items-center">
+                                <h3 class="font-black text-slate-700 text-center">Stored Teams</h3>
+                                <span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded">Available in Match Setup</span>
+                            </div>
+                            <div id="groups-container" class="p-6 overflow-y-auto flex-grow grid grid-cols-2 gap-4 place-content-start"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: CONTENT -->
+            <div id="view-content" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="flex gap-8 h-full">
+                    <div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-orange-200 flex flex-col h-fit sticky top-0">
+                        <h3 id="form-cq-title" class="text-xl font-black text-slate-800 mb-4 border-b border-orange-100 pb-4"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i> Add Question</h3>
+                        <form onsubmit="addCustomQuestion(event)" class="space-y-4">
+                            <input type="hidden" id="cq-edit-id" value="">
+                            <input type="hidden" id="cq-existing-image" value="">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Target Game Module</label>
+                                <select id="cq-module" onchange="loadCustomQuestions()" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium bg-white cursor-pointer transition-colors">
+                                    <option value="W1">Week 1: Sense Detectives</option>
+                                    <option value="W2">Week 2: Science Showdown</option>
+                                    <option value="W3">Week 3: Process Skills Lab</option>
+                                    <option value="W4">Week 4: Material Testers</option>
+                                    <option value="W5">Week 5: Eco-Patrol</option>
+                                    <option value="W6">Week 6: Trash to Treasure</option>
+                                    <option value="W7">Week 7: Maker's Workshop</option>
+                                    <option value="W8">Week 8: Element Foundry</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Question / Prompt</label>
+                                <textarea id="cq-prompt" required rows="2" placeholder="e.g. What sense do you use to see a rainbow?" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Correct Answer (Sense)</label>
+                                <select id="cq-answer" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium cursor-pointer">
+                                    <option value="0">Sight (BTN 1 - Blue)</option>
+                                    <option value="1">Touch (BTN 2 - Orange)</option>
+                                    <option value="2">Hearing (BTN 3 - Green)</option>
+                                    <option value="3">Smell (BTN 4 - Purple)</option>
+                                    <option value="4">Taste (BTN 5 - Red)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Upload Image (Optional)</label>
+                                <input type="file" id="cq-image-file" accept="image/*" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors bg-white cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                                <p id="cq-image-help" class="text-xs text-orange-500 mt-2 font-bold hidden"></p>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button type="button" onclick="cancelEdit()" id="btn-cancel-edit" class="hidden w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>
+                                <button type="submit" id="btn-save-cq" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">Save to Bank</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="w-2/3 bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-black text-slate-800"><i class="fa-solid fa-database text-orange-400 mr-2"></i> Custom Questions Bank</h3>
+                                <p class="text-xs font-bold text-orange-600 mt-1">School Year: <span id="question-bank-year-label">—</span></p>
+                            </div>
+                            <button onclick="resetCustomQuestions()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-sm"><i class="fa-solid fa-rotate-right mr-1"></i>Reload</button>
+                        </div>
+                        <div class="flex-grow overflow-y-auto p-4" id="questions-list-container"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- VIEW: LESSON BUILDER (LMS) -->
+            <div id="view-lesson-builder" class="view-section hidden p-0 h-full w-full bg-slate-100">
+                <iframe id="lesson-builder-frame" src="" class="w-full h-full border-none"></iframe>
+            </div>
+
+            <!-- VIEW: CURRICULUM MANAGER -->
+            <div id="view-curriculum" class="view-section hidden p-8 space-y-8 overflow-y-auto">
+                <div class="bg-stone-800 rounded-3xl p-7 text-white border-b-4 border-emerald-500 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                    <div>
+                        <p class="text-emerald-300 text-xs font-black uppercase tracking-[0.2em]">Selected School Year</p>
+                        <h2 id="content-current-year-label" class="text-3xl font-black mt-1">—</h2>
+                        <p class="text-slate-300 mt-2 max-w-2xl">Lessons, question banks, and game settings belong to a school year. Students, groups, progress, and match history are intentionally kept separate.</p>
+                    </div>
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="openAddYearModal()" class="bg-orange-600 hover:bg-orange-500 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-calendar-plus mr-2"></i>Create School Year</button>
+                        <button onclick="switchTab('lesson-builder')" class="bg-white/10 hover:bg-white/20 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-pen-ruler mr-2"></i>Open Lesson Builder</button>
+                        <button onclick="switchTab('student-preview')" class="bg-emerald-600 hover:bg-emerald-500 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-eye mr-2"></i>Student Preview</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-slate-400">Lessons</p><div id="content-count-lessons" class="text-3xl font-black text-slate-800 mt-1">0</div></div>
+                    <div class="bg-white rounded-2xl border border-emerald-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-emerald-500">Published</p><div id="content-count-published" class="text-3xl font-black text-emerald-700 mt-1">0</div></div>
+                    <div class="bg-white rounded-2xl border border-blue-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-blue-500">Questions</p><div id="content-count-questions" class="text-3xl font-black text-blue-700 mt-1">0</div></div>
+                    <div class="bg-white rounded-2xl border border-purple-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-purple-500">Game Settings</p><div id="content-count-settings" class="text-3xl font-black text-purple-700 mt-1">0</div></div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                    <form onsubmit="copySchoolYearContent(event)" class="xl:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5 h-fit">
+                        <div>
+                            <h3 class="text-xl font-black text-slate-800"><i class="fa-solid fa-copy text-orange-500 mr-2"></i>Copy Curriculum</h3>
+                            <p class="text-sm text-slate-500 mt-1">Copy selected academic content from one year to another.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
+                            <div><label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Source School Year</label><select id="copy-content-source" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500"></select></div>
+                            <div><label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Target School Year</label><select id="copy-content-target" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500"></select></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Copy Mode</label>
+                            <select id="copy-content-mode" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500">
+                                <option value="merge">Merge — keep existing target content</option>
+                                <option value="replace">Replace — overwrite selected target content</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-lessons" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Lessons & publication state</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-questions" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Question Bank</span></label>
+                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-settings" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Game Settings</span></label>
+                        </div>
+
+                        <div id="copy-content-warning" class="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm font-bold"></div>
+                        <div class="rounded-xl bg-slate-900 text-slate-200 p-4 text-xs leading-relaxed"><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i><strong class="text-white">Never copied:</strong> student roster, stored groups, student progress, and match history.</div>
+                        <button id="copy-content-button" type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3.5 rounded-xl transition-colors"><i class="fa-solid fa-copy mr-2"></i>Copy Curriculum</button>
+                        <button id="clear-content-button" type="button" onclick="clearSelectedSchoolYearContent()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-black py-3 rounded-xl transition-colors"><i class="fa-solid fa-trash mr-2"></i>Clear Selected Content</button>
+                    </form>
+
+                    <div class="xl:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-200 bg-slate-50"><h3 class="text-xl font-black text-slate-800">School Year Content Overview</h3><p class="text-sm text-slate-500 mt-1">Use a year to edit it, or preview exactly what students will see.</p></div>
+                        <div id="school-year-content-summary" class="divide-y divide-slate-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: STUDENT PORTAL PREVIEW -->
+            <div id="view-student-preview" class="view-section hidden p-0 h-full w-full bg-slate-100 flex flex-col">
+                <div class="bg-white border-b border-slate-200 px-5 py-3 flex justify-between items-center flex-shrink-0">
+                    <div><p class="font-black text-slate-800">Student Portal Preview</p><p class="text-xs text-slate-500">Teacher preview includes the selected school year. Draft lessons can be shown for review.</p></div>
+                    <div class="flex gap-2"><button onclick="refreshStudentPreview()" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-slate-700"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh</button><button onclick="openStudentPortalInNewTab()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold"><i class="fa-solid fa-arrow-up-right-from-square mr-2"></i>Open</button></div>
+                </div>
+                <iframe id="student-preview-frame" src="" class="w-full flex-grow border-none bg-sky-50"></iframe>
+            </div>
+
+            <!-- VIEW: HISTORY -->
+            <div id="view-history" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden flex flex-col h-full">
+                    <div class="bg-stone-800 p-6 border-b-4 border-orange-500 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-clock-rotate-left text-orange-400 mr-2"></i> Post-Game Match History</h2>
+                            <p class="text-slate-400 text-sm mt-1">Review recent game results, scores, and winners.</p>
+                        </div>
+                        <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"><i class="fa-solid fa-trash mr-2"></i>Clear Logs</button>
+                    </div>
+                    <div class="p-6 flex-grow overflow-y-auto bg-orange-50" id="history-list-container"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS -->
+            <div id="view-settings" class="view-section hidden p-8 max-w-4xl mx-auto w-full">
+                <div class="bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden">
+                    <div class="bg-stone-800 p-6 border-b-4 border-orange-500">
+                        <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-sliders text-orange-400 mr-2"></i> System Configuration</h2>
+                    </div>
+                    <div class="p-8 space-y-8">
+                        
+                        <div class="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-300">
+                            <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-custom-game-title"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i>Add Custom Game Module</h3>
+                            <form onsubmit="handleAddCustomGame(event)" class="flex flex-col gap-4">
+                                <input type="hidden" id="edit-custom-game-id" value="">
+                                <div class="flex gap-4 w-full">
+                                    <div class="w-1/4">
+                                        <select id="new-game-quarter" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium cursor-pointer">
+                                            <option value="1">Quarter 1</option>
+                                            <option value="2">Quarter 2</option>
+                                            <option value="3">Quarter 3</option>
+                                            <option value="4">Quarter 4</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1"><input type="text" id="new-game-name" placeholder="Game Name (e.g. Week 1: Space)" required class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium transition-colors"></div>
+                                </div>
+                                <div class="flex gap-4 w-full">
+                                    <div class="flex-1"><input type="text" id="new-game-path" placeholder="Path (e.g. /games/quarter2/SikLab_W1.html)" required class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium transition-colors"></div>
+                                    <button type="button" onclick="cancelEditCustomGame()" id="btn-cancel-cg" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl transition-colors">Cancel</button>
+                                    <button type="submit" id="btn-save-cg" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-colors whitespace-nowrap">Add Custom Game</button>
+                                </div>
+                            </form>
+                            
+                            <div id="custom-games-list" class="mt-6 space-y-2 max-h-48 overflow-y-auto pr-2">
+                                </div>
+                        </div>
+
+                        <hr class="border-slate-200">
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Active Curriculum Game Module</label>
+                            <div class="relative">
+                                <select id="setting-game" onchange="updateGameModeUI('setting-game')" class="w-full appearance-none px-5 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 focus:border-orange-500 focus:bg-white outline-none font-bold text-slate-800 text-lg cursor-pointer">
+                                    <option value="sorter">Quarter 1, Week 4: Material Testers (Factory)</option>
+                                    <option value="ecopatrol" selected>Quarter 1, Week 5: Eco-Patrol (Park Defense)</option>
+                                    <option value="workshop">Quarter 1, Week 6: Maker's Workshop</option>
+                                    <option value="foundry">Quarter 1, Week 8: Element Foundry</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-5 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-orange-500"></i> The Orange Pi display will automatically load this module in its isolated iframe.</p>
+                        </div>
+
+                        <hr class="border-slate-200">
+                        
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-700 mb-4">
+                                <i class="fa-solid fa-star-half-stroke text-orange-500 mr-2"></i> 
+                                <span id="dynamic-settings-title">Dynamic Scoring Rules</span>
+                            </h3>
+                            <div id="dynamic-settings-container" class="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-orange-50 p-6 rounded-2xl border border-orange-100">
+                            </div>
+                        </div>
+
+                        <div class="pt-6">
+                            <button onclick="saveGameConfig()" class="bg-stone-800 hover:bg-stone-900 text-white font-black px-8 py-3 rounded-xl shadow-md transition-colors w-full md:w-auto">Save System Configuration</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- VIEW: ESP PLAYER SETUP -->
+            <div id="view-device-setup" class="view-section hidden p-8 w-full">
+                <div class="max-w-6xl mx-auto space-y-6">
+
+                    <!-- CLOUD SETUP HERO -->
+                    <div class="bg-gradient-to-r from-stone-900 to-orange-950 rounded-3xl p-7 text-white shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-orange-500/10"></div>
+
+                        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            <div>
+                                <span class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+                                    <i class="fa-solid fa-cloud"></i>
+                                    Supabase Cloud Controllers
+                                </span>
+
+                                <h2 class="text-3xl font-black mt-4">
+                                    Configure ESP Player Controllers
+                                </h2>
+
+                                <p class="text-stone-300 mt-2 max-w-2xl">
+                                    SikLab is hosted online. ESP Player devices only need an internet-connected
+                                    Wi-Fi network or mobile hotspot and a Player 1 / Player 2 assignment.
+                                    No laptop IP address or local SikLab server address is required.
+                                </p>
+                            </div>
+
+                            <div class="w-20 h-20 rounded-2xl bg-orange-500/10 border border-orange-400/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-microchip text-4xl text-orange-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CLOUD CONNECTION INFO -->
+                    <div class="bg-white rounded-3xl border border-orange-100 shadow-sm p-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+                                        Controller Backend
+                                    </p>
+                                    <h3 class="text-xl font-black text-slate-800 mt-1">
+                                        SikLab Online / Supabase
+                                    </h3>
+                                    <p class="text-sm text-slate-500 mt-1">
+                                        The cloud endpoint is configured in the ESP32 firmware. Teachers do not enter a server IP.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div id="device-cloud-status" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-500 border border-slate-200 font-black text-xs self-start md:self-auto">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                CHECKING CLOUD
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLLER CARDS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- PLAYER 1 -->
+                        <div class="bg-white rounded-3xl border-2 border-blue-100 shadow-sm overflow-hidden">
+                            <div class="bg-blue-50 p-5 border-b border-blue-100 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-black text-blue-500 uppercase tracking-widest">
+                                        Blue Controller
+                                    </p>
+                                    <h3 class="text-2xl font-black text-blue-900">
+                                        Player 1
+                                    </h3>
+                                </div>
+
+                                <span id="device-status-player1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                    OFFLINE
+                                </span>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="grid grid-cols-2 gap-3 mb-5">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Device</p>
+                                        <p id="device-id-player1" class="font-black text-slate-700 mt-1">Not connected</p>
+                                    </div>
+
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Last Seen</p>
+                                        <p id="device-last-seen-player1" class="font-black text-slate-700 mt-1">—</p>
+                                    </div>
+                                </div>
+
+                                <div id="qr-empty-player1" class="h-64 border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+                                    <i class="fa-solid fa-qrcode text-5xl text-blue-200 mb-4"></i>
+                                    <p class="font-black text-slate-700">
+                                        Setup QR not generated
+                                    </p>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-xs">
+                                        Connect your phone to the ESP controller's SikLab-Setup-XXXXXX Wi-Fi first,
+                                        then use this QR to open the controller as Player 1.
+                                    </p>
+                                </div>
+
+                                <div id="qr-result-player1" class="hidden">
+                                    <div class="flex justify-center bg-white border-2 border-blue-100 rounded-2xl p-4">
+                                        <img id="qr-image-player1" alt="Player 1 setup QR" class="w-56 h-56 object-contain">
+                                    </div>
+
+                                    <p id="qr-expires-player1" class="text-center text-xs text-slate-400 font-bold mt-3"></p>
+
+                                    <div class="flex gap-2 mt-4">
+                                        <input id="qr-link-player1" type="text" readonly class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+
+                                        <button onclick="copyDeviceSetupLink('player1')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 rounded-lg" title="Copy setup link">
+                                            <i class="fa-solid fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button id="btn-qr-player1" onclick="generateControllerQR('player1')" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 rounded-xl shadow-md transition-colors">
+                                    <i class="fa-solid fa-qrcode mr-2"></i>
+                                    Generate Player 1 Setup QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PLAYER 2 -->
+                        <div class="bg-white rounded-3xl border-2 border-red-100 shadow-sm overflow-hidden">
+                            <div class="bg-red-50 p-5 border-b border-red-100 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-black text-red-500 uppercase tracking-widest">
+                                        Red Controller
+                                    </p>
+                                    <h3 class="text-2xl font-black text-red-900">
+                                        Player 2
+                                    </h3>
+                                </div>
+
+                                <span id="device-status-player2" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                    OFFLINE
+                                </span>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="grid grid-cols-2 gap-3 mb-5">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Device</p>
+                                        <p id="device-id-player2" class="font-black text-slate-700 mt-1">Not connected</p>
+                                    </div>
+
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Last Seen</p>
+                                        <p id="device-last-seen-player2" class="font-black text-slate-700 mt-1">—</p>
+                                    </div>
+                                </div>
+
+                                <div id="qr-empty-player2" class="h-64 border-2 border-dashed border-red-200 bg-red-50/40 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+                                    <i class="fa-solid fa-qrcode text-5xl text-red-200 mb-4"></i>
+                                    <p class="font-black text-slate-700">
+                                        Setup QR not generated
+                                    </p>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-xs">
+                                        Connect your phone to the ESP controller's SikLab-Setup-XXXXXX Wi-Fi first,
+                                        then use this QR to open the controller as Player 2.
+                                    </p>
+                                </div>
+
+                                <div id="qr-result-player2" class="hidden">
+                                    <div class="flex justify-center bg-white border-2 border-red-100 rounded-2xl p-4">
+                                        <img id="qr-image-player2" alt="Player 2 setup QR" class="w-56 h-56 object-contain">
+                                    </div>
+
+                                    <p id="qr-expires-player2" class="text-center text-xs text-slate-400 font-bold mt-3"></p>
+
+                                    <div class="flex gap-2 mt-4">
+                                        <input id="qr-link-player2" type="text" readonly class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+
+                                        <button onclick="copyDeviceSetupLink('player2')" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 rounded-lg" title="Copy setup link">
+                                            <i class="fa-solid fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button id="btn-qr-player2" onclick="generateControllerQR('player2')" class="w-full mt-5 bg-red-600 hover:bg-red-700 text-white font-black py-3.5 rounded-xl shadow-md transition-colors">
+                                    <i class="fa-solid fa-qrcode mr-2"></i>
+                                    Generate Player 2 Setup QR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SETUP PROCESS -->
+                    <div class="bg-orange-50 border border-orange-200 rounded-3xl p-6">
+                        <h3 class="font-black text-orange-800 text-lg">
+                            <i class="fa-solid fa-list-check mr-2"></i>
+                            Controller Setup Process
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-5">
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">1</span>
+                                <p class="font-black text-slate-700">Setup Mode</p>
+                                <p class="text-xs text-slate-400 mt-1">Hold Button 5 + joystick LEFT for 3 seconds.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">2</span>
+                                <p class="font-black text-slate-700">Connect</p>
+                                <p class="text-xs text-slate-400 mt-1">Join SikLab-Setup-XXXXXX. “No Internet” is expected.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">3</span>
+                                <p class="font-black text-slate-700">Assign</p>
+                                <p class="text-xs text-slate-400 mt-1">Generate or open the QR for Player 1 or Player 2.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">4</span>
+                                <p class="font-black text-slate-700">Wi-Fi</p>
+                                <p class="text-xs text-slate-400 mt-1">Enter the internet router or mobile-hotspot SSID and password.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">5</span>
+                                <p class="font-black text-slate-700">Cloud Ready</p>
+                                <p class="text-xs text-slate-400 mt-1">ESP restarts, connects to the internet, and appears online in SikLab.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IMPORTANT INFO -->
+                    <div class="bg-slate-900 rounded-3xl p-6 text-white">
+                        <div class="flex gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-circle-info"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="font-black text-lg">About 192.168.4.1</h3>
+                                <p class="text-sm text-slate-300 mt-1 leading-relaxed">
+                                    Both physical controllers can use <strong class="text-white">192.168.4.1</strong> during setup.
+                                    Each controller creates a separate Wi-Fi network named <strong class="text-orange-300">SikLab-Setup-XXXXXX</strong>.
+                                    After setup, the controller leaves that temporary network and communicates with SikLab through Supabase over the internet.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VIEW: ADMIN & REPORTS -->
+<div id="view-admin" class="view-section hidden p-8 flex flex-col space-y-8 overflow-y-auto" style="height: calc(100vh - 5rem);">
+                
+                <!-- School Year Manager -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-stone-800 p-6 border-b-4 border-emerald-500 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-calendar-days text-emerald-400 mr-2"></i> School Year Manager</h2>
+                            <p class="text-slate-400 text-sm mt-1">Manage global access and archived years.</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="overflow-hidden rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold text-sm uppercase tracking-wider">
+                                        <th class="p-4 border-b border-slate-200">School Year</th>
+                                        <th class="p-4 border-b border-slate-200">Status</th>
+                                        <th class="p-4 border-b border-slate-200 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-year-list">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Progress Report -->
+<div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-0">
+                    <div class="bg-emerald-50 p-6 border-b border-emerald-200 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-emerald-800"><i class="fa-solid fa-ranking-star text-yellow-500 mr-2"></i> Student Progress Report</h2>
+                            <p class="text-emerald-600 font-bold text-sm mt-1">Scores and completion data for <span id="report-sy-label"></span></p>
+                        </div>
+                        <button onclick="loadProgressReport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-colors"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh Data</button>
+                    </div>
+<div class="p-6 overflow-y-auto" style="max-height: 400px;">
+                        <div class="overflow-hidden rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold text-sm uppercase tracking-wider">
+                                        <th class="p-4 border-b border-slate-200">Student Name</th>
+                                        <th class="p-4 border-b border-slate-200">Grade & Section</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Total Stars</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Modules Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-progress-list">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FULL SCREEN GAME OVERLAY (IFRAME SANDBOX) -->
+    <div id="siklab-game-overlay" class="fixed inset-0 z-[200] bg-black hidden transition-opacity duration-300">
+        <div class="h-12 bg-stone-900 flex justify-between items-center px-4 border-b border-stone-700 shadow-md w-full shrink-0">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-gamepad text-orange-500"></i>
+                <span class="text-white font-bold text-sm tracking-widest uppercase">SIKLAB ISOLATED ENGINE</span>
+            </div>
+            <button onclick="closeGameOverlay()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded shadow-md font-bold text-sm transition-colors cursor-pointer flex items-center">
+                <i class="fa-solid fa-power-off mr-2"></i> END SESSION
+            </button>
+        </div>
+        <iframe id="game-iframe" src="" class="w-full grow border-none bg-stone-800"></iframe>
+    </div>
+
+    <!-- Modals -->
+    <div id="selector-modal" class="fixed inset-0 z-[100] bg-stone-900/80 backdrop-blur-md flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div id="selector-box" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden transform scale-90 transition-transform duration-300">
+            <div class="p-8 border-b-2 border-slate-100 bg-orange-50/30">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 id="selector-title" class="text-2xl font-black text-slate-800">Select Participant</h3>
+                        <p id="selector-subtitle" class="text-sm font-bold text-slate-400 uppercase tracking-widest">Choose a player or team</p>
+                    </div>
+                    <button onclick="closeSelectorModal()" class="w-10 h-10 rounded-full bg-white text-slate-400 hover:text-red-500 shadow-sm border border-slate-200 flex items-center justify-center transition-all"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                
+                <div class="relative group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
+                    <input type="text" id="selector-search" onkeyup="filterSelectorList(this.value)" placeholder="Search names or group numbers..." class="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-orange-500 outline-none font-bold text-slate-700 transition-all shadow-inner bg-white">
+                </div>
+            </div>
+
+            <div class="p-4 h-[400px] overflow-y-auto bg-white space-y-2" id="selector-list"></div>
+            
+            <div class="p-6 bg-slate-50 border-t-2 border-slate-100 text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter">Participants filtered for <span id="selector-sy-label"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-year-modal" class="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border-t-8 border-orange-500 transform scale-95 transition-transform duration-300 max-h-[92vh] overflow-y-auto" id="add-year-box">
+            <div class="p-7 border-b border-slate-100">
+                <h3 class="text-2xl font-black text-slate-800">Create New School Year</h3>
+                <p class="text-sm text-slate-500 mt-1">Create an empty curriculum or begin with a copy of an existing school year.</p>
+            </div>
+            <form onsubmit="handleAddYear(event)" class="p-7 space-y-6">
+                <div><label class="block text-sm font-bold text-slate-600 mb-2">School Year Name</label><input type="text" id="new-year-input" required placeholder="e.g. SY 2027-2028" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-bold transition-colors"></div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-3">Curriculum Setup</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 cursor-pointer hover:border-orange-300"><div class="flex items-start gap-3"><input type="radio" name="new-year-mode" value="empty" checked onchange="setNewYearSetupMode(this.value)" class="mt-1 w-5 h-5 accent-orange-600"><div><div class="font-black text-slate-800">Start Empty</div><div class="text-xs text-slate-500 mt-1">New roster and a blank curriculum.</div></div></div></label>
+                        <label class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 cursor-pointer hover:border-orange-300"><div class="flex items-start gap-3"><input type="radio" name="new-year-mode" value="copy" onchange="setNewYearSetupMode(this.value)" class="mt-1 w-5 h-5 accent-orange-600"><div><div class="font-black text-slate-800">Copy Existing Curriculum</div><div class="text-xs text-slate-500 mt-1">Reuse lessons, questions, and settings.</div></div></div></label>
+                    </div>
+                </div>
+
+                <div id="new-year-copy-options" class="hidden rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-4">
+                    <div><label class="block text-xs uppercase tracking-wider font-black text-blue-700 mb-2">Copy From</label><select id="new-year-copy-source" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 bg-white font-bold outline-none focus:border-blue-500"></select></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-lessons" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Lessons</span></label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-questions" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Questions</span></label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-settings" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Game Settings</span></label>
+                    </div>
+                    <p class="text-xs text-blue-700 font-bold"><i class="fa-solid fa-circle-info mr-1"></i>Student roster, groups, progress, and match history are never copied.</p>
+                </div>
+
+                <label class="flex items-start gap-3 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 cursor-pointer"><input id="new-year-set-active" type="checkbox" checked class="mt-1 w-5 h-5 accent-emerald-600"><div><div class="font-black text-emerald-800">Make this the active student school year</div><div class="text-xs text-emerald-700 mt-1">The public Student Portal will show published lessons from the active year.</div></div></label>
+
+                <div class="flex gap-3 pt-2"><button type="button" onclick="closeAddYearModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-colors">Cancel</button><button id="new-year-submit" type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-xl shadow-md transition-colors"><i class="fa-solid fa-calendar-plus mr-2"></i>Create School Year</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-group-modal" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border-t-8 border-orange-500 transform scale-95 transition-transform duration-300" id="edit-group-box">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-black text-slate-800" id="edit-group-title">Edit Group</h3>
+                <button onclick="closeEditGroupModal()" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-times text-2xl"></i></button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-slate-600 mb-1">Assign Specific Student</label>
+                <div class="flex gap-2">
+                    <select id="add-to-group-select" class="flex-grow px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></select>
+                    <button onclick="addStudentToGroup()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl font-bold shadow-md transition-colors"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <label class="block text-sm font-bold text-slate-600 mb-1 mt-4">Current Members</label>
+            <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 max-h-60 overflow-y-auto" id="edit-group-members"></div>
+
+            <button onclick="closeEditGroupModal()" class="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 rounded-xl shadow-md transition-colors mt-6">Done</button>
+        </div>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const icon = button.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                if (icon) icon.className = 'fa-solid fa-eye';
+            }
+        }
+    </script>
+
+    <!-- Supabase must initialize before SikLab modules -->
+    <script src="js/supabase_client.js"></script>
+    <script src="js/storage_helpers.js"></script>
+
+    <script src="security.js"></script>
+
+    <script src="content_manager.js"></script>
+    <script src="settings_manager.js"></script>
+
+    <script src="js/00_state.js"></script>
+    <script src="js/01_core.js"></script>
+    <script src="js/02_school_years.js"></script>
+    <script src="js/03_auth.js"></script>
+    <script src="js/04_navigation.js"></script>
+    <script src="js/05_students.js"></script>
+    <script src="js/06_match_setup.js"></script>
+    <script src="js/07_wheel.js"></script>
+    <script src="js/08_groups.js"></script>
+    <script src="js/09_history.js"></script>
+    <script src="js/10_games.js"></script>
+    <script src="js/11_esp32.js"></script>
+    <script src="js/12_admin.js"></script>
+    <script src="js/13_device_setup.js"></script>
+    <script src="js/14_content_management.js"></script>
+</body>
+</html>

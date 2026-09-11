@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SikLab: Student Explorer</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts: Nunito (Kid friendly body) & Fredoka One (Fun Headers) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Nunito', sans-serif; 
+            background-color: #f0f9ff; 
+        }
+        .fun-font { font-family: 'Fredoka One', cursive; }
+        
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Child-friendly Animations */
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        
+        @keyframes cloud-drift {
+            0% { transform: translateX(-100%); opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% { transform: translateX(100vw); opacity: 0; }
+        }
+        .animate-cloud-1 { animation: cloud-drift 25s linear infinite; }
+        .animate-cloud-2 { animation: cloud-drift 35s linear infinite 10s; }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        .hover-wiggle:hover { animation: wiggle 0.3s ease-in-out infinite; }
+
+        /* Card Flip Animation for Lessons */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .is-flipped .transform-style-3d { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen overflow-hidden flex flex-col bg-sky-50 relative" onload="initStudentApp()">
+
+    <!-- Decorative Background Clouds -->
+    <div class="fixed top-10 left-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-40">
+        <i class="fa-solid fa-cloud text-white text-6xl absolute top-10 animate-cloud-1"></i>
+        <i class="fa-solid fa-cloud text-white text-8xl absolute top-40 animate-cloud-2"></i>
+    </div>
+
+    <!-- STUDENT LOGIN SCREEN -->
+    <div id="auth-screen" class="absolute inset-0 z-50 bg-sky-900 flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-md w-full border-b-8 border-orange-500 relative overflow-hidden text-center transform hover:scale-105 transition-transform duration-300">
+            <div class="animate-float mb-6">
+                <div class="bg-orange-500 text-white w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-lg border-4 border-yellow-300">
+                    <i class="fa-solid fa-rocket text-5xl"></i>
+                </div>
+            </div>
+            <h1 class="text-5xl font-black text-sky-900 fun-font mb-2">SikLab</h1>
+            <p class="text-sky-600 font-bold text-lg mb-8 uppercase tracking-widest">Explorer Portal</p>
+            
+            <form onsubmit="handleStudentLogin(event)" class="space-y-6 relative z-10">
+                <div>
+                    <label class="block text-lg font-black text-sky-800 mb-2">What is your name?</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-face-smile-beam absolute left-5 top-1/2 transform -translate-y-1/2 text-orange-400 text-xl"></i>
+                        <input type="text" id="student-name" required placeholder="Type your name here..." class="w-full pl-14 pr-4 py-4 rounded-2xl border-4 border-sky-100 focus:border-orange-400 focus:ring-0 outline-none transition-colors font-bold text-xl text-sky-900 bg-sky-50 focus:bg-white placeholder-sky-300 shadow-inner">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-b from-orange-400 to-orange-600 hover:from-orange-300 hover:to-orange-500 text-white font-black py-4 rounded-2xl shadow-[0_6px_0_#c2410c] active:shadow-none active:translate-y-[6px] transition-all text-2xl fun-font tracking-wide">
+                    LET'S GO! <i class="fa-solid fa-play ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN STUDENT LMS LAYOUT -->
+    <div id="dashboard-layout" class="hidden flex h-full w-full opacity-0 transition-opacity duration-500 relative z-10">
+        
+        <!-- STUDENT SIDEBAR -->
+        <aside class="w-24 lg:w-72 bg-sky-900 text-sky-100 flex flex-col shadow-2xl z-20 flex-shrink-0 transition-all duration-300 rounded-r-[3rem] border-r-4 border-sky-800">
+            <div class="h-24 flex items-center justify-center lg:justify-start lg:px-8 border-b-2 border-sky-800">
+                <div class="bg-orange-500 w-12 h-12 rounded-xl flex items-center justify-center shadow-inner border-2 border-yellow-300 transform -rotate-6">
+                    <i class="fa-solid fa-fire text-2xl text-yellow-100"></i>
+                </div>
+                <span class="hidden lg:block ml-4 text-3xl font-black text-white fun-font tracking-wide drop-shadow-md">SikLab</span>
+            </div>
+            
+            <div class="flex-grow py-8 flex flex-col gap-4 px-4">
+                <button onclick="switchTab('home')" id="nav-home" class="nav-btn w-full flex items-center p-3 lg:px-6 lg:py-5 rounded-2xl bg-orange-500 text-white font-black transition-all shadow-[0_4px_0_#c2410c] hover:translate-y-1 text-lg">
+                    <i class="fa-solid fa-map-location-dot text-2xl w-8 text-center"></i>
+                    <span class="hidden lg:block ml-3">My Map</span>
+                </button>
+                <button onclick="switchTab('lesson-w1')" id="nav-lesson-w1" class="nav-btn w-full flex items-center p-3 lg:px-6 lg:py-5 rounded-2xl hover:bg-sky-800 text-sky-200 font-black transition-all text-lg hover-wiggle">
+                    <i class="fa-solid fa-book-open-reader text-2xl w-8 text-center"></i>
+                    <span class="hidden lg:block ml-3">Week 1 Lesson</span>
+                </button>
+                <button onclick="switchTab('lesson-w2')" id="nav-lesson-w2" class="nav-btn w-full flex items-center p-3 lg:px-6 lg:py-5 rounded-2xl hover:bg-sky-800 text-sky-200 font-black transition-all text-lg hover-wiggle">
+                    <i class="fa-solid fa-flask text-2xl w-8 text-center"></i>
+                    <span class="hidden lg:block ml-3">Week 2 Lesson</span>
+                </button>
+            </div>
+            
+            <div class="p-6 bg-sky-950 rounded-br-[3rem]">
+                <button onclick="logoutStudent()" class="w-full flex items-center justify-center p-3 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white font-bold transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden lg:block ml-2">Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-grow flex flex-col h-full relative overflow-y-auto hide-scroll">
+            
+            <!-- TOP BAR (Gamified Stats) -->
+            <header class="h-24 bg-transparent flex items-center px-8 justify-between sticky top-0 z-30 pt-4">
+                <div class="flex items-center gap-4 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border-2 border-white">
+                    <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center border-2 border-orange-300 overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf" alt="avatar" id="student-avatar" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-sky-900 leading-tight" id="header-student-name">Student</h2>
+                        <p class="text-xs font-bold text-orange-500 uppercase tracking-widest">Level 3 Explorer</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="bg-yellow-400 text-yellow-900 px-5 py-2 rounded-full font-black text-lg flex items-center gap-2 shadow-[0_4px_0_#b45309] border-2 border-yellow-200 animate-pulse">
+                        <i class="fa-solid fa-star text-white drop-shadow"></i> <span id="star-count">150</span>
+                    </div>
+                    <div class="bg-emerald-400 text-emerald-900 px-5 py-2 rounded-full font-black text-lg flex items-center gap-2 shadow-[0_4px_0_#047857] border-2 border-emerald-200">
+                        <i class="fa-solid fa-bolt text-white drop-shadow"></i> <span>100%</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- VIEW: HOME (JOURNEY MAP) -->
+            <div id="view-home" class="view-section p-8 max-w-6xl mx-auto w-full space-y-8">
+                
+                <!-- Welcome Hero -->
+                <div class="bg-gradient-to-r from-blue-500 to-sky-400 rounded-[2.5rem] p-10 text-white shadow-xl relative overflow-hidden flex items-center">
+                    <div class="relative z-10 w-full md:w-2/3">
+                        <span class="bg-yellow-400 text-yellow-900 px-4 py-1 rounded-full text-sm font-black uppercase tracking-widest shadow-sm">Ready to Learn!</span>
+                        <h2 class="text-5xl font-black mt-4 mb-2 fun-font tracking-wide">Welcome back!</h2>
+                        <p class="text-blue-100 text-xl font-bold">Your next science adventure is waiting for you.</p>
+                        <button onclick="switchTab('lesson-w1')" class="mt-6 bg-white text-blue-600 hover:bg-blue-50 font-black text-xl px-8 py-4 rounded-2xl shadow-[0_5px_0_#93c5fd] active:shadow-none active:translate-y-[5px] transition-all hover-wiggle">
+                            CONTINUE QUEST <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                    <div class="w-1/3 hidden md:flex justify-center relative">
+                        <i class="fa-solid fa-earth-americas text-[150px] text-blue-300 opacity-50 absolute animate-float" style="animation-delay: 1s;"></i>
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=science&backgroundColor=transparent" class="w-48 h-48 animate-float relative z-10 drop-shadow-2xl">
+                    </div>
+                </div>
+
+                <!-- Quests Map -->
+                <div>
+                    <h3 class="text-2xl font-black text-sky-900 mb-6 fun-font flex items-center gap-3">
+                        <i class="fa-solid fa-map text-orange-500"></i> My Science Map
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                        <!-- Progress Line -->
+                        <div class="hidden md:block absolute top-1/2 left-10 right-10 h-3 bg-sky-200 rounded-full -z-10 transform -translate-y-1/2">
+                            <div class="h-full bg-orange-400 rounded-full w-1/3"></div>
+                        </div>
+
+                        <!-- Node 1: Active/Completed -->
+                        <div onclick="switchTab('lesson-w1')" class="bg-white p-6 rounded-3xl shadow-md border-4 border-emerald-400 text-center relative transform hover:-translate-y-2 transition-transform cursor-pointer group">
+                            <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-xl shadow-sm"><i class="fa-solid fa-check"></i></div>
+                            <div class="bg-emerald-100 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4 mt-2 group-hover:bg-emerald-200 transition-colors"><i class="fa-solid fa-eye text-4xl text-emerald-500"></i></div>
+                            <h4 class="font-black text-lg text-slate-800">Week 1: Senses</h4>
+                            <p class="text-sm font-bold text-emerald-500 uppercase mt-1">Ready to Read!</p>
+                        </div>
+
+                        <!-- Node 2: Active -->
+                        <div onclick="switchTab('lesson-w2')" class="bg-white p-6 rounded-3xl shadow-xl border-4 border-orange-500 text-center relative transform hover:-translate-y-2 transition-transform cursor-pointer ring-4 ring-orange-200 ring-offset-2 group">
+                            <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-xl shadow-sm animate-bounce"><i class="fa-solid fa-star"></i></div>
+                            <div class="bg-orange-100 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4 mt-2 group-hover:bg-orange-200 transition-colors"><i class="fa-solid fa-flask text-4xl text-orange-500"></i></div>
+                            <h4 class="font-black text-lg text-slate-800">Week 2: Science Lab</h4>
+                            <p class="text-sm font-bold text-orange-600 uppercase mt-1">Ready to Read!</p>
+                        </div>
+
+                        <!-- Node 3: Locked -->
+                        <div class="bg-slate-100 p-6 rounded-3xl border-4 border-slate-200 text-center relative opacity-70">
+                            <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-slate-300 text-slate-500 w-10 h-10 rounded-full flex items-center justify-center font-black text-xl shadow-sm"><i class="fa-solid fa-lock"></i></div>
+                            <div class="bg-slate-200 w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4 mt-2 grayscale"><i class="fa-solid fa-ruler text-4xl text-slate-400"></i></div>
+                            <h4 class="font-black text-lg text-slate-500">Week 3: Skills</h4>
+                            <p class="text-sm font-bold text-slate-400 uppercase mt-1">Locked</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: INTERACTIVE LESSONS (Week 1) -->
+            <div id="view-lesson-w1" class="view-section hidden p-8 max-w-5xl mx-auto w-full space-y-8 pb-24">
+                
+                <div class="text-center mb-6">
+                    <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-black uppercase tracking-widest text-sm border-2 border-emerald-200 animate-pulse">Active Lesson</span>
+                    <h2 class="text-5xl font-black text-sky-900 mt-4 fun-font">The 5 Senses!</h2>
+                    <p class="text-xl text-sky-700 font-bold mt-2">Let's learn how to observe the world around us.</p>
+                </div>
+
+                <!-- DISCUSSION / LESSON SECTION -->
+                <div class="bg-white rounded-[2.5rem] p-8 md:p-12 border-4 border-sky-200 shadow-xl relative">
+                    <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-6 py-2 rounded-bl-[2rem] rounded-tr-[2rem] font-black text-lg shadow-sm border-b-4 border-l-4 border-yellow-500">
+                        📖 Reading Time
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row gap-8 items-center border-b-4 border-dashed border-sky-100 pb-10">
+                        <div class="w-48 h-48 flex-shrink-0 bg-blue-100 rounded-full border-8 border-blue-300 overflow-hidden flex items-center justify-center animate-float shadow-inner">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=teacher1&backgroundColor=transparent" alt="Teacher" class="w-3/4 h-3/4 drop-shadow-md">
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-black text-sky-800 mb-4 fun-font">Hello, Explorers! 👋</h3>
+                            <p class="text-2xl text-slate-600 font-bold leading-relaxed">
+                                Did you know you have superpowers? They are called your <span class="text-orange-500 font-black">5 Senses</span>! 
+                                We use our senses to observe and learn about objects around us. Let's find out how!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 mt-10">
+                        <!-- Sense 1 -->
+                        <div class="bg-blue-50 p-6 rounded-3xl border-2 border-blue-200 flex flex-col md:flex-row items-center gap-6 hover:bg-blue-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-blue-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#1e40af] group-hover:scale-110 transition-transform transform rotate-3">
+                                👁️
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-blue-800 fun-font mb-2">1. Sense of Sight</h4>
+                                <p class="text-xl text-slate-700 font-bold">We use our <span class="text-blue-600 font-black">EYES</span> to see. We can tell the color, shape, and size of an object. Is the pencil yellow? Is the ball round?</p>
+                            </div>
+                            <button class="bg-blue-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-blue-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+                        
+                        <!-- Sense 2 -->
+                        <div class="bg-green-50 p-6 rounded-3xl border-2 border-green-200 flex flex-col md:flex-row items-center gap-6 hover:bg-green-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-green-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#166534] group-hover:scale-110 transition-transform transform -rotate-3">
+                                👂
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-green-800 fun-font mb-2">2. Sense of Hearing</h4>
+                                <p class="text-xl text-slate-700 font-bold">We use our <span class="text-green-600 font-black">EARS</span> to hear sounds. We can listen to loud drums or soft whispers.</p>
+                            </div>
+                            <button class="bg-green-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-green-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+
+                        <!-- Sense 3 -->
+                        <div class="bg-purple-50 p-6 rounded-3xl border-2 border-purple-200 flex flex-col md:flex-row items-center gap-6 hover:bg-purple-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-purple-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#581c87] group-hover:scale-110 transition-transform transform rotate-3">
+                                👃
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-purple-800 fun-font mb-2">3. Sense of Smell</h4>
+                                <p class="text-xl text-slate-700 font-bold">We use our <span class="text-purple-600 font-black">NOSE</span> to smell! Flowers smell fragrant, but garbage smells stinky!</p>
+                            </div>
+                            <button class="bg-purple-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-purple-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+
+                        <!-- Sense 4 -->
+                        <div class="bg-red-50 p-6 rounded-3xl border-2 border-red-200 flex flex-col md:flex-row items-center gap-6 hover:bg-red-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-red-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#991b1b] group-hover:scale-110 transition-transform transform -rotate-3">
+                                👅
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-red-800 fun-font mb-2">4. Sense of Taste</h4>
+                                <p class="text-xl text-slate-700 font-bold">We use our <span class="text-red-600 font-black">TONGUE</span> to taste! Lemons are sour, chocolate is sweet, and medicine is bitter.</p>
+                            </div>
+                            <button class="bg-red-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-red-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+
+                        <!-- Sense 5 -->
+                        <div class="bg-orange-50 p-6 rounded-3xl border-2 border-orange-200 flex flex-col md:flex-row items-center gap-6 hover:bg-orange-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-orange-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#9a3412] group-hover:scale-110 transition-transform transform rotate-3">
+                                🖐️
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-orange-800 fun-font mb-2">5. Sense of Touch</h4>
+                                <p class="text-xl text-slate-700 font-bold">We use our <span class="text-orange-600 font-black">SKIN</span> to touch! A rock is hard and rough, but a pillow is soft and smooth.</p>
+                            </div>
+                            <button class="bg-orange-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-orange-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Question in reading -->
+                    <div class="mt-12 bg-yellow-50 rounded-3xl p-8 border-4 border-yellow-300 text-center shadow-inner relative overflow-hidden">
+                        <i class="fa-solid fa-circle-question absolute -right-6 -bottom-6 text-9xl text-yellow-200 opacity-50"></i>
+                        <div class="relative z-10">
+                            <h4 class="text-3xl font-black text-yellow-800 mb-4 fun-font">🤔 Brain Check!</h4>
+                            <p class="text-2xl text-slate-700 font-bold mb-6">Which sense would you use to know if a lemon is sour?</p>
+                            <div class="flex justify-center gap-4 flex-wrap">
+                                <button onclick="this.innerText='❌ Oops! Try again.'; this.classList.replace('bg-white', 'bg-red-200')" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">Eyes</button>
+                                <button onclick="this.innerText='✅ Correct! You use your tongue.'; this.classList.replace('bg-white', 'bg-green-200'); playClickSound();" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">Tongue</button>
+                                <button onclick="this.innerText='❌ Oops! Try again.'; this.classList.replace('bg-white', 'bg-red-200')" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">Hands</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flashcards Section Header -->
+                <div class="text-center pt-8 border-t-4 border-dashed border-sky-200">
+                    <h2 class="text-4xl font-black text-sky-900 mb-2 fun-font">Flashcard Review</h2>
+                    <p class="text-xl text-sky-700 font-bold">Click the cards to flip them over!</p>
+                </div>
+
+                <!-- Interactive Flashcards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <!-- Card 1 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-blue-500 rounded-[2rem] border-b-8 border-blue-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-eye text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">SIGHT</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-blue-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-glasses text-4xl text-blue-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Your Eyes!</h3>
+                                <p class="text-slate-600 font-bold">You use sight to see colors, shapes, and sizes.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-green-500 rounded-[2rem] border-b-8 border-green-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-ear-listen text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">HEARING</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-green-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-music text-4xl text-green-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Your Ears!</h3>
+                                <p class="text-slate-600 font-bold">You use hearing to listen to loud or soft sounds.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-purple-500 rounded-[2rem] border-b-8 border-purple-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-wind text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">SMELL</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-purple-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-flower text-4xl text-purple-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Your Nose!</h3>
+                                <p class="text-slate-600 font-bold">You use smell to know if something is fragrant or stinky.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Your Skills Box -->
+                <div class="mt-12 bg-white rounded-[2.5rem] p-10 border-8 border-yellow-300 shadow-xl text-center relative overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
+                    <div class="absolute -right-10 -top-10 opacity-20"><i class="fa-solid fa-gamepad text-[250px] text-yellow-500"></i></div>
+                    <div class="relative z-10">
+                        <h3 class="text-5xl font-black text-slate-800 mb-4 fun-font">Ready to Play?</h3>
+                        <p class="text-2xl text-slate-600 font-bold mb-8">Test your detective skills in the Sense Detectives mini-game!</p>
+                        <button onclick="launchMiniGame('SikLab_Sense_Detectives_W1.html')" class="bg-gradient-to-b from-yellow-400 to-yellow-600 text-white font-black text-3xl px-16 py-6 rounded-full shadow-[0_8px_0_#b45309] hover:shadow-[0_4px_0_#b45309] active:shadow-none hover:translate-y-1 active:translate-y-[8px] transition-all hover-wiggle">
+                            <i class="fa-solid fa-play mr-3"></i> START GAME 1
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VIEW: INTERACTIVE LESSONS (Week 2) -->
+            <div id="view-lesson-w2" class="view-section hidden p-8 max-w-5xl mx-auto w-full space-y-8 pb-24">
+                
+                <div class="text-center mb-6">
+                    <span class="bg-orange-100 text-orange-700 px-4 py-2 rounded-full font-black uppercase tracking-widest text-sm border-2 border-orange-200 animate-pulse">Active Lesson</span>
+                    <h2 class="text-5xl font-black text-sky-900 mt-4 fun-font">Science Showdown!</h2>
+                    <p class="text-xl text-sky-700 font-bold mt-2">Learn how to experiment and discover how things work.</p>
+                </div>
+
+                <!-- DISCUSSION / LESSON SECTION -->
+                <div class="bg-white rounded-[2.5rem] p-8 md:p-12 border-4 border-orange-200 shadow-xl relative">
+                    <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-6 py-2 rounded-bl-[2rem] rounded-tr-[2rem] font-black text-lg shadow-sm border-b-4 border-l-4 border-yellow-500">
+                        📖 Reading Time
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row gap-8 items-center border-b-4 border-dashed border-orange-100 pb-10">
+                        <div class="w-48 h-48 flex-shrink-0 bg-orange-100 rounded-full border-8 border-orange-300 overflow-hidden flex items-center justify-center animate-float shadow-inner">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=scientist&backgroundColor=transparent" alt="Scientist" class="w-3/4 h-3/4 drop-shadow-md">
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-black text-orange-800 mb-4 fun-font">Welcome to the Lab! 🔬</h3>
+                            <p class="text-2xl text-slate-600 font-bold leading-relaxed">
+                                Science is all about <span class="text-blue-500 font-black">experimenting</span>! We can change materials, test how they move, and see if they float or sink. Are you ready to be a scientist?
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 mt-10">
+                        <!-- Lab Topic 1 -->
+                        <div class="bg-indigo-50 p-6 rounded-3xl border-2 border-indigo-200 flex flex-col md:flex-row items-center gap-6 hover:bg-indigo-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-indigo-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#3730a3] group-hover:scale-110 transition-transform transform rotate-3">
+                                🔍
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-indigo-800 fun-font mb-2">1. Forensics</h4>
+                                <p class="text-xl text-slate-700 font-bold">Everyone has unique <span class="text-indigo-600 font-black">Fingerprints</span>! Scientists look closely to find patterns like Whorls, Loops, or Arches.</p>
+                            </div>
+                            <button class="bg-indigo-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-indigo-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+                        
+                        <!-- Lab Topic 2 -->
+                        <div class="bg-cyan-50 p-6 rounded-3xl border-2 border-cyan-200 flex flex-col md:flex-row items-center gap-6 hover:bg-cyan-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-cyan-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#155e75] group-hover:scale-110 transition-transform transform -rotate-3">
+                                🎈
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-cyan-800 fun-font mb-2">2. Air Power</h4>
+                                <p class="text-xl text-slate-700 font-bold">Even though we can't see it, <span class="text-cyan-600 font-black">AIR</span> takes up space! When air moves fast, it can push objects away.</p>
+                            </div>
+                            <button class="bg-cyan-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-cyan-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+
+                        <!-- Lab Topic 3 -->
+                        <div class="bg-emerald-50 p-6 rounded-3xl border-2 border-emerald-200 flex flex-col md:flex-row items-center gap-6 hover:bg-emerald-100 transition-colors group cursor-pointer" onclick="playClickSound()">
+                            <div class="w-32 h-32 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-6xl shadow-[0_6px_0_#065f46] group-hover:scale-110 transition-transform transform rotate-3">
+                                ⛵
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <h4 class="text-3xl font-black text-emerald-800 fun-font mb-2">3. Buoyancy</h4>
+                                <p class="text-xl text-slate-700 font-bold">Why do heavy ships float? Because of their <span class="text-emerald-600 font-black">SHAPE</span>! A ball of clay sinks, but a boat shaped clay floats!</p>
+                            </div>
+                            <button class="bg-emerald-400 text-white w-16 h-16 rounded-full shadow-md hover:bg-emerald-500 active:scale-95 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-volume-high text-2xl"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Question in reading -->
+                    <div class="mt-12 bg-yellow-50 rounded-3xl p-8 border-4 border-yellow-300 text-center shadow-inner relative overflow-hidden">
+                        <i class="fa-solid fa-circle-question absolute -right-6 -bottom-6 text-9xl text-yellow-200 opacity-50"></i>
+                        <div class="relative z-10">
+                            <h4 class="text-3xl font-black text-yellow-800 mb-4 fun-font">🤔 Brain Check!</h4>
+                            <p class="text-2xl text-slate-700 font-bold mb-6">If you drop a heavy, solid ball of clay in water, what will happen?</p>
+                            <div class="flex justify-center gap-4 flex-wrap">
+                                <button onclick="this.innerText='✅ Correct! Solid clay sinks.'; this.classList.replace('bg-white', 'bg-green-200'); playClickSound();" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">It will Sink</button>
+                                <button onclick="this.innerText='❌ Oops! Try again.'; this.classList.replace('bg-white', 'bg-red-200')" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">It will Float</button>
+                                <button onclick="this.innerText='❌ Oops! Try again.'; this.classList.replace('bg-white', 'bg-red-200')" class="bg-white border-b-4 border-slate-300 text-slate-700 font-black text-xl px-8 py-4 rounded-2xl hover:bg-slate-50 transition-all active:translate-y-1 active:border-b-0">It will Fly</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flashcards Section Header -->
+                <div class="text-center pt-8 border-t-4 border-dashed border-sky-200">
+                    <h2 class="text-4xl font-black text-sky-900 mb-2 fun-font">Flashcard Review</h2>
+                    <p class="text-xl text-sky-700 font-bold">Click the cards to flip them over!</p>
+                </div>
+
+                <!-- Interactive Flashcards (2x2 Grid) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <!-- Card 1 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <!-- Front -->
+                            <div class="absolute w-full h-full backface-hidden bg-indigo-500 rounded-[2rem] border-b-8 border-indigo-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-fingerprint text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">FORENSICS</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-indigo-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-magnifying-glass text-5xl text-indigo-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Fingerprints!</h3>
+                                <p class="text-slate-600 font-bold">Examine fingerprints closely. Everyone has a unique pattern: Whorl, Loop, or Arch!</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-cyan-500 rounded-[2rem] border-b-8 border-cyan-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-wind text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">AIR POWER</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-cyan-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-fan text-5xl text-cyan-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Moving Air!</h3>
+                                <p class="text-slate-600 font-bold">Air takes up space and can push things! Try blowing up a balloon to move objects.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-orange-500 rounded-[2rem] border-b-8 border-orange-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-egg text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">SPINNING EGGS</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-orange-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-arrows-rotate text-5xl text-orange-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Hard or Raw?</h3>
+                                <p class="text-slate-600 font-bold">A hard-boiled egg spins smoothly, but a raw egg wobbles because the liquid moves inside!</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="perspective-1000 h-64 w-full cursor-pointer group" onclick="this.classList.toggle('is-flipped'); playClickSound();">
+                        <div class="relative w-full h-full transform-style-3d">
+                            <div class="absolute w-full h-full backface-hidden bg-emerald-500 rounded-[2rem] border-b-8 border-emerald-700 shadow-lg flex flex-col items-center justify-center text-white hover:brightness-110 transition-all">
+                                <i class="fa-solid fa-sailboat text-7xl mb-4"></i>
+                                <h3 class="text-3xl fun-font tracking-wide">BUOYANCY</h3>
+                                <p class="text-sm font-bold opacity-80 mt-2 uppercase tracking-widest">Click to Flip</p>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden bg-white rounded-[2rem] border-4 border-emerald-500 shadow-lg flex flex-col items-center justify-center text-center p-6 rotate-y-180">
+                                <i class="fa-solid fa-water text-5xl text-emerald-500 mb-3"></i>
+                                <h3 class="text-2xl font-black text-slate-800 mb-2">Floating Clay!</h3>
+                                <p class="text-slate-600 font-bold">A heavy ball of clay sinks, but if you shape it like a boat, it pushes water away and floats!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Your Skills Box -->
+                <div class="mt-12 bg-white rounded-[2.5rem] p-10 border-8 border-orange-400 shadow-xl text-center relative overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
+                    <div class="absolute -right-10 -top-10 opacity-20"><i class="fa-solid fa-gamepad text-[250px] text-orange-300"></i></div>
+                    <div class="relative z-10">
+                        <h3 class="text-5xl font-black text-slate-800 mb-4 fun-font">Ready to Play?</h3>
+                        <p class="text-2xl text-slate-600 font-bold mb-8">Put your experiments to the test in the lab!</p>
+                        <button onclick="launchMiniGame('SikLab_Science_Showdown_W2.html')" class="bg-gradient-to-b from-orange-400 to-orange-600 text-white font-black text-3xl px-16 py-6 rounded-full shadow-[0_8px_0_#c2410c] hover:shadow-[0_4px_0_#c2410c] active:shadow-none hover:translate-y-1 active:translate-y-[8px] transition-all hover-wiggle">
+                            <i class="fa-solid fa-play mr-3"></i> START GAME 2
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MINI GAME MODAL (Loads the HTML file dynamically) -->
+    <div id="game-modal" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col hidden opacity-0 transition-opacity duration-500">
+        <div class="bg-slate-800 p-4 flex justify-between items-center border-b-4 border-slate-700">
+            <h2 class="text-white font-black text-2xl fun-font tracking-wide text-yellow-400"><i class="fa-solid fa-gamepad mr-2"></i> Play Mode</h2>
+            <button onclick="closeMiniGame()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-2 rounded-xl shadow-[0_4px_0_#991b1b] active:translate-y-1 transition-all">
+                EXIT GAME
+            </button>
+        </div>
+        <div class="flex-grow bg-black relative">
+            <div id="game-loading" class="absolute inset-0 flex flex-col items-center justify-center z-10">
+                <i class="fa-solid fa-circle-notch fa-spin text-6xl text-yellow-400 mb-4"></i>
+                <p class="text-white font-bold tracking-widest animate-pulse">LOADING GAME...</p>
+            </div>
+            <!-- The iframe src will be set dynamically via JS -->
+            <iframe id="game-frame" src="" class="w-full h-full border-none relative z-20 opacity-0 transition-opacity duration-1000" onload="this.style.opacity='1'; document.getElementById('game-loading').style.display='none';"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // --- STUDENT APP LOGIC ---
+        
+        function initStudentApp() {
+            // Check if already logged in locally
+            const studentName = localStorage.getItem('siklab_student_name');
+            if (studentName) {
+                document.getElementById('header-student-name').innerText = studentName;
+                document.getElementById('auth-screen').classList.add('hidden');
+                
+                const dash = document.getElementById('dashboard-layout');
+                dash.classList.remove('hidden');
+                setTimeout(() => dash.style.opacity = '1', 50);
+                
+                // Set seed for avatar based on name
+                document.getElementById('student-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${studentName}&backgroundColor=ffdfbf`;
+            } else {
+                setTimeout(() => {
+                    document.getElementById('auth-screen').style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        function handleStudentLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('student-name').value;
+            localStorage.setItem('siklab_student_name', name);
+            
+            document.getElementById('header-student-name').innerText = name;
+            document.getElementById('student-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}&backgroundColor=ffdfbf`;
+            
+            const auth = document.getElementById('auth-screen');
+            auth.style.opacity = '0';
+            
+            setTimeout(() => {
+                auth.classList.add('hidden');
+                const dash = document.getElementById('dashboard-layout');
+                dash.classList.remove('hidden');
+                switchTab('home'); // Show home by default
+                setTimeout(() => dash.style.opacity = '1', 50);
+            }, 500);
+        }
+
+        function logoutStudent() {
+            localStorage.removeItem('siklab_student_name');
+            document.getElementById('dashboard-layout').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('dashboard-layout').classList.add('hidden');
+                document.getElementById('student-name').value = '';
+                const auth = document.getElementById('auth-screen');
+                auth.classList.remove('hidden');
+                setTimeout(() => auth.style.opacity = '1', 50);
+            }, 500);
+        }
+
+        function switchTab(tabId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            
+            // Reset nav buttons
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-orange-500', 'text-white', 'shadow-[0_4px_0_#c2410c]');
+                el.classList.add('hover:bg-sky-800', 'text-sky-200');
+            });
+            
+            // Show active view
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            
+            // Highlight active button (map lesson-wX to lessons)
+            const navId = tabId.startsWith('lesson-') ? tabId : tabId;
+            const btn = document.getElementById(`nav-${navId}`);
+            if(btn) {
+                btn.classList.remove('hover:bg-sky-800', 'text-sky-200');
+                btn.classList.add('bg-orange-500', 'text-white', 'shadow-[0_4px_0_#c2410c]');
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function playClickSound() {
+            // Add a little star count for interacting
+            const starEl = document.getElementById('star-count');
+            let stars = parseInt(starEl.innerText);
+            starEl.innerText = stars + 5;
+            
+            // Animate stars addition
+            starEl.parentElement.classList.remove('animate-pulse');
+            void starEl.parentElement.offsetWidth; // trigger reflow
+            starEl.parentElement.classList.add('animate-pulse');
+        }
+
+        function launchMiniGame(gameUrl) {
+            const modal = document.getElementById('game-modal');
+            const frame = document.getElementById('game-frame');
+            const loader = document.getElementById('game-loading');
+            
+            modal.classList.remove('hidden');
+            loader.style.display = 'flex';
+            frame.style.opacity = '0';
+            
+            // Set source to the provided SikLab game file URL
+            frame.src = gameUrl;
+            
+            setTimeout(() => {
+                modal.style.opacity = '1';
+            }, 50);
+        }
+
+        function closeMiniGame() {
+            const modal = document.getElementById('game-modal');
+            const frame = document.getElementById('game-frame');
+            
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                frame.src = ""; // Unload the game to free memory
+            }, 500);
+        }
+    </script>
+</body>
+</html>
