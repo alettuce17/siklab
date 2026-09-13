@@ -745,61 +745,103 @@
             </div>
 
             <!-- VIEW: CURRICULUM MANAGER -->
-            <div id="view-curriculum" class="view-section hidden p-8 space-y-8 overflow-y-auto">
-                <div class="bg-stone-800 rounded-3xl p-7 text-white border-b-4 border-emerald-500 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                    <div>
-                        <p class="text-emerald-300 text-xs font-black uppercase tracking-[0.2em]">Selected School Year</p>
-                        <h2 id="content-current-year-label" class="text-3xl font-black mt-1">—</h2>
-                        <p class="text-slate-300 mt-2 max-w-2xl">Lessons, question banks, and game settings belong to a school year. Students, groups, progress, and match history are intentionally kept separate.</p>
+            <div id="view-curriculum" class="view-section hidden p-4 md:p-5 space-y-4 overflow-y-auto">
+                <!-- Compact selected-year header -->
+                <div class="bg-stone-800 rounded-2xl px-5 py-4 text-white border-b-4 border-emerald-500 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <p class="text-emerald-300 text-[10px] font-black uppercase tracking-[0.18em]">Selected School Year</p>
+                            <h2 id="content-current-year-label" class="text-2xl font-black leading-none">—</h2>
+                        </div>
+                        <p class="text-slate-300 text-xs mt-2 max-w-3xl leading-relaxed">Curriculum content belongs to a school year. Student roster, groups, progress, and match history stay separate.</p>
                     </div>
-                    <div class="flex gap-3 flex-wrap">
-                        <button onclick="openAddYearModal()" class="bg-orange-600 hover:bg-orange-500 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-calendar-plus mr-2"></i>Create School Year</button>
-                        <button onclick="switchTab('lesson-builder')" class="bg-white/10 hover:bg-white/20 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-pen-ruler mr-2"></i>Open Lesson Builder</button>
-                        <button onclick="switchTab('student-preview')" class="bg-emerald-600 hover:bg-emerald-500 px-5 py-3 rounded-xl font-black transition-colors"><i class="fa-solid fa-eye mr-2"></i>Student Preview</button>
+                    <div class="flex gap-2 flex-wrap shrink-0">
+                        <button onclick="openAddYearModal()" class="bg-orange-600 hover:bg-orange-500 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-calendar-plus mr-1.5"></i>Create Year</button>
+                        <button onclick="switchTab('lesson-builder')" class="bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-pen-ruler mr-1.5"></i>Lesson Builder</button>
+                        <button onclick="switchTab('student-preview')" class="bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-eye mr-1.5"></i>Preview</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-slate-400">Lessons</p><div id="content-count-lessons" class="text-3xl font-black text-slate-800 mt-1">0</div></div>
-                    <div class="bg-white rounded-2xl border border-emerald-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-emerald-500">Published</p><div id="content-count-published" class="text-3xl font-black text-emerald-700 mt-1">0</div></div>
-                    <div class="bg-white rounded-2xl border border-blue-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-blue-500">Questions</p><div id="content-count-questions" class="text-3xl font-black text-blue-700 mt-1">0</div></div>
-                    <div class="bg-white rounded-2xl border border-purple-200 p-5"><p class="text-xs font-black uppercase tracking-wider text-purple-500">Game Settings</p><div id="content-count-settings" class="text-3xl font-black text-purple-700 mt-1">0</div></div>
+                <!-- Compact counters -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Lessons</p><div id="content-count-lessons" class="text-2xl font-black text-slate-800 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-book-open"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-emerald-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-emerald-500">Published</p><div id="content-count-published" class="text-2xl font-black text-emerald-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-blue-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-blue-500">Questions</p><div id="content-count-questions" class="text-2xl font-black text-blue-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-circle-question"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-purple-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-purple-500">Settings</p><div id="content-count-settings" class="text-2xl font-black text-purple-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-sliders"></i></div>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                    <form onsubmit="copySchoolYearContent(event)" class="xl:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5 h-fit">
-                        <div>
-                            <h3 class="text-xl font-black text-slate-800"><i class="fa-solid fa-copy text-orange-500 mr-2"></i>Copy Curriculum</h3>
-                            <p class="text-sm text-slate-500 mt-1">Copy selected academic content from one year to another.</p>
+                <div class="grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(0,2.05fr)] gap-4 items-start">
+                    <!-- Compact copy curriculum panel -->
+                    <form onsubmit="copySchoolYearContent(event)" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3 h-fit">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 leading-tight"><i class="fa-solid fa-copy text-orange-500 mr-2"></i>Copy Curriculum</h3>
+                                <p class="text-xs text-slate-500 mt-1">Copy academic content between school years.</p>
+                            </div>
+                            <span class="shrink-0 text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 border border-orange-100 rounded-full px-2.5 py-1">Curriculum Only</span>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
-                            <div><label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Source School Year</label><select id="copy-content-source" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500"></select></div>
-                            <div><label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Target School Year</label><select id="copy-content-target" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500"></select></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Source Year</label>
+                                <select id="copy-content-source" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"></select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Target Year</label>
+                                <select id="copy-content-target" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"></select>
+                            </div>
                         </div>
 
                         <div>
-                            <label class="block text-xs uppercase tracking-wider font-black text-slate-500 mb-2">Copy Mode</label>
-                            <select id="copy-content-mode" onchange="updateCopyContentWarning()" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500">
+                            <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Copy Mode</label>
+                            <select id="copy-content-mode" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
                                 <option value="merge">Merge — keep existing target content</option>
                                 <option value="replace">Replace — overwrite selected target content</option>
                             </select>
                         </div>
 
-                        <div class="space-y-2">
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-lessons" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Lessons & publication state</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-questions" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Question Bank</span></label>
-                            <label class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"><input id="copy-content-settings" type="checkbox" checked class="w-5 h-5 accent-orange-600"><span class="font-bold text-slate-700">Game Settings</span></label>
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1.5">Include</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 2xl:grid-cols-1 min-[1500px]:grid-cols-3 gap-2">
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-lessons" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Lessons</span></label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-questions" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Questions</span></label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-settings" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Settings</span></label>
+                            </div>
                         </div>
 
-                        <div id="copy-content-warning" class="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm font-bold"></div>
-                        <div class="rounded-xl bg-slate-900 text-slate-200 p-4 text-xs leading-relaxed"><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i><strong class="text-white">Never copied:</strong> student roster, stored groups, student progress, and match history.</div>
-                        <button id="copy-content-button" type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3.5 rounded-xl transition-colors"><i class="fa-solid fa-copy mr-2"></i>Copy Curriculum</button>
-                        <button id="clear-content-button" type="button" onclick="clearSelectedSchoolYearContent()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-black py-3 rounded-xl transition-colors"><i class="fa-solid fa-trash mr-2"></i>Clear Selected Content</button>
+                        <div id="copy-content-warning" class="rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2.5 text-xs font-bold leading-relaxed"></div>
+
+                        <div class="rounded-lg bg-slate-900 text-slate-300 px-3 py-2.5 text-[11px] leading-relaxed">
+                            <i class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i><strong class="text-white">Never copied:</strong> roster, groups, progress, or match history.
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button id="copy-content-button" type="submit" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-black py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-copy mr-1.5"></i>Copy Curriculum</button>
+                            <button id="clear-content-button" type="button" onclick="clearSelectedSchoolYearContent()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-black py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-trash mr-1.5"></i>Clear Selected</button>
+                        </div>
                     </form>
 
-                    <div class="xl:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 bg-slate-50"><h3 class="text-xl font-black text-slate-800">School Year Content Overview</h3><p class="text-sm text-slate-500 mt-1">Use a year to edit it, or preview exactly what students will see.</p></div>
+                    <!-- Compact school-year content overview -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
+                        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 leading-tight">School Year Content Overview</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Switch years or preview student-visible content.</p>
+                            </div>
+                            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Students are never copied</div>
+                        </div>
                         <div id="school-year-content-summary" class="divide-y divide-slate-100"></div>
                     </div>
                 </div>

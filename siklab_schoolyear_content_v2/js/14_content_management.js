@@ -63,7 +63,7 @@ function updateCopyContentWarning() {
     if (!box || !btn) return;
 
     if (!sourceId || !targetId || sourceId === targetId) {
-        box.className = 'rounded-xl border border-red-200 bg-red-50 text-red-700 p-4 text-sm font-bold';
+        box.className = 'rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-2.5 text-xs font-bold leading-relaxed';
         box.textContent = 'Choose two different school years.';
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -74,10 +74,10 @@ function updateCopyContentWarning() {
     btn.classList.remove('opacity-50', 'cursor-not-allowed');
 
     if (mode === 'replace') {
-        box.className = 'rounded-xl border border-amber-200 bg-amber-50 text-amber-800 p-4 text-sm font-bold';
+        box.className = 'rounded-lg border border-amber-200 bg-amber-50 text-amber-800 px-3 py-2.5 text-xs font-bold leading-relaxed';
         box.textContent = `Replace mode will delete the selected curriculum categories currently stored in ${selectedContentYearLabel(targetId)} before copying.`;
     } else {
-        box.className = 'rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm font-bold';
+        box.className = 'rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2.5 text-xs font-bold leading-relaxed';
         box.textContent = `Merge mode keeps existing content in ${selectedContentYearLabel(targetId)} and only adds missing lessons/questions/settings.`;
     }
 }
@@ -165,27 +165,53 @@ function renderSchoolYearContentSummary() {
     if (!container) return;
 
     if (!schoolYearContentSummary.length) {
-        container.innerHTML = '<div class="p-8 text-center text-slate-400 font-bold">No school years yet.</div>';
+        container.innerHTML = `
+            <div class="px-4 py-8 text-center">
+                <div class="w-10 h-10 mx-auto rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-calendar-xmark"></i>
+                </div>
+                <p class="text-sm text-slate-500 font-bold">No school years yet.</p>
+            </div>`;
         return;
     }
+
+    const metric = (value, label, colorClass = 'text-slate-700') => `
+        <div class="min-w-0 text-center rounded-lg bg-slate-50/70 px-2 py-1.5">
+            <div class="text-sm font-black ${colorClass} leading-none">${Number(value || 0)}</div>
+            <div class="text-[9px] uppercase tracking-wide font-black text-slate-400 mt-1 truncate">${label}</div>
+        </div>`;
 
     container.innerHTML = schoolYearContentSummary.map(row => {
         const active = row.is_active === true;
         const yearId = Number(row.year_id);
+
         return `
-            <div class="grid grid-cols-1 lg:grid-cols-[1.5fr_repeat(5,minmax(80px,0.6fr))_auto] gap-3 items-center p-4 border-b border-slate-100 last:border-b-0 hover:bg-orange-50/40">
-                <div>
-                    <div class="font-black text-slate-800">${escapeHtml(row.label)}</div>
-                    <div class="mt-1 text-xs font-bold ${active ? 'text-emerald-600' : 'text-slate-400'}">${active ? 'ACTIVE SCHOOL YEAR' : 'ARCHIVED / INACTIVE'}</div>
-                </div>
-                <div class="text-center"><div class="font-black text-slate-700">${Number(row.student_count || 0)}</div><div class="text-[10px] uppercase font-bold text-slate-400">Students</div></div>
-                <div class="text-center"><div class="font-black text-slate-700">${Number(row.lesson_count || 0)}</div><div class="text-[10px] uppercase font-bold text-slate-400">Lessons</div></div>
-                <div class="text-center"><div class="font-black text-emerald-600">${Number(row.published_lesson_count || 0)}</div><div class="text-[10px] uppercase font-bold text-slate-400">Published</div></div>
-                <div class="text-center"><div class="font-black text-slate-700">${Number(row.question_count || 0)}</div><div class="text-[10px] uppercase font-bold text-slate-400">Questions</div></div>
-                <div class="text-center"><div class="font-black text-slate-700">${Number(row.settings_count || 0)}</div><div class="text-[10px] uppercase font-bold text-slate-400">Settings</div></div>
-                <div class="flex gap-2 justify-end">
-                    <button onclick="useSchoolYearFromContentManager(${yearId})" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-800 hover:text-white text-slate-700 text-xs font-black transition-colors">Use Year</button>
-                    <button onclick="previewSchoolYear(${yearId})" class="px-3 py-2 rounded-lg bg-blue-100 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-black transition-colors">Preview</button>
+            <div class="px-3 py-3 hover:bg-orange-50/40 transition-colors">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(155px,1.35fr)_repeat(5,minmax(58px,0.55fr))_auto] gap-2.5 xl:items-center">
+                    <div class="min-w-0 flex xl:block items-center justify-between gap-2">
+                        <div class="font-black text-slate-800 text-sm leading-tight truncate" title="${escapeHtml(row.label)}">${escapeHtml(row.label)}</div>
+                        <span class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] uppercase tracking-wide font-black ${active ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}">
+                            <span class="w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                            ${active ? 'Active' : 'Archived'}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-1.5 xl:contents">
+                        ${metric(row.student_count, 'Students')}
+                        ${metric(row.lesson_count, 'Lessons')}
+                        ${metric(row.published_lesson_count, 'Published', 'text-emerald-600')}
+                        ${metric(row.question_count, 'Questions', 'text-blue-600')}
+                        ${metric(row.settings_count, 'Settings', 'text-purple-600')}
+                    </div>
+
+                    <div class="flex gap-1.5 justify-end">
+                        <button onclick="useSchoolYearFromContentManager(${yearId})" title="Use ${escapeHtml(row.label)}" class="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-800 hover:text-white text-slate-700 text-[11px] font-black transition-colors">
+                            <i class="fa-solid fa-arrow-right-to-bracket"></i><span class="hidden sm:inline">Use</span>
+                        </button>
+                        <button onclick="previewSchoolYear(${yearId})" title="Preview ${escapeHtml(row.label)}" class="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[11px] font-black transition-colors border border-blue-100">
+                            <i class="fa-solid fa-eye"></i><span class="hidden sm:inline">Preview</span>
+                        </button>
+                    </div>
                 </div>
             </div>`;
     }).join('');
