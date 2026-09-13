@@ -103,6 +103,58 @@ function normalizeEmail(value) {
     return String(value || '').trim().toLowerCase();
 }
 
+function getSikLabAuthRedirectUrl() {
+    // Redirect magic-link fallbacks back to the exact SikLab site currently open.
+    // Examples:
+    //   Local:   http://localhost:3000/
+    //   Netlify: https://your-site.netlify.app/
+    //
+    // The URL must also be allowed in Supabase:
+    // Authentication -> URL Configuration -> Redirect URLs.
+    const url = new URL(window.location.href);
+    url.hash = '';
+    url.search = '';
+    return url.toString();
+}
+
+
+
+/* =========================================================
+ * FRIENDLY AUTH ERROR MESSAGES
+ * ========================================================= */
+function getFriendlyAuthError(error, fallback = 'Authentication failed.') {
+    const message = String(error?.message || '').trim();
+    const lower = message.toLowerCase();
+    const status = Number(error?.status || error?.statusCode || 0);
+
+    if (
+        status === 429 ||
+        lower.includes('rate limit') ||
+        lower.includes('too many requests')
+    ) {
+        return 'Too many login emails were requested. Please wait before trying again. If Custom SMTP is already enabled, check Supabase Authentication → Rate Limits.';
+    }
+
+    if (lower.includes('email address not authorized')) {
+        return 'This email cannot receive messages from the Supabase test mailer. Enable Custom SMTP in Supabase Authentication → Emails → SMTP Settings.';
+    }
+
+    if (
+        lower.includes('expired') ||
+        lower.includes('invalid token') ||
+        lower.includes('token is invalid') ||
+        lower.includes('otp') && lower.includes('invalid')
+    ) {
+        return 'That verification code is invalid or expired. Request a new code and try again.';
+    }
+
+    if (lower.includes('email') && lower.includes('invalid')) {
+        return 'Enter a valid email address.';
+    }
+
+    return message || fallback;
+}
+
 async function requestOtpForEmail(email) {
     const db = requireSupabase();
 
@@ -110,7 +162,11 @@ async function requestOtpForEmail(email) {
         email,
         options: {
             // New teachers are created automatically after requesting OTP.
-            shouldCreateUser: true
+            shouldCreateUser: true,
+
+            // If Supabase sends a clickable link as a fallback, do NOT hard-code
+            // localhost. Send the user back to whichever SikLab site they used.
+            emailRedirectTo: getSikLabAuthRedirectUrl()
         }
     });
 
@@ -152,7 +208,10 @@ async function handleSendCode(event) {
     } catch (error) {
         console.error('[SikLab send OTP]', error);
         showErrorToast(
-            error?.message || 'Unable to send the verification code.'
+            getFriendlyAuthError(
+                error,
+                'Unable to send the verification code.'
+            )
         );
     } finally {
         setAuthButtonBusy(
@@ -227,7 +286,10 @@ async function handleVerifyCode(event) {
     } catch (error) {
         console.error('[SikLab verify OTP]', error);
         showErrorToast(
-            error?.message || 'Invalid or expired verification code.'
+            getFriendlyAuthError(
+                error,
+                'Invalid or expired verification code.'
+            )
         );
     } finally {
         setAuthButtonBusy(
@@ -261,7 +323,10 @@ async function resendLoginCode() {
     } catch (error) {
         console.error('[SikLab resend OTP]', error);
         showErrorToast(
-            error?.message || 'Unable to resend the verification code.'
+            getFriendlyAuthError(
+                error,
+                'Unable to resend the verification code.'
+            )
         );
         updateOtpResendButton();
     }
