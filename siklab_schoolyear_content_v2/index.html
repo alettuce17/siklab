@@ -223,8 +223,20 @@
                         </p>
                     </div>
 
-                    <!-- LOGIN -->
-                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                    <!-- PASSWORDLESS EMAIL OTP LOGIN -->
+                    <form id="login-form" onsubmit="handleSendCode(event)" class="space-y-5">
+
+                        <div class="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex gap-3 items-start">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <i class="fa-solid fa-envelope-open-text"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-slate-700 text-sm">No password needed</p>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    Enter your email and SikLab will send a 6-digit sign-in code. New emails are automatically created as teacher accounts.
+                                </p>
+                            </div>
+                        </div>
 
                         <div>
                             <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
@@ -233,161 +245,94 @@
 
                             <div class="relative">
                                 <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
-                                    <i class="fa-solid fa-user"></i>
+                                    <i class="fa-solid fa-envelope"></i>
                                 </div>
 
                                 <input type="email"
                                        id="login-email"
                                        required
                                        autocomplete="email"
+                                       inputmode="email"
                                        placeholder="teacher@school.edu"
                                        class="auth-input w-full pl-16 pr-4 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                Password
-                            </label>
-
-                            <div class="relative">
-                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
-                                    <i class="fa-solid fa-lock"></i>
-                                </div>
-
-                                <input type="password"
-                                       id="login-pass"
-                                       required
-                                       autocomplete="current-password"
-                                       placeholder="Enter password"
-                                       class="auth-input w-full pl-16 pr-12 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
-
-                                <button type="button"
-                                        onclick="togglePasswordVisibility('login-pass', this)"
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
-                                        title="Show or hide password">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <button type="submit"
-                                class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-black py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-base flex items-center justify-center gap-3 mt-2">
-                            <i class="fa-solid fa-right-to-bracket"></i>
-                            Sign In to SikLab
+                        <button id="send-code-btn"
+                                type="submit"
+                                class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-base flex items-center justify-center gap-3 mt-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            Send Login Code
                         </button>
 
-                        <div class="flex items-center gap-4 py-1">
-                            <div class="h-px bg-slate-200 flex-grow"></div>
-                            <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest">
-                                New to SikLab?
-                            </span>
-                            <div class="h-px bg-slate-200 flex-grow"></div>
-                        </div>
-
-                        <button type="button"
-                                onclick="toggleAuthMode()"
-                                class="w-full border-2 border-stone-800 hover:bg-stone-800 hover:text-white text-stone-800 font-bold py-3.5 rounded-xl transition-all">
-                            Create Teacher Account
-                        </button>
+                        <p class="text-center text-xs text-slate-400 leading-relaxed">
+                            By continuing, you will sign in to the SikLab Teacher Dashboard using a one-time code sent to your email.
+                        </p>
                     </form>
 
-                    <!-- REGISTER -->
-                    <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                    <!-- OTP VERIFICATION -->
+                    <form id="otp-form" onsubmit="handleVerifyCode(event)" class="space-y-5 hidden">
 
-                        <div>
-                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                Full Name
-                            </label>
-
-                            <div class="relative">
-                                <i class="fa-solid fa-id-badge absolute left-5 top-1/2 -translate-y-1/2 text-orange-400"></i>
-                                <input type="text"
-                                       id="reg-name"
-                                       required
-                                       placeholder="Teacher full name"
-                                       class="auth-input w-full pl-14 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                Email Address
-                            </label>
-
-                            <div class="relative">
-                                <i class="fa-solid fa-envelope absolute left-5 top-1/2 -translate-y-1/2 text-orange-400"></i>
-                                <input type="email"
-                                       id="reg-email"
-                                       required
-                                       autocomplete="email"
-                                       placeholder="teacher@school.edu"
-                                       class="auth-input w-full pl-14 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                    Password
-                                </label>
-
-                                <div class="relative">
-                                    <input type="password"
-                                           id="reg-pass"
-                                           required
-                                           autocomplete="new-password"
-                                           placeholder="••••••••"
-                                           class="auth-input w-full px-4 pr-10 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
-
-                                    <button type="button"
-                                            onclick="togglePasswordVisibility('reg-pass', this)"
-                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
-                                            title="Show or hide password">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                            <div class="flex gap-3 items-start">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                                    <i class="fa-solid fa-shield-halved"></i>
                                 </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                    Confirm
-                                </label>
-
-                                <div class="relative">
-                                    <input type="password"
-                                           id="reg-confirm"
-                                           required
-                                           autocomplete="new-password"
-                                           placeholder="••••••••"
-                                           class="auth-input w-full px-4 pr-10 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold">
-
-                                    <button type="button"
-                                            onclick="togglePasswordVisibility('reg-confirm', this)"
-                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
-                                            title="Show or hide password">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
+                                <div class="min-w-0">
+                                    <p class="font-black text-emerald-800 text-sm">Check your email</p>
+                                    <p class="text-xs text-emerald-700 mt-1 leading-relaxed">
+                                        We sent a 6-digit SikLab code to
+                                        <strong id="otp-email-display" class="break-all">your email</strong>.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        <button type="submit"
-                                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] mt-2">
-                            <i class="fa-solid fa-flask-vial mr-2"></i>
-                            Create Teacher Account
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                6-Digit Verification Code
+                            </label>
+
+                            <input type="text"
+                                   id="login-otp"
+                                   required
+                                   maxlength="6"
+                                   minlength="6"
+                                   inputmode="numeric"
+                                   autocomplete="one-time-code"
+                                   pattern="[0-9]{6}"
+                                   oninput="formatOtpInput(this)"
+                                   placeholder="000000"
+                                   class="auth-input w-full px-5 py-4 rounded-xl border-2 border-slate-200 transition-all font-black text-slate-800 bg-slate-50 text-center text-3xl tracking-[0.45em]">
+                        </div>
+
+                        <button id="verify-code-btn"
+                                type="submit"
+                                class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Verify & Continue
                         </button>
 
-                        <div class="text-center pt-2">
-                            <p class="text-sm text-slate-500">
-                                Already have an account?
-                                <button type="button"
-                                        onclick="toggleAuthMode()"
-                                        class="text-orange-600 font-black hover:underline">
-                                    Sign In
-                                </button>
-                            </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button id="resend-code-btn"
+                                    type="button"
+                                    onclick="resendLoginCode()"
+                                    class="border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-rotate-right mr-2"></i>
+                                <span id="resend-code-label">Resend Code</span>
+                            </button>
+
+                            <button type="button"
+                                    onclick="changeLoginEmail()"
+                                    class="border-2 border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition-all">
+                                <i class="fa-solid fa-pen mr-2"></i>
+                                Change Email
+                            </button>
                         </div>
+
+                        <p class="text-center text-xs text-slate-400">
+                            Never share your verification code with another person.
+                        </p>
                     </form>
 
                     <!-- Footer -->
@@ -1276,23 +1221,6 @@
             <button onclick="closeEditGroupModal()" class="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 rounded-xl shadow-md transition-colors mt-6">Done</button>
         </div>
     </div>
-
-    <script>
-        function togglePasswordVisibility(inputId, button) {
-            const input = document.getElementById(inputId);
-            if (!input) return;
-
-            const icon = button.querySelector('i');
-
-            if (input.type === 'password') {
-                input.type = 'text';
-                if (icon) icon.className = 'fa-solid fa-eye-slash';
-            } else {
-                input.type = 'password';
-                if (icon) icon.className = 'fa-solid fa-eye';
-            }
-        }
-    </script>
 
     <!-- Supabase must initialize before SikLab modules -->
     <script src="js/supabase_client.js"></script>
