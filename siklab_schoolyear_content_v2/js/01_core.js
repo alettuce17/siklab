@@ -1,6 +1,6 @@
 /* =========================================================
  * SIKLAB CORE / AUTH GUARD
- * Passwordless teacher authentication version.
+ * Email + password teacher authentication version.
  *
  * There is NO manual teacher approval check here.
  * Any user with a valid Supabase Auth session can enter the
@@ -11,11 +11,9 @@
 function applyMiddleware(actionName, payload, nextFunction) {
     const publicActions = [
         'INITIALIZE',
-        'SEND_OTP',
-        'VERIFY_OTP',
-        // Kept for compatibility with any older SikLab calls.
         'LOGIN',
-        'REGISTER'
+        'REGISTER',
+        'RESEND_CONFIRMATION'
     ];
 
     const hasSession = !!window.siklabCurrentUser;

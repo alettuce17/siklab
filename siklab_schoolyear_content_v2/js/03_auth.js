@@ -1,24 +1,101 @@
 /* =========================================================
  * SIKLAB TEACHER AUTHENTICATION
- * Passwordless Email OTP via Supabase Auth
+ * Email + Password + One-Time Email Confirmation
  *
  * Flow:
- *   1) Teacher enters email.
- *   2) Supabase emails a 6-digit OTP.
- *   3) Teacher enters OTP.
- *   4) Existing user signs in; new user is created automatically.
+ *   REGISTER
+ *   1) Teacher enters full name, email, and password.
+ *   2) Supabase creates the Auth account.
+ *   3) Supabase sends the Confirm Signup email.
+ *   4) Teacher clicks the confirmation link once.
+ *   5) Teacher signs in with email + password.
  *
- * IMPORTANT:
- * In Supabase Dashboard -> Authentication -> Email Templates,
- * the Magic Link template must contain {{ .Token }} so an OTP
- * code is sent instead of only a magic link.
+ * There is NO manual teacher approval requirement.
  * ========================================================= */
 
-const SIKLAB_OTP_EMAIL_KEY = 'siklab_pending_email';
-const SIKLAB_OTP_RESEND_SECONDS = 60;
+const SIKLAB_PENDING_CONFIRM_EMAIL = 'siklab_pending_confirm_email';
 
-let siklabOtpCooldownTimer = null;
-let siklabOtpCooldownRemaining = 0;
+function normalizeEmail(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getSikLabAuthRedirectUrl() {
+    // Confirmation links return to whichever SikLab deployment is being used.
+    // Make sure that URL is also allowed in:
+    // Supabase -> Authentication -> URL Configuration -> Redirect URLs.
+    const url = new URL(window.location.href);
+    url.hash = '';
+    url.search = '';
+    return url.toString();
+}
+
+function setAuthHeading(headingText, subtitleText) {
+    const heading = document.getElementById('auth-main-heading');
+    const title = document.getElementById('auth-title');
+
+    if (heading) heading.innerText = headingText;
+    if (title) title.innerText = subtitleText;
+}
+
+function hideAllAuthPanels() {
+    document.getElementById('login-form')?.classList.add('hidden');
+    document.getElementById('register-form')?.classList.add('hidden');
+    document.getElementById('confirmation-panel')?.classList.add('hidden');
+}
+
+function showLoginForm() {
+    hideAllAuthPanels();
+    document.getElementById('login-form')?.classList.remove('hidden');
+
+    setAuthHeading(
+        'Welcome Back',
+        'Sign in with your SikLab teacher email and password.'
+    );
+
+    const pendingEmail = sessionStorage.getItem(SIKLAB_PENDING_CONFIRM_EMAIL);
+    const emailInput = document.getElementById('login-email');
+
+    if (emailInput && pendingEmail && !emailInput.value) {
+        emailInput.value = pendingEmail;
+    }
+
+    if (emailInput) {
+        setTimeout(() => emailInput.focus(), 100);
+    }
+}
+
+function showRegisterForm() {
+    hideAllAuthPanels();
+    document.getElementById('register-form')?.classList.remove('hidden');
+
+    setAuthHeading(
+        'Create Teacher Account',
+        'Create your account, confirm your email once, then sign in using your password.'
+    );
+
+    const nameInput = document.getElementById('register-name');
+    if (nameInput) {
+        setTimeout(() => nameInput.focus(), 100);
+    }
+}
+
+function showConfirmationPanel(email) {
+    hideAllAuthPanels();
+    document.getElementById('confirmation-panel')?.classList.remove('hidden');
+
+    const cleanEmail = normalizeEmail(email);
+    if (cleanEmail) {
+        sessionStorage.setItem(SIKLAB_PENDING_CONFIRM_EMAIL, cleanEmail);
+    }
+
+    const display = document.getElementById('confirmation-email-display');
+    if (display) display.textContent = cleanEmail || 'your email';
+
+    setAuthHeading(
+        'Confirm Your Email',
+        'Open the email from SikLab and confirm your account before signing in.'
+    );
+}
 
 function showAuthScreen() {
     const auth = document.getElementById('auth-screen');
@@ -33,64 +110,7 @@ function showAuthScreen() {
         dash.style.opacity = '0';
     }
 
-    const pendingEmail = sessionStorage.getItem(SIKLAB_OTP_EMAIL_KEY);
-    if (pendingEmail) {
-        showOtpStep(pendingEmail, false);
-    } else {
-        showEmailStep();
-    }
-}
-
-function setAuthHeading(headingText, subtitleText) {
-    const heading = document.getElementById('auth-main-heading');
-    const title = document.getElementById('auth-title');
-
-    if (heading) heading.innerText = headingText;
-    if (title) title.innerText = subtitleText;
-}
-
-function showEmailStep() {
-    const loginForm = document.getElementById('login-form');
-    const otpForm = document.getElementById('otp-form');
-
-    loginForm?.classList.remove('hidden');
-    otpForm?.classList.add('hidden');
-
-    setAuthHeading(
-        'Teacher Sign In',
-        'Enter your email and we will send you a secure 6-digit code.'
-    );
-
-    const emailInput = document.getElementById('login-email');
-    if (emailInput) setTimeout(() => emailInput.focus(), 100);
-}
-
-function showOtpStep(email, focusCode = true) {
-    const loginForm = document.getElementById('login-form');
-    const otpForm = document.getElementById('otp-form');
-    const emailDisplay = document.getElementById('otp-email-display');
-
-    loginForm?.classList.add('hidden');
-    otpForm?.classList.remove('hidden');
-
-    if (emailDisplay) emailDisplay.textContent = email;
-
-    setAuthHeading(
-        'Enter Verification Code',
-        'Use the 6-digit code sent to your email to continue.'
-    );
-
-    if (focusCode) {
-        const otpInput = document.getElementById('login-otp');
-        if (otpInput) setTimeout(() => otpInput.focus(), 100);
-    }
-}
-
-function formatOtpInput(input) {
-    if (!input) return;
-    input.value = String(input.value || '')
-        .replace(/\D/g, '')
-        .slice(0, 6);
+    showLoginForm();
 }
 
 function setAuthButtonBusy(button, busy, busyHtml, normalHtml) {
@@ -99,30 +119,22 @@ function setAuthButtonBusy(button, busy, busyHtml, normalHtml) {
     button.innerHTML = busy ? busyHtml : normalHtml;
 }
 
-function normalizeEmail(value) {
-    return String(value || '').trim().toLowerCase();
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+
+    const icon = button?.querySelector('i');
+    if (icon) {
+        icon.className = showing
+            ? 'fa-solid fa-eye'
+            : 'fa-solid fa-eye-slash';
+    }
 }
 
-function getSikLabAuthRedirectUrl() {
-    // Redirect magic-link fallbacks back to the exact SikLab site currently open.
-    // Examples:
-    //   Local:   http://localhost:3000/
-    //   Netlify: https://your-site.netlify.app/
-    //
-    // The URL must also be allowed in Supabase:
-    // Authentication -> URL Configuration -> Redirect URLs.
-    const url = new URL(window.location.href);
-    url.hash = '';
-    url.search = '';
-    return url.toString();
-}
-
-
-
-/* =========================================================
- * FRIENDLY AUTH ERROR MESSAGES
- * ========================================================= */
-function getFriendlyAuthError(error, fallback = 'Authentication failed.') {
+function getFriendlyPasswordAuthError(error, fallback = 'Authentication failed.') {
     const message = String(error?.message || '').trim();
     const lower = message.toLowerCase();
     const status = Number(error?.status || error?.statusCode || 0);
@@ -132,148 +144,92 @@ function getFriendlyAuthError(error, fallback = 'Authentication failed.') {
         lower.includes('rate limit') ||
         lower.includes('too many requests')
     ) {
-        return 'Too many login emails were requested. Please wait before trying again. If Custom SMTP is already enabled, check Supabase Authentication → Rate Limits.';
-    }
-
-    if (lower.includes('email address not authorized')) {
-        return 'This email cannot receive messages from the Supabase test mailer. Enable Custom SMTP in Supabase Authentication → Emails → SMTP Settings.';
+        return 'Too many authentication emails or requests were made. Please wait a little before trying again.';
     }
 
     if (
-        lower.includes('expired') ||
-        lower.includes('invalid token') ||
-        lower.includes('token is invalid') ||
-        lower.includes('otp') && lower.includes('invalid')
+        lower.includes('invalid login credentials') ||
+        lower.includes('invalid credentials')
     ) {
-        return 'That verification code is invalid or expired. Request a new code and try again.';
+        return 'Incorrect email or password.';
+    }
+
+    if (
+        lower.includes('email not confirmed') ||
+        lower.includes('email_not_confirmed')
+    ) {
+        return 'Your email is not confirmed yet. Open your SikLab confirmation email first, or resend the confirmation email.';
+    }
+
+    if (
+        lower.includes('user already registered') ||
+        lower.includes('already been registered')
+    ) {
+        return 'That email already has a SikLab account. Sign in instead.';
+    }
+
+    if (lower.includes('password') && lower.includes('least')) {
+        return 'Your password does not meet the required minimum length.';
     }
 
     if (lower.includes('email') && lower.includes('invalid')) {
         return 'Enter a valid email address.';
     }
 
+    if (lower.includes('signup') && lower.includes('disabled')) {
+        return 'New account registration is currently disabled in Supabase Authentication settings.';
+    }
+
     return message || fallback;
 }
 
-async function requestOtpForEmail(email) {
-    const db = requireSupabase();
-
-    const { error } = await db.auth.signInWithOtp({
-        email,
-        options: {
-            // New teachers are created automatically after requesting OTP.
-            shouldCreateUser: true,
-
-            // If Supabase sends a clickable link as a fallback, do NOT hard-code
-            // localhost. Send the user back to whichever SikLab site they used.
-            emailRedirectTo: getSikLabAuthRedirectUrl()
-        }
-    });
-
-    if (error) throw error;
-}
-
-async function handleSendCode(event) {
+async function handleLogin(event) {
     event.preventDefault();
 
     const email = normalizeEmail(
         document.getElementById('login-email')?.value
     );
-
-    if (!email) {
-        showErrorToast('Enter your email address.');
-        return;
-    }
-
-    const button = document.getElementById('send-code-btn');
-
-    try {
-        setAuthButtonBusy(
-            button,
-            true,
-            '<i class="fa-solid fa-spinner fa-spin"></i> Sending Code...',
-            '<i class="fa-solid fa-paper-plane"></i> Send Login Code'
-        );
-
-        await requestOtpForEmail(email);
-
-        sessionStorage.setItem(SIKLAB_OTP_EMAIL_KEY, email);
-
-        const otpInput = document.getElementById('login-otp');
-        if (otpInput) otpInput.value = '';
-
-        showOtpStep(email);
-        startOtpResendCooldown(SIKLAB_OTP_RESEND_SECONDS);
-        showToast('Verification code sent. Check your email.');
-    } catch (error) {
-        console.error('[SikLab send OTP]', error);
-        showErrorToast(
-            getFriendlyAuthError(
-                error,
-                'Unable to send the verification code.'
-            )
-        );
-    } finally {
-        setAuthButtonBusy(
-            button,
-            false,
-            '',
-            '<i class="fa-solid fa-paper-plane"></i> Send Login Code'
-        );
-    }
-}
-
-async function handleVerifyCode(event) {
-    event.preventDefault();
-
-    const email = normalizeEmail(
-        sessionStorage.getItem(SIKLAB_OTP_EMAIL_KEY)
+    const password = String(
+        document.getElementById('login-password')?.value || ''
     );
 
-    const token = String(
-        document.getElementById('login-otp')?.value || ''
-    )
-        .replace(/\D/g, '')
-        .slice(0, 6);
-
-    if (!email) {
-        showErrorToast('Email session was lost. Please request a new code.');
-        changeLoginEmail();
+    if (!email || !password) {
+        showErrorToast('Enter your email and password.');
         return;
     }
 
-    if (token.length !== 6) {
-        showErrorToast('Enter the complete 6-digit code.');
-        return;
-    }
-
-    const button = document.getElementById('verify-code-btn');
+    const button = document.getElementById('login-btn');
 
     try {
         setAuthButtonBusy(
             button,
             true,
-            '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...',
-            '<i class="fa-solid fa-circle-check"></i> Verify & Continue'
+            '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...',
+            '<i class="fa-solid fa-right-to-bracket"></i> Sign In'
         );
 
         const db = requireSupabase();
-        const { data, error } = await db.auth.verifyOtp({
+        const { data, error } = await db.auth.signInWithPassword({
             email,
-            token,
-            type: 'email'
+            password
         });
 
-        if (error) throw error;
+        if (error) {
+            const lower = String(error?.message || '').toLowerCase();
+            if (lower.includes('email not confirmed')) {
+                sessionStorage.setItem(SIKLAB_PENDING_CONFIRM_EMAIL, email);
+                showConfirmationPanel(email);
+            }
+            throw error;
+        }
 
         const user = data?.user || data?.session?.user || null;
         if (!user) {
-            throw new Error('Verification succeeded but no user session was returned.');
+            throw new Error('Sign in succeeded but no user session was returned.');
         }
 
         window.siklabCurrentUser = user;
-        sessionStorage.removeItem(SIKLAB_OTP_EMAIL_KEY);
-        stopOtpResendCooldown();
+        sessionStorage.removeItem(SIKLAB_PENDING_CONFIRM_EMAIL);
 
         const displayName = getTeacherDisplayName(user);
         sessionStorage.setItem('siklab_teacher_session', displayName);
@@ -281,14 +237,14 @@ async function handleVerifyCode(event) {
         proceedToDashboard(
             displayName,
             true,
-            `Welcome to SikLab, ${displayName}!`
+            `Welcome back, ${displayName}!`
         );
     } catch (error) {
-        console.error('[SikLab verify OTP]', error);
+        console.error('[SikLab password login]', error);
         showErrorToast(
-            getFriendlyAuthError(
+            getFriendlyPasswordAuthError(
                 error,
-                'Invalid or expired verification code.'
+                'Unable to sign in.'
             )
         );
     } finally {
@@ -296,94 +252,165 @@ async function handleVerifyCode(event) {
             button,
             false,
             '',
-            '<i class="fa-solid fa-circle-check"></i> Verify & Continue'
+            '<i class="fa-solid fa-right-to-bracket"></i> Sign In'
         );
     }
 }
 
-async function resendLoginCode() {
+async function handleRegister(event) {
+    event.preventDefault();
+
+    const fullName = String(
+        document.getElementById('register-name')?.value || ''
+    ).trim();
     const email = normalizeEmail(
-        sessionStorage.getItem(SIKLAB_OTP_EMAIL_KEY)
+        document.getElementById('register-email')?.value
+    );
+    const password = String(
+        document.getElementById('register-password')?.value || ''
+    );
+    const confirmPassword = String(
+        document.getElementById('register-confirm-password')?.value || ''
     );
 
-    if (!email) {
-        changeLoginEmail();
+    if (!fullName || !email || !password || !confirmPassword) {
+        showErrorToast('Complete all account fields.');
         return;
     }
 
-    if (siklabOtpCooldownRemaining > 0) return;
+    if (password.length < 8) {
+        showErrorToast('Password must contain at least 8 characters.');
+        return;
+    }
 
-    const button = document.getElementById('resend-code-btn');
+    if (password !== confirmPassword) {
+        showErrorToast('Passwords do not match.');
+        return;
+    }
+
+    const button = document.getElementById('register-btn');
 
     try {
-        if (button) button.disabled = true;
-        await requestOtpForEmail(email);
-        startOtpResendCooldown(SIKLAB_OTP_RESEND_SECONDS);
-        showToast('A new verification code was sent.');
-    } catch (error) {
-        console.error('[SikLab resend OTP]', error);
-        showErrorToast(
-            getFriendlyAuthError(
-                error,
-                'Unable to resend the verification code.'
-            )
+        setAuthButtonBusy(
+            button,
+            true,
+            '<i class="fa-solid fa-spinner fa-spin"></i> Creating Account...',
+            '<i class="fa-solid fa-user-plus"></i> Create Account'
         );
-        updateOtpResendButton();
-    }
-}
 
-function changeLoginEmail() {
-    sessionStorage.removeItem(SIKLAB_OTP_EMAIL_KEY);
-    stopOtpResendCooldown();
+        const db = requireSupabase();
+        const { data, error } = await db.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    role: 'teacher'
+                },
+                emailRedirectTo: getSikLabAuthRedirectUrl()
+            }
+        });
 
-    const otpInput = document.getElementById('login-otp');
-    if (otpInput) otpInput.value = '';
+        if (error) throw error;
 
-    showEmailStep();
-}
+        // Depending on Supabase anti-enumeration settings, an already-existing
+        // email can return an obfuscated user with no identities instead of an error.
+        if (
+            data?.user &&
+            Array.isArray(data.user.identities) &&
+            data.user.identities.length === 0
+        ) {
+            throw new Error('This email may already have an account. Try signing in instead.');
+        }
 
-function startOtpResendCooldown(seconds = SIKLAB_OTP_RESEND_SECONDS) {
-    stopOtpResendCooldown();
+        // If Confirm Email is OFF, Supabase may return an active session immediately.
+        if (data?.session?.user) {
+            window.siklabCurrentUser = data.session.user;
+            sessionStorage.removeItem(SIKLAB_PENDING_CONFIRM_EMAIL);
 
-    siklabOtpCooldownRemaining = Math.max(0, Number(seconds) || 0);
-    updateOtpResendButton();
+            const displayName = getTeacherDisplayName(data.session.user);
+            sessionStorage.setItem('siklab_teacher_session', displayName);
 
-    if (siklabOtpCooldownRemaining <= 0) return;
-
-    siklabOtpCooldownTimer = setInterval(() => {
-        siklabOtpCooldownRemaining -= 1;
-
-        if (siklabOtpCooldownRemaining <= 0) {
-            stopOtpResendCooldown();
+            proceedToDashboard(
+                displayName,
+                true,
+                `Welcome to SikLab, ${displayName}!`
+            );
             return;
         }
 
-        updateOtpResendButton();
-    }, 1000);
+        sessionStorage.setItem(SIKLAB_PENDING_CONFIRM_EMAIL, email);
+        showConfirmationPanel(email);
+        showToast('Account created. Check your email to confirm it.');
+    } catch (error) {
+        console.error('[SikLab register]', error);
+        showErrorToast(
+            getFriendlyPasswordAuthError(
+                error,
+                'Unable to create the account.'
+            )
+        );
+    } finally {
+        setAuthButtonBusy(
+            button,
+            false,
+            '',
+            '<i class="fa-solid fa-user-plus"></i> Create Account'
+        );
+    }
 }
 
-function stopOtpResendCooldown() {
-    if (siklabOtpCooldownTimer) {
-        clearInterval(siklabOtpCooldownTimer);
-        siklabOtpCooldownTimer = null;
+async function resendConfirmationEmail() {
+    const email = normalizeEmail(
+        sessionStorage.getItem(SIKLAB_PENDING_CONFIRM_EMAIL) ||
+        document.getElementById('register-email')?.value ||
+        document.getElementById('login-email')?.value
+    );
+
+    if (!email) {
+        showErrorToast('Enter your email first.');
+        showRegisterForm();
+        return;
     }
 
-    siklabOtpCooldownRemaining = 0;
-    updateOtpResendButton();
-}
+    const button = document.getElementById('resend-confirmation-btn');
 
-function updateOtpResendButton() {
-    const button = document.getElementById('resend-code-btn');
-    const label = document.getElementById('resend-code-label');
+    try {
+        setAuthButtonBusy(
+            button,
+            true,
+            '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Sending...',
+            '<i class="fa-solid fa-paper-plane mr-2"></i> Resend Confirmation Email'
+        );
 
-    if (!button || !label) return;
+        const db = requireSupabase();
+        const { error } = await db.auth.resend({
+            type: 'signup',
+            email,
+            options: {
+                emailRedirectTo: getSikLabAuthRedirectUrl()
+            }
+        });
 
-    if (siklabOtpCooldownRemaining > 0) {
-        button.disabled = true;
-        label.textContent = `Resend in ${siklabOtpCooldownRemaining}s`;
-    } else {
-        button.disabled = false;
-        label.textContent = 'Resend Code';
+        if (error) throw error;
+
+        sessionStorage.setItem(SIKLAB_PENDING_CONFIRM_EMAIL, email);
+        showToast('Confirmation email sent. Check your inbox.');
+    } catch (error) {
+        console.error('[SikLab resend confirmation]', error);
+        showErrorToast(
+            getFriendlyPasswordAuthError(
+                error,
+                'Unable to resend the confirmation email.'
+            )
+        );
+    } finally {
+        setAuthButtonBusy(
+            button,
+            false,
+            '',
+            '<i class="fa-solid fa-paper-plane mr-2"></i> Resend Confirmation Email'
+        );
     }
 }
 
@@ -437,17 +464,14 @@ async function forceLogout() {
 
     window.siklabCurrentUser = null;
     sessionStorage.removeItem('siklab_teacher_session');
-    sessionStorage.removeItem(SIKLAB_OTP_EMAIL_KEY);
-    stopOtpResendCooldown();
 
     const dash = document.getElementById('dashboard-layout');
     if (dash) dash.style.opacity = '0';
 
     setTimeout(() => {
+        const loginPassword = document.getElementById('login-password');
+        if (loginPassword) loginPassword.value = '';
         showAuthScreen();
-
-        const otpInput = document.getElementById('login-otp');
-        if (otpInput) otpInput.value = '';
     }, 250);
 }
 

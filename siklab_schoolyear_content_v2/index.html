@@ -223,17 +223,17 @@
                         </p>
                     </div>
 
-                    <!-- PASSWORDLESS EMAIL OTP LOGIN -->
-                    <form id="login-form" onsubmit="handleSendCode(event)" class="space-y-5">
+                    <!-- EMAIL + PASSWORD LOGIN -->
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
 
                         <div class="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex gap-3 items-start">
                             <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                                <i class="fa-solid fa-envelope-open-text"></i>
+                                <i class="fa-solid fa-shield-halved"></i>
                             </div>
                             <div>
-                                <p class="font-black text-slate-700 text-sm">No password needed</p>
+                                <p class="font-black text-slate-700 text-sm">Teacher account</p>
                                 <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Enter your email and SikLab will send a 6-digit sign-in code. New emails are automatically created as teacher accounts.
+                                    Sign in with your email and password. New accounts verify their email once before the first login.
                                 </p>
                             </div>
                         </div>
@@ -242,12 +242,10 @@
                             <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
                                 Email Address
                             </label>
-
                             <div class="relative">
                                 <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
                                     <i class="fa-solid fa-envelope"></i>
                                 </div>
-
                                 <input type="email"
                                        id="login-email"
                                        required
@@ -258,82 +256,171 @@
                             </div>
                         </div>
 
-                        <button id="send-code-btn"
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <input type="password"
+                                       id="login-password"
+                                       required
+                                       autocomplete="current-password"
+                                       placeholder="Enter your password"
+                                       class="auth-input w-full pl-16 pr-12 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('login-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="login-btn"
                                 type="submit"
                                 class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-base flex items-center justify-center gap-3 mt-2">
-                            <i class="fa-solid fa-paper-plane"></i>
-                            Send Login Code
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Sign In
                         </button>
 
-                        <p class="text-center text-xs text-slate-400 leading-relaxed">
-                            By continuing, you will sign in to the SikLab Teacher Dashboard using a one-time code sent to your email.
-                        </p>
+                        <div class="relative py-1">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                            <div class="relative flex justify-center"><span class="bg-white px-3 text-xs font-bold text-slate-400 uppercase tracking-widest">New Teacher?</span></div>
+                        </div>
+
+                        <button type="button"
+                                onclick="showRegisterForm()"
+                                class="w-full border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-black py-3.5 rounded-xl transition-all">
+                            <i class="fa-solid fa-user-plus mr-2"></i>
+                            Create Teacher Account
+                        </button>
                     </form>
 
-                    <!-- OTP VERIFICATION -->
-                    <form id="otp-form" onsubmit="handleVerifyCode(event)" class="space-y-5 hidden">
+                    <!-- REGISTRATION -->
+                    <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
 
-                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                            <div class="flex gap-3 items-start">
-                                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                                    <i class="fa-solid fa-shield-halved"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="font-black text-emerald-800 text-sm">Check your email</p>
-                                    <p class="text-xs text-emerald-700 mt-1 leading-relaxed">
-                                        We sent a 6-digit SikLab code to
-                                        <strong id="otp-email-display" class="break-all">your email</strong>.
-                                    </p>
-                                </div>
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 flex gap-3 items-start">
+                            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-slate-700 text-sm">Create your SikLab account</p>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    After registration, SikLab will email you a confirmation link. You only need to verify the email once.
+                                </p>
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
-                                6-Digit Verification Code
-                            </label>
-
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Full Name</label>
                             <input type="text"
-                                   id="login-otp"
+                                   id="register-name"
                                    required
-                                   maxlength="6"
-                                   minlength="6"
-                                   inputmode="numeric"
-                                   autocomplete="one-time-code"
-                                   pattern="[0-9]{6}"
-                                   oninput="formatOtpInput(this)"
-                                   placeholder="000000"
-                                   class="auth-input w-full px-5 py-4 rounded-xl border-2 border-slate-200 transition-all font-black text-slate-800 bg-slate-50 text-center text-3xl tracking-[0.45em]">
+                                   autocomplete="name"
+                                   placeholder="e.g. Maria Santos"
+                                   class="auth-input w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
                         </div>
 
-                        <button id="verify-code-btn"
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Email Address</label>
+                            <input type="email"
+                                   id="register-email"
+                                   required
+                                   autocomplete="email"
+                                   inputmode="email"
+                                   placeholder="teacher@school.edu"
+                                   class="auth-input w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Password</label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="register-password"
+                                       required
+                                       minlength="8"
+                                       autocomplete="new-password"
+                                       placeholder="At least 8 characters"
+                                       class="auth-input w-full px-4 pr-12 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('register-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Confirm Password</label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="register-confirm-password"
+                                       required
+                                       minlength="8"
+                                       autocomplete="new-password"
+                                       placeholder="Repeat your password"
+                                       class="auth-input w-full px-4 pr-12 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('register-confirm-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Use at least 8 characters. Your password is handled by Supabase Auth and is never stored in SikLab JavaScript.
+                        </p>
+
+                        <button id="register-btn"
                                 type="submit"
-                                class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3">
-                            <i class="fa-solid fa-circle-check"></i>
-                            Verify & Continue
+                                class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-user-plus"></i>
+                            Create Account
                         </button>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <button id="resend-code-btn"
-                                    type="button"
-                                    onclick="resendLoginCode()"
-                                    class="border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i class="fa-solid fa-rotate-right mr-2"></i>
-                                <span id="resend-code-label">Resend Code</span>
-                            </button>
+                        <button type="button"
+                                onclick="showLoginForm()"
+                                class="w-full border-2 border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition-all">
+                            <i class="fa-solid fa-arrow-left mr-2"></i>
+                            Back to Sign In
+                        </button>
+                    </form>
 
-                            <button type="button"
-                                    onclick="changeLoginEmail()"
-                                    class="border-2 border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition-all">
-                                <i class="fa-solid fa-pen mr-2"></i>
-                                Change Email
-                            </button>
+                    <!-- EMAIL CONFIRMATION NOTICE -->
+                    <div id="confirmation-panel" class="space-y-5 hidden">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                            <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md mb-4">
+                                <i class="fa-solid fa-envelope-circle-check text-2xl"></i>
+                            </div>
+                            <h3 class="font-black text-emerald-900 text-xl">Check your email</h3>
+                            <p class="text-sm text-emerald-800 mt-2 leading-relaxed">
+                                We sent an account confirmation link to
+                                <strong id="confirmation-email-display" class="break-all">your email</strong>.
+                                Open that email and click <strong>Confirm Account</strong>, then return to SikLab and sign in with your password.
+                            </p>
                         </div>
 
-                        <p class="text-center text-xs text-slate-400">
-                            Never share your verification code with another person.
-                        </p>
-                    </form>
+                        <button id="resend-confirmation-btn"
+                                type="button"
+                                onclick="resendConfirmationEmail()"
+                                class="w-full border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-black py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-paper-plane mr-2"></i>
+                            Resend Confirmation Email
+                        </button>
+
+                        <button type="button"
+                                onclick="showLoginForm()"
+                                class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-3.5 rounded-xl transition-all">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i>
+                            Go to Sign In
+                        </button>
+                    </div>
 
                     <!-- Footer -->
                     <div class="mt-8 pt-5 border-t border-slate-100 flex justify-center items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
