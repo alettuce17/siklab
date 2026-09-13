@@ -1,57 +1,461 @@
-/* Custom Fonts and Backgrounds */
-body { 
-    font-family: 'Poppins', sans-serif; 
-    background-color: #fff7ed; 
+/* =========================================================
+ * SIKLAB GLOBAL THEME + COMPACT TEACHER DASHBOARD
+ * Drop-in replacement for style.css
+ * Student portal is intentionally not affected.
+ * ========================================================= */
+
+/* ---------------------------------------------------------
+ * Existing SikLab theme
+ * --------------------------------------------------------- */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #fff7ed;
 }
 
-/* Hide scrollbars but keep scroll functionality */
 .hide-scroll::-webkit-scrollbar { display: none; }
 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Spin Wheel Indicator - Fiery Red/Orange */
 .wheel-indicator {
     clip-path: polygon(100% 0, 0 50%, 100% 100%);
     background: linear-gradient(to bottom right, #ea580c, #dc2626) !important;
 }
 
-/* Custom Toggle Switch Styling - Fire Theme */
-input:checked ~ .dot { 
-    transform: translateX(1.5rem); 
-    background-color: #ea580c !important; 
-    box-shadow: 0 0 10px rgba(234, 88, 12, 0.6); 
+input:checked ~ .dot {
+    transform: translateX(1.5rem);
+    background-color: #ea580c !important;
+    box-shadow: 0 0 10px rgba(234, 88, 12, 0.6);
 }
-input:checked ~ .block { 
-    background-color: #ffedd5 !important; 
+input:checked ~ .block {
+    background-color: #ffedd5 !important;
 }
 
-/* Initial Session Loader - Dark Ember Glow */
 #loader-screen {
     transition: opacity 0.3s ease;
     background: radial-gradient(circle, #450a0a 0%, #0f172a 100%) !important;
 }
-
 #loader-screen i {
-    color: #ea580c !important; 
+    color: #ea580c !important;
     filter: drop-shadow(0 0 15px rgba(234,88,12,0.8));
 }
+#loader-screen p { color: #fed7aa !important; }
 
-#loader-screen p {
-    color: #fed7aa !important; 
-}
-
-/* School Year Selector Dropdown Arrow - Fire Tone */
 .school-year-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ea580c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1em;
+    background-position: right 0.65rem center;
+    background-size: 0.85em;
 }
-
-/* Removes the ugly focus rectangle and shadow when the dropdown is clicked */
 .school-year-select:focus,
 .school-year-select:active {
     outline: none !important;
     box-shadow: none !important;
     border-color: #ea580c !important;
+}
+
+/* =========================================================
+ * COMPACT TEACHER DASHBOARD
+ * ========================================================= */
+
+/* Sidebar: narrower and shorter controls */
+#dashboard-layout > aside {
+    width: 4.5rem !important;
+}
+
+#dashboard-layout > aside > div:first-child {
+    height: 3.75rem !important;
+}
+
+#dashboard-layout > aside .nav-btn {
+    padding: 0.55rem !important;
+    border-radius: 0.65rem !important;
+    font-size: 0.78rem !important;
+    line-height: 1.1 !important;
+}
+
+#dashboard-layout > aside .nav-btn i {
+    font-size: 1rem !important;
+    width: 1.55rem !important;
+}
+
+#dashboard-layout > aside .py-6 {
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.7rem !important;
+}
+
+#dashboard-layout > aside .gap-2 { gap: 0.35rem !important; }
+#dashboard-layout > aside .px-3 {
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+}
+
+#dashboard-layout > aside .p-4 { padding: 0.65rem !important; }
+#dashboard-layout > aside .w-10 { width: 2rem !important; }
+#dashboard-layout > aside .h-10 { height: 2rem !important; }
+
+@media (min-width: 1024px) {
+    #dashboard-layout > aside {
+        width: 13.5rem !important;
+    }
+
+    #dashboard-layout > aside > div:first-child {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    #dashboard-layout > aside > div:first-child i {
+        font-size: 1.35rem !important;
+    }
+
+    #dashboard-layout > aside > div:first-child span {
+        font-size: 1.25rem !important;
+        margin-left: 0.55rem !important;
+    }
+
+    #dashboard-layout > aside .nav-btn {
+        padding: 0.58rem 0.8rem !important;
+    }
+
+    #dashboard-layout > aside .nav-btn span {
+        margin-left: 0.45rem !important;
+    }
+}
+
+/* Top header */
+#dashboard-layout main > header {
+    height: 3.75rem !important;
+    min-height: 3.75rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+#dashboard-layout main > header #header-title {
+    font-size: 1.15rem !important;
+    line-height: 1.2 !important;
+}
+
+#dashboard-layout main > header #header-subtitle {
+    font-size: 0.68rem !important;
+    line-height: 1.2 !important;
+}
+
+#dashboard-layout main > header .gap-4 { gap: 0.55rem !important; }
+#dashboard-layout main > header .gap-2 { gap: 0.3rem !important; }
+
+#dashboard-layout main > header #school-year-filter {
+    font-size: 0.72rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+#dashboard-layout main > header button {
+    font-size: 0.72rem !important;
+}
+
+#dashboard-layout main > header #ui-status-p1,
+#dashboard-layout main > header #ui-status-p2 {
+    padding: 0.38rem 0.65rem !important;
+    font-size: 0.68rem !important;
+    gap: 0.3rem !important;
+}
+
+/* All teacher views: less whitespace */
+#dashboard-layout .view-section:not(#view-lesson-builder):not(#view-student-preview) {
+    padding: 0.9rem !important;
+}
+
+#dashboard-layout .view-section.space-y-8,
+#dashboard-layout .space-y-8 { gap: 0 !important; }
+
+#dashboard-layout .view-section.space-y-8 > * + *,
+#dashboard-layout .space-y-8 > * + * { margin-top: 0.85rem !important; }
+
+#dashboard-layout .space-y-6 > * + * { margin-top: 0.7rem !important; }
+#dashboard-layout .space-y-5 > * + * { margin-top: 0.6rem !important; }
+#dashboard-layout .space-y-4 > * + * { margin-top: 0.5rem !important; }
+#dashboard-layout .space-y-3 > * + * { margin-top: 0.4rem !important; }
+
+#dashboard-layout .gap-8 { gap: 0.9rem !important; }
+#dashboard-layout .gap-6 { gap: 0.75rem !important; }
+#dashboard-layout .gap-5 { gap: 0.65rem !important; }
+#dashboard-layout .gap-4 { gap: 0.55rem !important; }
+#dashboard-layout .gap-3 { gap: 0.45rem !important; }
+
+/* Cards / panels */
+#dashboard-layout .view-section .p-8 { padding: 1rem !important; }
+#dashboard-layout .view-section .p-6 { padding: 0.85rem !important; }
+#dashboard-layout .view-section .p-5 { padding: 0.75rem !important; }
+#dashboard-layout .view-section .p-4 { padding: 0.65rem !important; }
+#dashboard-layout .view-section .p-3 { padding: 0.5rem !important; }
+
+#dashboard-layout .view-section .px-8 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+#dashboard-layout .view-section .px-6 {
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
+}
+#dashboard-layout .view-section .px-5 {
+    padding-left: 0.7rem !important;
+    padding-right: 0.7rem !important;
+}
+#dashboard-layout .view-section .px-4 {
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+}
+
+#dashboard-layout .view-section .py-6 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+#dashboard-layout .view-section .py-5 {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+}
+#dashboard-layout .view-section .py-4 {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+}
+#dashboard-layout .view-section .py-3 {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+}
+#dashboard-layout .view-section .py-2 {
+    padding-top: 0.32rem !important;
+    padding-bottom: 0.32rem !important;
+}
+
+#dashboard-layout .view-section .rounded-3xl { border-radius: 1rem !important; }
+#dashboard-layout .view-section .rounded-2xl { border-radius: 0.8rem !important; }
+#dashboard-layout .view-section .rounded-xl { border-radius: 0.65rem !important; }
+
+/* Headings / typography */
+#dashboard-layout .view-section .text-5xl { font-size: 2rem !important; line-height: 1.05 !important; }
+#dashboard-layout .view-section .text-4xl { font-size: 1.6rem !important; line-height: 1.1 !important; }
+#dashboard-layout .view-section .text-3xl { font-size: 1.35rem !important; line-height: 1.12 !important; }
+#dashboard-layout .view-section .text-2xl { font-size: 1.1rem !important; line-height: 1.2 !important; }
+#dashboard-layout .view-section .text-xl { font-size: 0.98rem !important; line-height: 1.25 !important; }
+#dashboard-layout .view-section .text-lg { font-size: 0.9rem !important; line-height: 1.3 !important; }
+#dashboard-layout .view-section .text-base { font-size: 0.82rem !important; }
+#dashboard-layout .view-section .text-sm { font-size: 0.72rem !important; }
+#dashboard-layout .view-section .text-xs { font-size: 0.64rem !important; }
+
+/* Inputs and controls */
+#dashboard-layout .view-section input:not([type="checkbox"]):not([type="radio"]),
+#dashboard-layout .view-section select,
+#dashboard-layout .view-section textarea {
+    font-size: 0.78rem !important;
+    border-radius: 0.6rem !important;
+}
+
+#dashboard-layout .view-section input:not([type="checkbox"]):not([type="radio"]),
+#dashboard-layout .view-section select {
+    min-height: 2.15rem !important;
+}
+
+#dashboard-layout .view-section textarea {
+    min-height: 4.5rem;
+}
+
+#dashboard-layout .view-section input.py-4,
+#dashboard-layout .view-section select.py-4,
+#dashboard-layout .view-section textarea.py-4 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+#dashboard-layout .view-section label {
+    font-size: 0.7rem;
+}
+
+/* Buttons: keep touchable but smaller */
+#dashboard-layout .view-section button:not(.w-2):not(.h-2) {
+    line-height: 1.15 !important;
+}
+
+#dashboard-layout .view-section button.text-lg { font-size: 0.82rem !important; }
+#dashboard-layout .view-section button.text-base { font-size: 0.76rem !important; }
+#dashboard-layout .view-section button.text-sm { font-size: 0.7rem !important; }
+#dashboard-layout .view-section button.text-xs { font-size: 0.62rem !important; }
+
+/* Common large icon/stat circles */
+#dashboard-layout .view-section .w-16.h-16,
+#dashboard-layout .view-section .h-16.w-16 {
+    width: 2.9rem !important;
+    height: 2.9rem !important;
+}
+
+#dashboard-layout .view-section .w-14.h-14,
+#dashboard-layout .view-section .h-14.w-14 {
+    width: 2.55rem !important;
+    height: 2.55rem !important;
+}
+
+#dashboard-layout .view-section .w-12.h-12,
+#dashboard-layout .view-section .h-12.w-12 {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+}
+
+/* Tables */
+#dashboard-layout .view-section table {
+    font-size: 0.72rem !important;
+}
+
+#dashboard-layout .view-section th {
+    padding: 0.5rem 0.65rem !important;
+    font-size: 0.63rem !important;
+}
+
+#dashboard-layout .view-section td {
+    padding: 0.48rem 0.65rem !important;
+}
+
+/* Overview */
+#view-overview > .grid {
+    gap: 0.7rem !important;
+}
+
+#view-overview > .grid > div {
+    padding: 0.75rem !important;
+    gap: 0.65rem !important;
+    min-height: 4.2rem;
+}
+
+#view-overview #live-match-setup-box {
+    padding: 0.85rem !important;
+}
+
+#view-overview #live-match-setup-box .mb-6 { margin-bottom: 0.75rem !important; }
+
+/* Students / question bank / history / settings / admin */
+#view-students,
+#view-content,
+#view-history,
+#view-settings,
+#view-admin,
+#view-wheel,
+#view-device-setup {
+    padding: 0.9rem !important;
+}
+
+#view-students .mb-6,
+#view-content .mb-6,
+#view-history .mb-6,
+#view-settings .mb-6,
+#view-admin .mb-6,
+#view-wheel .mb-6,
+#view-device-setup .mb-6 {
+    margin-bottom: 0.7rem !important;
+}
+
+#view-students .mb-8,
+#view-content .mb-8,
+#view-history .mb-8,
+#view-settings .mb-8,
+#view-admin .mb-8,
+#view-wheel .mb-8,
+#view-device-setup .mb-8 {
+    margin-bottom: 0.85rem !important;
+}
+
+/* Curriculum Manager - extra dense */
+#view-curriculum {
+    padding: 0.75rem !important;
+}
+
+#view-curriculum > * + * {
+    margin-top: 0.65rem !important;
+}
+
+#view-curriculum .grid {
+    gap: 0.65rem !important;
+}
+
+#view-curriculum .p-5,
+#view-curriculum .p-6 {
+    padding: 0.72rem !important;
+}
+
+/* Device Setup */
+#view-device-setup .grid {
+    gap: 0.75rem !important;
+}
+
+#view-device-setup img,
+#view-device-setup canvas {
+    max-width: 220px;
+    height: auto;
+}
+
+/* Admin page was previously very tall */
+#view-admin {
+    gap: 0.8rem !important;
+    height: calc(100vh - 3.75rem) !important;
+}
+
+/* Modal density */
+#selector-modal > div,
+#add-year-modal > div,
+#edit-group-modal > div {
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+#selector-modal .p-8,
+#add-year-modal .p-8,
+#edit-group-modal .p-8,
+#selector-modal .p-6,
+#add-year-modal .p-6,
+#edit-group-modal .p-6 {
+    padding: 1rem !important;
+}
+
+#selector-modal .text-3xl,
+#add-year-modal .text-3xl,
+#edit-group-modal .text-3xl {
+    font-size: 1.35rem !important;
+}
+
+#selector-modal .text-2xl,
+#add-year-modal .text-2xl,
+#edit-group-modal .text-2xl {
+    font-size: 1.1rem !important;
+}
+
+/* Preserve enough room on smaller screens. */
+@media (max-width: 1023px) {
+    #dashboard-layout .view-section:not(#view-lesson-builder):not(#view-student-preview) {
+        padding: 0.7rem !important;
+    }
+
+    #dashboard-layout main > header {
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+    }
+
+    #dashboard-layout main > header #header-subtitle {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    /* Keep mobile controls usable rather than over-compressing them. */
+    #dashboard-layout main > header {
+        min-height: 3.75rem !important;
+        height: auto !important;
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+    }
+
+    #dashboard-layout main > header .flex.items-center.gap-4 {
+        gap: 0.35rem !important;
+    }
+
+    #dashboard-layout main > header #ui-status-p1,
+    #dashboard-layout main > header #ui-status-p2 {
+        padding: 0.3rem 0.45rem !important;
+        font-size: 0.6rem !important;
+    }
 }

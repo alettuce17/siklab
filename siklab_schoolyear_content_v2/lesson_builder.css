@@ -1,18 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap');
 
-body { 
-    font-family: 'Poppins', sans-serif; 
+/* =========================================================
+ * SIKLAB COMPACT LESSON BUILDER
+ * Drop-in replacement for lesson_builder.css
+ * ========================================================= */
+body {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
 }
 
-/* Drag and Drop Helpers */
 .drag-handle { cursor: grab; }
 .drag-handle:active { cursor: grabbing; }
-.sortable-ghost { 
-    opacity: 0.4; 
-    border: 2px dashed #f97316; 
+.sortable-ghost {
+    opacity: 0.4;
+    border: 2px dashed #f97316;
 }
 
-/* Rich Text Editor Styling */
 .rich-editor-content:empty:before {
     content: attr(data-placeholder);
     color: #94a3b8;
@@ -20,37 +23,90 @@ body {
     display: block;
 }
 
-.rich-editor-content h3 { 
-    font-size: 1.5rem; 
-    font-weight: 900; 
-    margin-bottom: 0.5rem; 
-    color: #1e293b; 
+.rich-editor-content h3 {
+    font-size: 1.2rem;
+    font-weight: 900;
+    margin-bottom: 0.35rem;
+    color: #1e293b;
 }
 
-.rich-editor-content h4 { 
-    font-size: 1.25rem; 
-    font-weight: 800; 
-    margin-bottom: 0.5rem; 
-    color: #334155; 
+.rich-editor-content h4 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+    color: #334155;
 }
 
-.rich-editor-content u { 
-    text-decoration-color: #ea580c; 
-    text-decoration-thickness: 3px; 
-    text-underline-offset: 2px; 
+.rich-editor-content p,
+.rich-editor-content li {
+    line-height: 1.5;
 }
-/* Image Resizing & Moving Styling */
-.rich-editor-content img { 
-    height: auto; 
-    border-radius: 1rem; 
-    margin: 1rem 0; 
-    border: 4px solid transparent;
-    /* Removed the hardcoded cursor */
+
+.rich-editor-content u {
+    text-decoration-color: #ea580c;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+}
+
+.rich-editor-content img {
+    height: auto;
+    border-radius: 0.7rem;
+    margin: 0.65rem 0;
+    border: 3px solid transparent;
     transition: border-color 0.2s ease;
     max-width: 100%;
     display: inline-block;
 }
 
-.rich-editor-content img:hover {
-    border-color: #3b82f6; 
+.rich-editor-content img:hover { border-color: #3b82f6; }
+
+/* Compact Tailwind-heavy builder layout without changing its JS. */
+body .p-8 { padding: 1rem !important; }
+body .p-6 { padding: 0.8rem !important; }
+body .p-5 { padding: 0.72rem !important; }
+body .p-4 { padding: 0.62rem !important; }
+body .p-3 { padding: 0.5rem !important; }
+body .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+body .px-6 { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+body .py-6 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+body .py-4 { padding-top: 0.52rem !important; padding-bottom: 0.52rem !important; }
+body .gap-8 { gap: 0.85rem !important; }
+body .gap-6 { gap: 0.7rem !important; }
+body .gap-4 { gap: 0.5rem !important; }
+body .space-y-6 > * + * { margin-top: 0.7rem !important; }
+body .space-y-4 > * + * { margin-top: 0.5rem !important; }
+
+body .rounded-3xl { border-radius: 1rem !important; }
+body .rounded-2xl { border-radius: 0.8rem !important; }
+body .rounded-xl { border-radius: 0.65rem !important; }
+
+body .text-4xl { font-size: 1.6rem !important; }
+body .text-3xl { font-size: 1.35rem !important; }
+body .text-2xl { font-size: 1.1rem !important; }
+body .text-xl { font-size: 0.98rem !important; }
+body .text-lg { font-size: 0.9rem !important; }
+body .text-base { font-size: 0.82rem !important; }
+body .text-sm { font-size: 0.72rem !important; }
+body .text-xs { font-size: 0.64rem !important; }
+
+body input,
+body select,
+body textarea,
+body button {
+    font-size: 0.78rem;
+}
+
+body input,
+body select {
+    min-height: 2.15rem;
+}
+
+body textarea {
+    min-height: 4.5rem;
+}
+
+/* Keep editor content readable while reducing chrome around it. */
+.rich-editor-content {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
 }
