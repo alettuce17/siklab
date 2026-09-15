@@ -1,0 +1,2 @@
+websockets>=12,<16
+qrcode[pil]>=8,<9
