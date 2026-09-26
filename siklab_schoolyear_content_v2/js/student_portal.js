@@ -303,6 +303,30 @@ function renderStudentLesson(lesson) {
 function renderStudentBlock(block, lesson, index) {
     if (!block || typeof block !== 'object') return '';
 
+    if (block.type === 'pdf_resource') {
+        // Public lesson-pdfs bucket; validate URL so a lesson cannot embed arbitrary third-party pages.
+        let validUrl = '';
+        try {
+            const link = new URL(String(block.url || ''));
+            const cloud = new URL(SIKLAB_SUPABASE_URL);
+            if (link.protocol === 'https:' && link.host === cloud.host &&
+                link.pathname.startsWith('/storage/v1/object/public/lesson-pdfs/')) validUrl = link.toString();
+        } catch (_) {}
+        if (!validUrl) return '';
+        const title = escapeHtml(String(block.title || 'Reading Material').slice(0, 140));
+        const safeUrl = escapeAttr(validUrl);
+        return `<section class="rounded-3xl border-4 border-rose-100 bg-rose-50 p-5 md:p-7">
+            <div class="flex items-center gap-3 mb-3"><div class="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center text-2xl"><i class="fa-solid fa-file-pdf"></i></div>
+                <div><p class="text-sm font-black uppercase text-rose-600">Extra Reading</p><h3 class="text-xl md:text-2xl font-black text-slate-800">${title}</h3></div></div>
+            <p class="text-slate-600 mb-3">Explore the original learning material if you want to learn more.</p>
+            <details class="bg-white border border-rose-200 rounded-2xl p-3">
+                <summary class="cursor-pointer font-black text-rose-700 px-2 py-2">📖 Open PDF reader here</summary>
+                <iframe src="${safeUrl}#toolbar=1" loading="lazy" title="${escapeAttr(String(block.title || 'PDF Reading Material').slice(0,140))}" class="w-full mt-3 rounded-lg border border-rose-200" style="height: min(70vh, 640px)"></iframe>
+            </details>
+            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center bg-rose-600 text-white font-black px-5 py-3 rounded-2xl">Open full PDF in new tab ↗</a>
+        </section>`;
+    }
+
     if (block.type === 'rich_text' || block.type === 'text') {
         return `<article class="lesson-rich text-lg md:text-xl leading-relaxed font-semibold text-slate-700 bg-sky-50/50 border border-sky-100 rounded-3xl p-6 md:p-8">${sanitizeRichHtml(block.content || '')}</article>`;
     }
@@ -318,7 +342,7 @@ function renderStudentBlock(block, lesson, index) {
 
     if (block.type === 'quiz') {
         const options = Array.isArray(block.options) ? block.options.slice(0,4) : [];
-        return `<div class="rounded-3xl border-4 border-emerald-200 bg-emerald-50 p-6 md:p-8" data-quiz-module="${lesson.moduleId}" data-quiz-index="${index}" data-correct="${Number(block.correctIndex || 0)}">
+        return `<div class="rounded-3xl border-4 border-emerald-200 bg-emerald-50 p-6 md:p-8" data-quiz-module="${lesson.moduleId}" data-quiz-index="${index}" data-correct="${Number(block.correctIndex || 0)}" data-explanation="${escapeAttr(String(block.explanation || '').slice(0,350))}">
             <div class="flex items-center gap-3"><div class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl"><i class="fa-solid fa-circle-question"></i></div><div><p class="text-xs font-black uppercase tracking-wider text-emerald-600">Brain Check</p><h3 class="text-2xl font-black text-emerald-950">${escapeHtml(block.question || 'Choose the correct answer')}</h3></div></div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                 ${options.map((option, optionIndex) => `<button onclick="answerStudentQuiz(this, ${optionIndex})" class="student-quiz-option bg-white hover:bg-emerald-100 border-2 border-emerald-200 text-slate-700 font-black px-5 py-4 rounded-2xl transition-colors">${escapeHtml(option)}</button>`).join('')}
@@ -352,7 +376,7 @@ function answerStudentQuiz(button, chosenIndex) {
     if (chosenIndex === correctIndex) {
         button.classList.add('bg-emerald-200','border-emerald-500');
         if (feedback) {
-            feedback.textContent = 'Correct! Great job!';
+            feedback.textContent = 'Correct! Great job!' + (card.dataset.explanation ? ' ' + card.dataset.explanation : '');
             feedback.className = 'student-quiz-feedback mt-4 rounded-xl p-4 font-black text-center bg-emerald-100 text-emerald-700';
         }
         const state = lessonQuizProgress.get(moduleId);

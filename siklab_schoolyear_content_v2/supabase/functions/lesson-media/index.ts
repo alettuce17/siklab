@@ -1,0 +1,133 @@
+// Search licensed Commons illustrations and copy teacher-selected image to SikLab Storage.
+import { createClient } from 'npm:@supabase/supabase-js@2'
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json',
+}
+const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers })
+function key(): string {
+  const direct = Deno.env.get('SIKLAB_PUBLISHABLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY')
+  if (direct) return direct
+  const map = JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') || '{}')
+  return map.default || Object.values(map)[0] as string || ''
+}
+function stripHtml(value: unknown): string {
+  return String(value || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").slice(0, 200)
+}
+async function userClient(req: Request) {
+  const bearer = req.headers.get('authorization') || ''
+  if (!/^Bearer\s+\S+$/i.test(bearer)) return null
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, key(), {
+    global: { headers: { Authorization: bearer } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data, error } = await db.auth.getUser()
+  if (error || !data.user) return null
+  const { data: allowed, error: accessError } = await db.rpc('is_approved_teacher')
+  return !accessError && allowed === true ? db : null
+}
+function wikimediaImageUrl(raw: unknown): string | null {
+  try {
+    const u = new URL(String(raw || ''))
+    if (u.protocol !== 'https:' || u.hostname !== 'upload.wikimedia.org' || u.username || u.password || u.port) return null
+    if (!/^\/wikipedia\/commons\//.test(u.pathname)) return null
+    return u.toString()
+  } catch (_) { return null }
+}
+Deno.serve(async req => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers })
+  if (req.method !== 'POST') return reply({ error: 'POST required.' }, 405)
+  try {
+    const db = await userClient(req)
+    if (!db) return reply({ error: 'Sign in with an authorized teacher account.' }, 403)
+    const body = await req.json()
+    if (body?.action === 'search') {
+      const query = String(body.query || '').trim().slice(0, 100)
+      if (query.length < 2) return reply({ error: 'Enter image search keywords.' }, 400)
+      const params = new URLSearchParams({
+        action: 'query', generator: 'search', gsrsearch: `${query} filetype:bitmap`,
+        gsrnamespace: '6', gsrlimit: '18', prop: 'imageinfo',
+        iiprop: 'url|extmetadata|mime|size', iiurlwidth: '400', format: 'json', formatversion: '2',
+      })
+      const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`, { signal: AbortSignal.timeout(16000), headers: { 'User-Agent': 'SikLabEducationalLessonBuilder/1.0 (teacher-curated science images)' } })
+      if (!r.ok) return reply({ error: 'Image library unavailable. Use Add Image instead.' }, 502)
+      const json = await r.json()
+      const images = (json?.query?.pages || []).flatMap((item: Record<string, any>) => {
+        const info = item?.imageinfo?.[0]
+        if (!info || !/image\/(jpeg|png|webp)/.test(info.mime || '') || info.size > 5 * 1024 * 1024) return []
+        const url = wikimediaImageUrl(info.url)
+        const thumb = wikimediaImageUrl(info.thumburl || info.url)
+        if (!url || !thumb) return []
+        const meta = info.extmetadata || {}
+        const license = stripHtml(meta.LicenseShortName?.value || meta.License?.value)
+        if (!/(CC|public domain|PD-|GFDL)/i.test(license)) return []
+        return [{ title: stripHtml(item.title).replace(/^File:/i, ''), url, thumb,
+          artist: stripHtml(meta.Artist?.value || 'Wikimedia Commons contributor'), license,
+          page: String(info.descriptionurl || '').slice(0, 350) }]
+      }).slice(0, 12)
+      return reply({ images })
+    }
+    if (body?.action === 'generate') {
+      const prompt = String(body.prompt || '').trim().slice(0, 180)
+      const yearId = Number(body.year_id)
+      if (prompt.length < 3) return reply({ error: 'Enter an illustration topic.' }, 400)
+      if (!Number.isSafeInteger(yearId) || yearId <= 0) return reply({ error: 'Select a school year first.' }, 400)
+      const geminiKey = Deno.env.get('GEMINI_API_KEY')
+      if (!geminiKey) return reply({ error: 'GEMINI_API_KEY is not configured.' }, 503)
+      const model = Deno.env.get('GEMINI_IMAGE_MODEL') || 'gemini-2.5-flash-image'
+      const promptText = `Create one clear, friendly science illustration suitable for Grade 3 students, accurate anatomy/structure, bright clean flat educational artwork, no text labels, no watermark added by prompt, no identifiable children or real people. Topic: ${prompt}`
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } }),
+        signal: AbortSignal.timeout(110_000),
+      })
+      if (!r.ok) {
+        const detail = await r.text()
+        console.error('[Gemini image]', r.status, detail.slice(0, 500))
+        return reply({ error: r.status === 429 ? 'Image generation quota exceeded.' : 'Image generation unavailable. Check Gemini image model and billing access.' }, 502)
+      }
+      const payload = await r.json()
+      const part = (payload?.candidates?.[0]?.content?.parts || []).find((part: Record<string, any>) => !!(part.inlineData?.data || part.inline_data?.data))
+      const inline = part?.inlineData || part?.inline_data
+      if (!inline?.data) return reply({ error: 'AI did not return an image. Try a simpler topic.' }, 502)
+      const mime = String(inline.mimeType || inline.mime_type || 'image/png')
+      const ext: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
+      if (!ext[mime] || inline.data.length > 7_000_000) return reply({ error: 'Generated image was unsupported or too large.' }, 502)
+      const bytes = Uint8Array.from(atob(inline.data), ch => ch.charCodeAt(0))
+      if (bytes.byteLength > 5 * 1024 * 1024) return reply({ error: 'Generated image exceeded storage limit.' }, 502)
+      const path = `school-year-${yearId}/ai-${crypto.randomUUID()}.${ext[mime]}`
+      const { error } = await db.storage.from('lesson-images').upload(path, bytes, { contentType: mime, upsert: false })
+      if (error) return reply({ error: `Could not save illustration: ${error.message}` }, 403)
+      const { data } = db.storage.from('lesson-images').getPublicUrl(path)
+      return reply({ publicUrl: data.publicUrl, aiGenerated: true })
+    }
+    if (body?.action === 'import') {
+      const url = wikimediaImageUrl(body.url)
+      if (!url) return reply({ error: 'Only selected Wikimedia Commons images are supported.' }, 400)
+      const yearId = Number(body.year_id)
+      if (!Number.isSafeInteger(yearId) || yearId <= 0) return reply({ error: 'Select a school year first.' }, 400)
+      // Fetch via our server so the teacher does not depend on Wikimedia browser CORS.
+      const r = await fetch(url, { signal: AbortSignal.timeout(18000) })
+      if (!r.ok) return reply({ error: 'Could not retrieve the chosen image.' }, 502)
+      const type = (r.headers.get('content-type') || '').split(';')[0].trim()
+      const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+      if (!extensions[type]) return reply({ error: 'Only JPG, PNG, or WEBP can be imported.' }, 400)
+      const size = Number(r.headers.get('content-length') || 0)
+      if (size > 5 * 1024 * 1024) return reply({ error: 'Image is larger than 5 MB.' }, 400)
+      const bytes = await r.arrayBuffer()
+      if (bytes.byteLength > 5 * 1024 * 1024) return reply({ error: 'Image is larger than 5 MB.' }, 400)
+      const storagePath = `school-year-${yearId}/commons-${crypto.randomUUID()}.${extensions[type]}`
+      const { error } = await db.storage.from('lesson-images').upload(storagePath, bytes, { contentType: type, upsert: false })
+      if (error) return reply({ error: `Unable to save image: ${error.message}` }, 403)
+      const { data } = db.storage.from('lesson-images').getPublicUrl(storagePath)
+      return reply({ publicUrl: data.publicUrl, attribution: String(body.attribution || '').slice(0, 200),
+        license: String(body.license || '').slice(0, 100), source: String(body.source || '').slice(0, 350) })
+    }
+    return reply({ error: 'Unsupported media action.' }, 400)
+  } catch (error) {
+    console.error('[lesson-media]', error)
+    return reply({ error: 'Could not access the image library right now.' }, 500)
+  }
+})

@@ -79,6 +79,11 @@
                     <p class="text-xs text-slate-400">A clickable card that reveals a hidden answer.</p>
                 </div>
                 
+                <div class="palette-item bg-slate-50 border-2 border-slate-200 p-4 rounded-xl cursor-grab hover:border-rose-400 transition-colors" data-type="pdf_resource">
+                    <i class="fa-solid fa-file-pdf text-rose-500 mb-2 text-xl"></i>
+                    <h4 class="font-bold text-slate-700">PDF Reading Resource</h4>
+                    <p class="text-xs text-slate-400">One PDF per topic, with a student reading viewer.</p>
+                </div>
                 <div class="palette-item bg-slate-50 border-2 border-slate-200 p-4 rounded-xl cursor-grab hover:border-emerald-400 transition-colors" data-type="quiz">
                     <i class="fa-solid fa-circle-question text-emerald-500 mb-2 text-xl"></i>
                     <h4 class="font-bold text-slate-700">Brain Check</h4>
@@ -90,6 +95,28 @@
         <!-- Canvas / Dropzone -->
         <div class="w-3/4 bg-slate-100 p-8 overflow-y-auto" id="canvas-scroll-area">
             <div class="max-w-4xl mx-auto">
+                <section id="ai-lesson-panel" class="ai-lesson-panel mb-5" aria-label="AI-assisted lesson draft">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div><span class="ai-tag"><i class="fa-solid fa-wand-magic-sparkles"></i> TEACHER ASSISTANT</span>
+                        <h2 class="font-black text-slate-800 text-xl mt-2">Create a lesson from your PDF</h2>
+                        <p class="text-sm text-slate-500 mt-1">Generate an editable Grade 3 Science draft and a Brain Check at the end. Nothing is published automatically.</p></div>
+                    </div>
+                    <div class="ai-input-grid mt-4">
+                        <label class="ai-field">Lesson PDF (max 5 MB)
+                            <input type="file" id="ai-lesson-pdf" accept="application/pdf,.pdf" class="ai-file" aria-label="PDF source for AI lesson">
+                        </label>
+                        <label class="ai-field">Topic or focus (optional)
+                            <input type="text" id="ai-lesson-focus" maxlength="140" placeholder="e.g. Parts of plants" class="ai-text">
+                        </label>
+                        <label class="ai-field">End-of-lesson questions
+                            <select id="ai-lesson-questions" class="ai-text"><option value="3">3 questions</option><option value="5" selected>5 questions</option><option value="10">10 questions</option></select>
+                        </label>
+                    </div>
+                    <label class="flex gap-2 items-start mt-3 text-sm text-slate-600"><input type="checkbox" id="ai-attach-pdf" checked class="mt-1"> Add the source PDF as a student reading resource before the quiz (only upload PDFs you are allowed to share with students).</label>
+                    <div class="flex items-center gap-3 flex-wrap mt-4"><button id="ai-generate-btn" type="button" onclick="generateAiLessonDraft()" class="ai-primary"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate editable draft</button>
+                        <span id="ai-lesson-status" role="status" class="text-sm font-semibold text-slate-500">PDF stays a teacher-reviewed draft until you save.</span></div>
+                    <div id="ai-lesson-review" class="hidden ai-review mt-4" aria-live="polite"></div>
+                </section>
                 <p class="text-slate-400 font-bold mb-4 uppercase tracking-widest text-sm">
                     <i class="fa-solid fa-arrow-down text-orange-500"></i> Drag blocks here to build the lesson
                 </p>
@@ -97,6 +124,17 @@
                 <div id="lesson-canvas" class="min-h-[600px] border-4 border-dashed border-slate-300 rounded-3xl p-6 bg-slate-50 flex flex-col gap-6 pb-32">
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Teacher image search: licensed Wikimedia Commons images, copied to Supabase on selection. -->
+    <div id="lesson-image-modal" class="fixed inset-0 z-[70] bg-slate-950/60 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Find an image for the lesson">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center gap-3"><div><h2 class="font-black text-xl text-slate-800">Find a lesson picture</h2><p class="text-slate-500 text-sm">Licensed Wikimedia Commons images. Check suitability and attribution before publishing.</p></div><button type="button" onclick="closeLessonImageSearch()" class="font-bold px-3 py-2 bg-slate-100 rounded-lg" aria-label="Close image search">✕</button></div>
+            <form class="p-4 flex gap-2" onsubmit="event.preventDefault();searchLessonImages()"><input id="lesson-image-query" class="ai-text flex-1" placeholder="Search: plant roots, solar system, insects…" maxlength="100" aria-label="Image search keywords"><button type="submit" id="lesson-image-find" class="ai-primary">Search</button><button type="button" id="lesson-image-generate" onclick="generateLessonIllustration()" class="ai-primary" style="background:#2563eb">AI illustration</button></form>
+            <p id="lesson-image-status" role="status" class="px-4 text-sm text-slate-500"></p>
+            <div id="lesson-image-results" class="ai-image-grid overflow-y-auto p-4"></div>
+            <div class="p-4 bg-slate-50 border-t text-xs text-slate-500">Images are copied to your SikLab lesson-images bucket when selected. Credit is placed below each picture.</div>
         </div>
     </div>
 

@@ -129,11 +129,27 @@ function generateFormHTML(type) {
                 <button type="button" onclick="triggerImageUpload('${uid}')" class="px-4 h-8 rounded bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 font-bold shadow-sm flex items-center gap-2" title="Insert Image">
                     <i class="fa-solid fa-image"></i> Add Image
                 </button>
+                <button type="button" onclick="openLessonImageSearch('${uid}')" class="px-4 h-8 rounded bg-emerald-100 border border-emerald-300 text-emerald-700 hover:bg-emerald-200 font-bold shadow-sm" title="Find licensed images"><i class="fa-solid fa-magnifying-glass"></i> Find Picture</button>
                 <input type="file" id="file_${uid}" accept="image/*" class="hidden" onchange="insertImage(this, '${uid}')">
             </div>
 
             <div id="${uid}" contenteditable="true" class="rich-editor-content min-h-[150px] max-h-[500px] overflow-y-auto p-6 outline-none text-slate-700 text-lg leading-relaxed focus:bg-blue-50/30 transition-colors" data-placeholder="Type your story, lesson, or instructions here..."></div>
         `;
+    }
+
+    if (type === 'pdf_resource') {
+        return controls + `
+            <input type="hidden" class="block-type" value="pdf_resource">
+            <div class="p-6">
+                <h4 class="font-black text-slate-700 mb-2"><i class="fa-solid fa-file-pdf text-rose-500"></i> PDF Reading Resource</h4>
+                <label class="ai-pdf-label">Display title (e.g. Plant Parts Reference)</label>
+                <input class="pdf-title ai-text" maxlength="140" placeholder="Reading material for this topic" type="text">
+                <label class="ai-pdf-label">Select PDF (max 12 MB; only files you have permission to share)</label>
+                <input type="file" class="pdf-file ai-file" accept="application/pdf,.pdf" onchange="uploadLessonPdf(this)">
+                <input type="hidden" class="pdf-url">
+                <div class="pdf-upload-status text-xs font-bold text-slate-500 mt-2">Choose a PDF. Students will see it inside this lesson.</div>
+                <a class="pdf-preview-link hidden text-blue-700 font-bold underline mt-2 inline-block" target="_blank" rel="noopener noreferrer">Open uploaded PDF</a>
+            </div>`;
     }
 
     if (type === 'interactive_fact') {
@@ -180,6 +196,8 @@ function generateFormHTML(type) {
                     </div>
                 </div>
                 <button type="button" onclick="addOption(this)" class="mt-4 text-sm font-bold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-4 py-2 rounded-lg transition-colors">+ Add Option</button>
+                <label class="ai-pdf-label">Explanation shown after a correct answer (optional)</label>
+                <textarea class="quiz-explanation ai-text" maxlength="350" rows="2" placeholder="Explain why the answer is correct in child-friendly language…"></textarea>
             </div>
         `;
     }
@@ -503,7 +521,18 @@ async function saveLesson() {
 
         if (type === 'rich_text') {
             const htmlContent = sanitizeRichHtml(el.querySelector('.rich-editor-content')?.innerHTML || '');
-            if (htmlContent.trim()) blocks.push({ type: 'rich_text', content: htmlContent });
+            if (htmlContent.trim()) blocks.push({ type: 'rich_text', content: htmlContent, image_query: String(el.querySelector('.rich-editor-content')?.dataset.imageQuery || '').slice(0,100) });
+            continue;
+        }
+
+        if (type === 'pdf_resource') {
+            const pdfUrl = el.querySelector('.pdf-url')?.value.trim() || '';
+            const pdfTitle = el.querySelector('.pdf-title')?.value.trim() || 'Reading Resource';
+            if (!isSikLabLessonPdfUrl(pdfUrl)) {
+                validationError = 'Upload a PDF for every PDF Reading Resource block before saving.';
+                break;
+            }
+            blocks.push({ type: 'pdf_resource', title: pdfTitle, url: pdfUrl });
             continue;
         }
 
@@ -559,7 +588,7 @@ async function saveLesson() {
                 break;
             }
 
-            blocks.push({ type: 'quiz', question, options, correctIndex });
+            blocks.push({ type: 'quiz', question, options, correctIndex, explanation: el.querySelector('.quiz-explanation')?.value.trim().slice(0,350) || '' });
             quizCount += 1;
         }
     }
@@ -903,7 +932,19 @@ async function loadLessonIntoBuilder(weekId) {
 
             if (block.type === 'rich_text' || block.type === 'text') {
                 el.querySelector('.rich-editor-content').innerHTML = sanitizeRichHtml(block.content || '');
+                el.querySelector('.rich-editor-content').dataset.imageQuery = String(block.image_query || '').slice(0,100);
             } 
+            else if (block.type === 'pdf_resource') {
+                el.querySelector('.pdf-title').value = block.title || 'Reading Resource';
+                const pdfUrl = isSikLabLessonPdfUrl(block.url) ? block.url : '';
+                el.querySelector('.pdf-url').value = pdfUrl;
+                if (pdfUrl) {
+                    const link = el.querySelector('.pdf-preview-link');
+                    link.href = pdfUrl;
+                    link.classList.remove('hidden');
+                    el.querySelector('.pdf-upload-status').textContent = 'PDF attached. Upload another file to replace it.';
+                }
+            }
             else if (block.type === 'interactive_fact') {
                 el.querySelector('.fact-question').value = block.question || '';
                 el.querySelector('.fact-icon').value = block.reveal_icon || 'fa-star';
@@ -911,6 +952,7 @@ async function loadLessonIntoBuilder(weekId) {
             } 
             else if (block.type === 'quiz') {
                 el.querySelector('.quiz-question').value = block.question || '';
+                el.querySelector('.quiz-explanation').value = block.explanation || '';
                 const optContainer = el.querySelector('.quiz-options-container');
                 optContainer.innerHTML = ''; 
                 
@@ -958,3 +1000,338 @@ window.addEventListener('message', event => {
         });
     }
 });
+
+// ============================================================================
+// AI-assisted lesson drafts, PDF reading blocks, and licensed image search.
+// The AI writes a preview only. Teachers must inspect and press SAVE manually.
+// ============================================================================
+let siklabAiDraft = null;
+let siklabAiSourcePdf = null;
+let siklabImageTargetEditorId = null;
+let siklabImageSearchResults = [];
+
+function isSikLabLessonPdfUrl(value) {
+    try {
+        const url = new URL(String(value || ''));
+        const cloud = new URL(SIKLAB_SUPABASE_URL);
+        return url.protocol === 'https:' && url.host === cloud.host &&
+            url.pathname.startsWith('/storage/v1/object/public/lesson-pdfs/');
+    } catch (_) { return false; }
+}
+
+function lessonAiStatus(message, isError = false) {
+    const el = document.getElementById('ai-lesson-status');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = isError ? '#b91c1c' : '#475569';
+}
+
+function lessonImageStatus(message, isError = false) {
+    const el = document.getElementById('lesson-image-status');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = isError ? '#b91c1c' : '#475569';
+}
+
+async function invokeLessonFunction(name, body) {
+    const db = requireSupabase();
+    const { data: sessionInfo, error: authError } = await db.auth.getSession();
+    if (authError || !sessionInfo?.session?.access_token) throw new Error('Sign in to the teacher dashboard to use this feature.');
+    const { data, error } = await db.functions.invoke(name, { body });
+    if (error) {
+        let detail = error.message || 'Function request failed.';
+        try {
+            if (error.context && typeof error.context.json === 'function') {
+                const body = await error.context.json();
+                detail = body.error || detail;
+            }
+        } catch (_) {}
+        throw new Error(detail);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read PDF.'));
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.readAsDataURL(file);
+    });
+}
+
+async function generateAiLessonDraft() {
+    const file = document.getElementById('ai-lesson-pdf')?.files?.[0];
+    if (!file) return lessonAiStatus('Choose the lesson PDF first.', true);
+    if (file.size > 5 * 1024 * 1024) return lessonAiStatus('PDF is larger than 5 MB. Use a smaller lesson extract.', true);
+    if (!file.name.toLowerCase().endsWith('.pdf') || (file.type && file.type !== 'application/pdf')) {
+        return lessonAiStatus('Please choose a PDF file.', true);
+    }
+    const btn = document.getElementById('ai-generate-btn');
+    const review = document.getElementById('ai-lesson-review');
+    btn.disabled = true;
+    review.classList.add('hidden');
+    siklabAiDraft = null;
+    try {
+        lessonAiStatus('Reading the PDF and preparing an editable Grade 3 draft…');
+        const result = await invokeLessonFunction('ai-lesson-draft', {
+            pdf_base64: await fileToBase64(file),
+            filename: file.name.slice(0, 160),
+            focus: document.getElementById('ai-lesson-focus')?.value.trim().slice(0, 140) || '',
+            question_count: Number(document.getElementById('ai-lesson-questions')?.value || 5)
+        });
+        if (!Array.isArray(result?.draft?.sections) || !Array.isArray(result?.draft?.questions)) {
+            throw new Error('AI returned an invalid draft. Please try again.');
+        }
+        siklabAiDraft = result.draft;
+        siklabAiSourcePdf = file;
+        const sectionCount = siklabAiDraft.sections.length;
+        const questionCount = siklabAiDraft.questions.length;
+        const sectionMarkup = siklabAiDraft.sections.map((section, i) => `<li><b>${i + 1}. ${escapeHtml(section.heading || 'Learning point')}</b>${section.page ? ` <span class="text-slate-500">(PDF p. ${escapeHtml(String(section.page))})</span>` : ''}<br><span class="text-slate-600">${escapeHtml(String(section.explanation || '').slice(0, 200))}</span>${section.image_query ? `<br><span class="text-blue-700">Picture idea: ${escapeHtml(section.image_query)}</span>` : ''}</li>`).join('');
+        review.innerHTML = `<div class="flex items-center justify-between gap-3 flex-wrap"><h3 class="font-black text-emerald-900">Draft ready for teacher review</h3><span class="font-bold">${sectionCount} reading points · ${questionCount} questions</span></div>
+            <p class="my-2 text-slate-700"><b>${escapeHtml(siklabAiDraft.title || 'Science lesson')}</b> — ${escapeHtml(siklabAiDraft.summary || '')}</p>
+            <details class="my-3"><summary class="cursor-pointer font-bold text-emerald-800">Review the lesson outline and PDF page hints</summary><ol class="list-decimal ml-5 mt-2 space-y-2">${sectionMarkup}</ol></details>
+            <p class="text-slate-600 mb-3">Review all wording, scientific accuracy, and answer keys. PDF page hints are AI-generated and may be inaccurate. Applying will replace any current unsaved canvas blocks, but will NOT publish the lesson.</p>
+            <button type="button" class="ai-primary" onclick="applyAiLessonDraft()"><i class="fa-solid fa-file-pen mr-1"></i> Put editable draft on canvas</button>`;
+        review.classList.remove('hidden');
+        lessonAiStatus('Draft generated. Check the outline, then apply it to the canvas.');
+    } catch (error) {
+        console.error('[AI lesson draft]', error);
+        lessonAiStatus(error.message || 'AI generation failed.', true);
+    } finally { btn.disabled = false; }
+}
+
+function textAsLessonHtml(value) {
+    return String(value || '').split(/\n{2,}/).map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+}
+
+function addLessonFormBlock(block) {
+    const el = document.createElement('div');
+    el.className = 'bg-white p-1 rounded-2xl shadow-sm border border-slate-200 relative group';
+    el.innerHTML = generateFormHTML(block.type);
+    if (block.type === 'rich_text') {
+        const editor = el.querySelector('.rich-editor-content');
+        editor.innerHTML = sanitizeRichHtml(block.content || '');
+        if (block.image_query) editor.dataset.imageQuery = block.image_query;
+    } else if (block.type === 'interactive_fact') {
+        el.querySelector('.fact-question').value = block.question || '';
+        el.querySelector('.fact-reveal').value = block.reveal_text || '';
+    } else if (block.type === 'quiz') {
+        el.querySelector('.quiz-question').value = block.question || '';
+        el.querySelector('.quiz-explanation').value = block.explanation || '';
+        const list = el.querySelector('.quiz-options-container');
+        list.innerHTML = '';
+        const name = 'correct_' + crypto.randomUUID().replace(/-/g, '');
+        (block.options || []).slice(0, 4).forEach((option, index) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-3 mt-3';
+            row.innerHTML = `<input type="radio" name="${name}" class="quiz-correct w-6 h-6 accent-emerald-500" ${index === block.correctIndex ? 'checked' : ''}>
+                <input type="text" class="quiz-option w-full p-3 border-2 border-slate-200 rounded-lg font-bold">
+                <button type="button" class="w-10 h-10 bg-red-100 text-red-500 rounded-lg" onclick="this.parentElement.remove()" aria-label="Remove option">✕</button>`;
+            row.querySelector('.quiz-option').value = String(option || '');
+            list.appendChild(row);
+        });
+    } else if (block.type === 'pdf_resource') {
+        el.querySelector('.pdf-title').value = block.title || 'Reading resource';
+        el.querySelector('.pdf-url').value = block.url || '';
+        const a = el.querySelector('.pdf-preview-link');
+        a.href = block.url || '#';
+        a.classList.remove('hidden');
+        el.querySelector('.pdf-upload-status').textContent = 'PDF ready for students after you save.';
+    }
+    document.getElementById('lesson-canvas').appendChild(el);
+    return el;
+}
+
+async function uploadPdfFileForLesson(file, yearId) {
+    if (!file || (file.type && file.type !== 'application/pdf') || !file.name.toLowerCase().endsWith('.pdf')) throw new Error('Choose a valid PDF.');
+    if (file.size > 12 * 1024 * 1024) throw new Error('PDF must be at most 12 MB.');
+    if (new TextDecoder().decode(await file.slice(0, 5).arrayBuffer()) !== '%PDF-') throw new Error('File is not a valid PDF.');
+    const db = requireSupabase();
+    const path = `school-year-${Number(yearId) || 'unassigned'}/${crypto.randomUUID()}.pdf`;
+    const { error } = await db.storage.from('lesson-pdfs').upload(path, file, { upsert: false, contentType: 'application/pdf', cacheControl: '3600' });
+    if (error) throw error;
+    const { data } = db.storage.from('lesson-pdfs').getPublicUrl(path);
+    if (!isSikLabLessonPdfUrl(data?.publicUrl)) throw new Error('Could not create a PDF link.');
+    return data.publicUrl;
+}
+
+async function uploadLessonPdf(input) {
+    const block = input.closest('.group');
+    const status = block?.querySelector('.pdf-upload-status');
+    const file = input.files?.[0];
+    if (!file || !block) return;
+    try {
+        status.textContent = 'Uploading PDF…';
+        const url = await uploadPdfFileForLesson(file, await getActiveYearId());
+        block.querySelector('.pdf-url').value = url;
+        const a = block.querySelector('.pdf-preview-link');
+        a.href = url;
+        a.classList.remove('hidden');
+        if (!block.querySelector('.pdf-title').value.trim()) block.querySelector('.pdf-title').value = file.name.replace(/\.pdf$/i, '');
+        status.textContent = 'PDF uploaded. Press SAVE to attach it to this lesson.';
+    } catch (error) {
+        status.textContent = error.message || 'PDF upload failed.';
+        status.style.color = '#b91c1c';
+    } finally { input.value = ''; }
+}
+
+async function applyAiLessonDraft() {
+    if (!siklabAiDraft) return;
+    const canvas = document.getElementById('lesson-canvas');
+    if (loadedLessonContext && !confirm('This will replace the lesson currently open in the editor when you press SAVE. To create a NEW lesson instead, Cancel, click New/Clear, then apply the draft. Continue editing the existing lesson?')) return;
+    if (canvas.children.length && !confirm('Replace all unsaved blocks on the canvas with the AI draft? Any unsaved changes will be lost.')) return;
+    const oldPdf = siklabAiSourcePdf;
+    let pdfBlock = null;
+    const addPdf = !!document.getElementById('ai-attach-pdf')?.checked && !!oldPdf;
+    try {
+        lessonAiStatus('Preparing the draft on the editable canvas…');
+        if (addPdf) {
+            if (oldPdf.size > 12 * 1024 * 1024) throw new Error('PDF too large to attach.');
+            pdfBlock = { type: 'pdf_resource', title: oldPdf.name.replace(/\.pdf$/i, '').slice(0,140), url: await uploadPdfFileForLesson(oldPdf, await getActiveYearId()) };
+        }
+        // Replace draft uploads and block content only AFTER PDF upload succeeds.
+        await cleanupNewDraftUploads();
+        pendingLessonImageDeletes.clear();
+        canvas.innerHTML = '';
+        document.getElementById('lms-title').value = siklabAiDraft.title || document.getElementById('lms-title').value || 'Science Lesson';
+        if (!document.getElementById('lms-label').value.trim()) document.getElementById('lms-label').value = 'Science Lesson';
+        document.getElementById('lms-completion').value = 'quiz';
+        const visibility = document.getElementById('lms-visibility');
+        if (visibility) visibility.value = 'draft';
+        for (const sec of siklabAiDraft.sections) {
+            const h = `<h3>${escapeHtml(sec.heading || 'Let us learn')}</h3>`;
+            const body = textAsLessonHtml(sec.explanation || '');
+            const example = sec.example ? `<p><strong>Example:</strong> ${escapeHtml(sec.example)}</p>` : '';
+            addLessonFormBlock({ type: 'rich_text', content: h + body + example, image_query: sec.image_query || '' });
+        }
+        for (const fact of siklabAiDraft.facts || []) {
+            if (fact.question && fact.answer) addLessonFormBlock({ type: 'interactive_fact', question: fact.question, reveal_text: fact.answer });
+        }
+        if (pdfBlock) addLessonFormBlock(pdfBlock);
+        for (const question of siklabAiDraft.questions) {
+            if (question.question && question.options?.length >= 2 && Number.isInteger(question.correctIndex)) {
+                addLessonFormBlock({ type: 'quiz', ...question });
+            }
+        }
+        document.getElementById('ai-lesson-review').classList.add('hidden');
+        lessonAiStatus('Editable draft added! Find pictures in each reading block, check answers, then save as draft or publish.');
+        document.getElementById('canvas-scroll-area')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+        console.error('[apply AI lesson draft]', error);
+        lessonAiStatus(error.message || 'Could not apply lesson draft.', true);
+    }
+}
+
+function openLessonImageSearch(editorId) {
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    siklabImageTargetEditorId = editorId;
+    document.getElementById('lesson-image-modal').classList.remove('hidden');
+    document.getElementById('lesson-image-results').innerHTML = '';
+    document.getElementById('lesson-image-query').value = editor.dataset.imageQuery || document.getElementById('lms-title').value || '';
+    lessonImageStatus('Search for a relevant, licensed image.');
+    if (editor.dataset.imageQuery) searchLessonImages();
+}
+
+function closeLessonImageSearch() {
+    document.getElementById('lesson-image-modal').classList.add('hidden');
+}
+
+async function searchLessonImages() {
+    const query = document.getElementById('lesson-image-query').value.trim();
+    if (query.length < 2) return lessonImageStatus('Enter at least two characters.', true);
+    const btn = document.getElementById('lesson-image-find');
+    btn.disabled = true;
+    const results = document.getElementById('lesson-image-results');
+    results.innerHTML = '';
+    try {
+        lessonImageStatus('Searching Wikimedia Commons…');
+        const payload = await invokeLessonFunction('lesson-media', { action: 'search', query });
+        siklabImageSearchResults = Array.isArray(payload.images) ? payload.images : [];
+        if (!siklabImageSearchResults.length) return lessonImageStatus('No reusable images found. Try different keywords or use Add Image.');
+        siklabImageSearchResults.forEach((photo, i) => {
+            const card = document.createElement('div');
+            card.className = 'ai-image-result';
+            const thumb = document.createElement('img');
+            thumb.src = photo.thumb;
+            thumb.alt = photo.title || query;
+            thumb.loading = 'lazy';
+            const caption = document.createElement('p');
+            caption.className = 'text-xs text-slate-700 font-bold mt-2';
+            caption.textContent = (photo.title || query).slice(0, 85);
+            const credit = document.createElement('p');
+            credit.className = 'text-xs text-slate-500 mt-1';
+            credit.textContent = `${photo.artist || 'Creator unknown'} · ${photo.license || 'Check license'}`.slice(0, 130);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = 'Use this picture';
+            button.onclick = () => chooseLessonImage(i, button);
+            card.append(thumb, caption, credit, button);
+            results.appendChild(card);
+        });
+        lessonImageStatus(`Found ${siklabImageSearchResults.length} results. Teacher: verify image and attribution.`);
+    } catch (error) {
+        console.error('[lesson image search]', error);
+        lessonImageStatus(error.message || 'Image search failed.', true);
+    } finally { btn.disabled = false; }
+}
+
+async function chooseLessonImage(index, button) {
+    const photo = siklabImageSearchResults[index];
+    const editor = document.getElementById(siklabImageTargetEditorId);
+    if (!photo || !editor) return;
+    button.disabled = true;
+    button.textContent = 'Adding…';
+    try {
+        const yearId = await getActiveYearId();
+        const response = await invokeLessonFunction('lesson-media', {
+            action: 'import', url: photo.url, year_id: yearId, title: photo.title,
+            attribution: photo.artist || '', license: photo.license || '', source: photo.page || ''
+        });
+        const picture = document.createElement('img');
+        picture.src = response.publicUrl;
+        picture.alt = photo.title || 'Science picture';
+        picture.style.cssText = 'width:65%;height:auto;display:block;margin:1rem auto;border-radius:1rem';
+        const credit = document.createElement('p');
+        credit.textContent = `Image: ${photo.artist || 'Wikimedia Commons contributor'} · ${photo.license || 'license information unavailable'} · Wikimedia Commons (${photo.page || 'source'})`;
+        // No direct remote embedding: import to SikLab Storage before adding to lesson.
+        editor.append(picture, credit);
+        newlyUploadedLessonImages.add(response.publicUrl);
+        closeLessonImageSearch();
+        lessonAiStatus('Picture inserted! Teacher: check the credit and save your lesson.');
+    } catch (error) {
+        console.error('[lesson image import]', error);
+        lessonImageStatus(error.message || 'Could not copy this image to SikLab.', true);
+        button.textContent = 'Try again';
+    } finally { button.disabled = false; }
+}
+
+async function generateLessonIllustration() {
+    const prompt = document.getElementById('lesson-image-query')?.value.trim() || '';
+    const editor = document.getElementById(siklabImageTargetEditorId);
+    if (!editor) return;
+    if (prompt.length < 3) return lessonImageStatus('Enter a topic for the illustration.', true);
+    const button = document.getElementById('lesson-image-generate');
+    button.disabled = true;
+    try {
+        lessonImageStatus('Making a child-friendly illustration… Image generation can use paid Gemini quota.');
+        const result = await invokeLessonFunction('lesson-media', {
+            action: 'generate', prompt: prompt.slice(0, 180), year_id: await getActiveYearId()
+        });
+        const img = document.createElement('img');
+        img.src = result.publicUrl;
+        img.alt = `AI illustration: ${prompt}`;
+        img.style.cssText = 'width:65%;height:auto;display:block;margin:1rem auto;border-radius:1rem';
+        const note = document.createElement('p');
+        note.textContent = 'AI-generated illustration. Teacher: verify scientific accuracy before publishing.';
+        editor.append(img, note);
+        newlyUploadedLessonImages.add(result.publicUrl);
+        closeLessonImageSearch();
+        lessonAiStatus('Illustration inserted. Inspect scientific accuracy, then SAVE.');
+    } catch (error) {
+        console.error('[lesson illustration]', error);
+        lessonImageStatus(error.message || 'Illustration generation failed.', true);
+    } finally { button.disabled = false; }
+}
