@@ -184,8 +184,8 @@ class SikLabControllerApp:
     def __init__(self, root):
         self.root = root
         self.root.title('SikLab Controller')
-        self.root.geometry('610x560')
-        self.root.minsize(570, 520)
+        self.root.geometry('650x700')
+        self.root.minsize(600, 620)
 
         self.web_root = guess_project_root()
         self.controller_host = detect_windows_ipv4()
@@ -254,6 +254,33 @@ class SikLabControllerApp:
         self.p1_label = self._controller_panel(status_grid, 'PLAYER 1', 0)
         self.p2_label = self._controller_panel(status_grid, 'PLAYER 2', 1)
 
+        # Prominent controller setup QR section.
+        qr_card = tk.Frame(body, bg='white', padx=18, pady=14)
+        qr_card.pack(fill='x', pady=(14, 0))
+        tk.Label(
+            qr_card, text='CONTROLLER SETUP QR', bg='white', fg='#111827',
+            font=('Segoe UI', 10, 'bold')
+        ).pack(anchor='w')
+        tk.Label(
+            qr_card,
+            text='Connect your phone to the ESP32 setup Wi-Fi first, then scan the matching QR.',
+            bg='white', fg='#64748b', font=('Segoe UI', 9), wraplength=560, justify='left'
+        ).pack(anchor='w', pady=(2, 10))
+        qrrow = tk.Frame(qr_card, bg='white')
+        qrrow.pack(fill='x')
+        tk.Button(
+            qrrow, text='▣  PLAYER 1 SETUP QR',
+            command=lambda: self.open_setup_qr('player1'),
+            bg='#2563eb', fg='white', activebackground='#1d4ed8', activeforeground='white',
+            relief='flat', pady=10, font=('Segoe UI', 9, 'bold')
+        ).pack(side='left', fill='x', expand=True)
+        tk.Button(
+            qrrow, text='▣  PLAYER 2 SETUP QR',
+            command=lambda: self.open_setup_qr('player2'),
+            bg='#7c3aed', fg='white', activebackground='#6d28d9', activeforeground='white',
+            relief='flat', pady=10, font=('Segoe UI', 9, 'bold')
+        ).pack(side='left', fill='x', expand=True, padx=(8, 0))
+
         controls = tk.Frame(body, bg='#111827')
         controls.pack(fill='x', pady=(16, 0))
 
@@ -273,9 +300,10 @@ class SikLabControllerApp:
 
         openrow = tk.Frame(controls, bg='#111827')
         openrow.pack(fill='x', pady=(8, 0))
-        tk.Button(openrow, text='OPEN SIKLAB', command=self.open_siklab, bg='#f97316', fg='white', relief='flat', pady=10, font=('Segoe UI', 9, 'bold')).pack(side='left', fill='x', expand=True)
-        tk.Button(openrow, text='P1 QR', command=lambda: self.open_setup_qr('player1'), bg='#334155', fg='white', relief='flat', pady=10, width=9).pack(side='left', padx=(8, 0))
-        tk.Button(openrow, text='P2 QR', command=lambda: self.open_setup_qr('player2'), bg='#334155', fg='white', relief='flat', pady=10, width=9).pack(side='left', padx=(8, 0))
+        tk.Button(
+            openrow, text='OPEN SIKLAB', command=self.open_siklab,
+            bg='#f97316', fg='white', relief='flat', pady=10, font=('Segoe UI', 9, 'bold')
+        ).pack(side='left', fill='x', expand=True)
 
         self.message_var = tk.StringVar(value='Start the app, power on both ESP32 controllers, then open SikLab.')
         tk.Label(body, textvariable=self.message_var, wraplength=550, justify='left', bg='#111827', fg='#94a3b8', font=('Segoe UI', 9)).pack(anchor='w', pady=(14, 0))
@@ -637,8 +665,14 @@ class SikLabControllerApp:
         return f'http://192.168.4.1/?{query}'
 
     def open_setup_qr(self, player):
-        if not self.running:
-            messagebox.showinfo('Start first', 'Press START CONTROLLERS first so the QR can be generated locally.')
+        # QR generation does not require the controller service to be running.
+        # It only encodes player + local mode + laptop IP + port.
+        host = self.ip_var.get().strip()
+        if not private_ipv4(host):
+            messagebox.showwarning(
+                'Check laptop IP',
+                'Set the Laptop / Hotspot IPv4 first (for example 192.168.110.25), then generate the QR.'
+            )
             return
         url = self.setup_url(player)
         qr_url = f'http://127.0.0.1:{HTTP_PORT}/__siklab_qr?data={urllib.parse.quote(url, safe="")}'
@@ -648,7 +682,7 @@ class SikLabControllerApp:
         win.configure(bg='white')
         win.geometry('410x480')
         tk.Label(win, text=title, bg='white', fg='#111827', font=('Segoe UI', 15, 'bold')).pack(pady=(18, 5))
-        tk.Label(win, text='1) Put ESP32 in setup mode\n2) Connect phone to SikLab-Setup-XXXXXX\n3) Scan this QR', bg='white', fg='#64748b', justify='center', font=('Segoe UI', 9)).pack()
+        tk.Label(win, text='1) Connect phone to SikLab-Setup-XXXXXX\n2) Scan this QR\n3) Player + Local mode + Laptop IP + Port are filled automatically', bg='white', fg='#64748b', justify='center', font=('Segoe UI', 9)).pack()
 
         # Tkinter cannot load remote PNG directly, so use the QR package locally.
         if qrcode is None:
