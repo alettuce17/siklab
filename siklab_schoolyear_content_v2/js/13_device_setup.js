@@ -90,7 +90,7 @@ function ensureLocalModeNotice(runtime) {
             <strong>Local Fast Controller App is running.</strong>
             P1/P2 gameplay goes directly to this laptop at
             <code>${runtime.controller_host}:${runtime.controller_port}</code>.
-            Internet is not used for button presses.
+            Internet is not used for button presses. The ESP can auto-discover this laptop after joining classroom Wi-Fi.
         `;
     } else {
         notice.className = 'rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800';
@@ -111,6 +111,7 @@ async function buildControllerSetupURL(player) {
         url.searchParams.set('mode', 'local');
         url.searchParams.set('server', runtime.controller_host);
         url.searchParams.set('port', String(runtime.controller_port));
+        if (runtime.pairing_code) url.searchParams.set('pair', runtime.pairing_code);
     } else {
         url.searchParams.set('mode', 'cloud');
     }
@@ -175,7 +176,7 @@ function renderControllerQR(player, config) {
 
     if (expires) {
         expires.innerText = config.mode === 'local'
-            ? `LOCAL FAST • ${config.runtime.controller_host}:${config.runtime.controller_port} • Connect your phone to SikLab-Setup-XXXXXX before scanning.`
+            ? `LOCAL FAST • ${config.runtime.controller_host}:${config.runtime.controller_port} • Pairing is included in the QR. Connect your phone to SikLab-Setup-XXXXXX before scanning.`
             : 'CLOUD • Connect your phone to SikLab-Setup-XXXXXX before scanning.';
     }
 }
