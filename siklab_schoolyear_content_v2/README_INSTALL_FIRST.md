@@ -1,49 +1,44 @@
-# SikLab Sense Detectives — Revision 1 (AI Questions + Cleaner Game Dashboard)
+# SikLab Game 1 — Picture Challenge Revision 2
 
-## Scope
+This is a **patch to Revision 1**. It removes the forced five-senses-only question behavior and the Game 1 AI illustration UI, improves Commons image-search diagnostics, and adds a saved-question Picture Manager. It does **not** require new ESP32 or Windows Controller App firmware.
 
-- Removes Quarter selector from **Start the Class Session**; existing quarter database column remains for compatibility. Advanced game-file management is collapsed.
-- Compact per-game scoring controls for Sense Detectives, without changing gameplay defaults or P1/P2 controller controls.
-- AI drafts exactly 5, 10 or 15 five-senses questions from one reference PDF, an existing SikLab lesson from the selected school year, or a typed topic.
-- Per-question image suggestions from Wikimedia Commons (teacher chooses and imports); teacher custom picture upload; optional AI illustration via the existing `lesson-media` function.
-- Teacher reviews/edits correct *sense*, prompt and explanation before saving into a named question set. Game launches the chosen set and shows explanations as round feedback.
+## What changed
 
-## Install order — read before replacing files
+- Game 1 remains ID `W1` and keeps its existing HTML filename for backward compatibility. The visible name is now **Picture Challenge** and supports ANY appropriate Grade 3 science topic in the chosen PDF, saved lesson, or teacher-supplied topic.
+- AI creates exactly FIVE labeled answers (A–E), because the physical controllers have five answer buttons. `correct_ans` stays 0–4, preserving input/scoring mapping. Manually authored W1 questions now have five editable answer fields.
+- Old existing W1 questions without `answer_options` remain playable, with Sight/Touch/Hearing/Smell/Taste as legacy fallback choices. Use a NEW question set to test general-topic questions without old questions mixed in.
+- Game 1 no longer shows or calls AI illustration generation. This does **not** disable the optional feature in the separate Lesson Builder, which still uses the shared `lesson-media` function.
+- The search button uses Wikimedia Commons, NOT Google Images and NOT the paid image generation API. Removed a restrictive `filetype:bitmap` search modifier; updated Wikimedia client identification; added clearer error messages; imported Commons pictures for Game 1 now go to `question-images` rather than `lesson-images`. Images from very large originals may use a Wikimedia thumbnail so they can be stored under the 5 MB limit.
+- `Question Bank → saved question → Manage Picture` allows viewing, searching, attaching, uploading, replacing or removing an image. The existing Edit and Delete Question buttons still control the question itself. Unlinking/replacing an image intentionally does NOT immediately delete the Storage object: copied school years can reference the same URL.
 
-1. **Back up the GitHub repository/project folder**, including any uncommitted modifications.
-2. Copy the ZIP's files **into your inner `siklab_schoolyear_content_v2` folder that contains `index.html`**, preserving relative paths and overwriting matching files. Do not delete your other files. The ZIP is a targeted overlay, not the full website.
-3. On the correct **Supabase Cloud project**, use Dashboard → SQL Editor and run the entire `supabase/migrations/007_sense_detectives_ai.sql` **once**. Migration `003_school_year_content_management.sql` must already have been applied. Run 007 before deploying the new frontend because it adds new `custom_question` columns. Do NOT re-run 001 or 003 blindly on your existing Cloud database.
-4. Make sure `GEMINI_API_KEY` exists in Supabase Dashboard → Edge Functions → Secrets; keep it private. Optional `GEMINI_MODEL=gemini-2.5-flash`. The functions use your existing `is_approved_teacher` SQL helper and `SIKLAB_PUBLISHABLE_KEY` (or built-in anon key).
-5. In PowerShell, open the folder containing the `supabase` directory, and deploy:
+## Install, in order
+
+1. Back up your current repository. Extract this ZIP. Copy its contents into your existing **inner SikLab folder containing `index.html`**, overwriting matching files. Keep your assets, auth setup and other games.
+2. Supabase Dashboard → **SQL Editor**: If you did not run `007_sense_detectives_ai.sql` in Revision 1, run it first. Then run **`supabase/migrations/008_picture_challenge_answers.sql`**. It adds five answer options per question and updates the existing school-year content copy RPC. It does not delete your old questions or images.
+3. From PowerShell in the SikLab root where `supabase/functions` exists:
 
    ```powershell
-   npx supabase link --project-ref xdnfldzjkzcpzxnclysr
    npx supabase functions deploy ai-game-questions
    npx supabase functions deploy lesson-media
    ```
 
-   `lesson-media` is included unchanged from the earlier AI Lesson Builder update for completeness; deploying it also supports AI Lesson Builder image search. You **do not** need to redeploy `ai-lesson-draft` for this game update.
-6. Confirm the `lesson-images` and `question-images` Supabase Storage buckets and their teacher-upload policies exist from your earlier migrations. `lesson-media` imports/creates images in `lesson-images`, while custom uploaded question pictures use `question-images`. Both are intended for shareable classroom media, not private student files.
-7. Commit/push the replaced frontend, game runtime, migration and function files to GitHub. Check that Netlify deploy succeeds. Open deployed SikLab, sign in as teacher, choose school year → Question Bank → Sense Detectives AI generator. **Hard refresh** (`Ctrl+F5`) after Netlify deploy if you see old UI.
+   Both must say `Deployed Functions on project xdnfldzjkzcpzxnclysr`. The existing `GEMINI_API_KEY` is reused **for TEXT question generation**. A Gemini image-model subscription is NOT required for Wikimedia image search.
+4. Check Supabase Dashboard → **Storage** that `question-images` exists and is publicly readable for classroom picture display, with an authenticated teacher-upload policy. Your older manual question upload already relies on this bucket. Search itself does not require a bucket, but attaching an image does.
+5. Commit/push the updated files to GitHub. Wait for Netlify deploy, then `Ctrl+F5` on the website. Remember `npx supabase functions deploy` is separate from deploying Netlify.
+6. Open **Question Bank → Generate Picture Challenge Questions**. Source `Type topic`, topic `Parts of a Plant`, 5 questions, set `TEST - Plants`. Review five options and correct answer on every question. Search/attach an image, then Save. In Question Bank select `Game 1: Picture Challenge` and press **Manage Picture** on any saved question to replace/remove it. In Game Dashboard choose `TEST - Plants`, start.
 
-## Test
+## If picture search fails
 
-- Start: no Quarter dropdown; select Sense Detectives and choose question set.
-- In Question Bank, source → Topic, try “five senses of familiar objects,” select 5, click Generate.
-- For each question choose a Commons candidate, upload your own or generate an image. Check the *correct sense* carefully: `0 Sight`, `1 Touch`, `2 Hearing`, `3 Smell`, `4 Taste`.
-- Save approved questions. Return to Game Dashboard and select the named set. Launch the game, then test joystick/buttons.
-- Then test an existing lesson from the active school year and a small text-based PDF (≤5MB).
-- Both ESP32 firmware and Windows Controller App remain unchanged. AI generation and media search require internet/Supabase/Gemini. The local game inputs still travel through your Windows Controller App if launched from your local SikLab site.
+The exact cause requires the HTTP/function error; do not assume a Gemini subscription is responsible. Read the error displayed under the question or in the saved-question Picture Manager, or open **Supabase Dashboard → Edge Functions → lesson-media → Logs** after pressing Search.
 
-## Expected limitations
+- `403 Sign in with an authorized teacher account` — check session and `is_approved_teacher` RPC in your Supabase project.
+- `Wikimedia image search HTTP 403/429/5xx` — check Wikimedia availability, app User-Agent identification, and rate limits; wait before retrying or upload a licensed image you own.
+- `No images matched` — try `mung bean seedling` instead of a whole question; not all Wikimedia items meet JPEG/PNG/WebP/license constraints.
+- `Unable to save image: ...` — inspect `question-images` bucket and its Storage upload policies.
+- `Function not found` — re-deploy **lesson-media** to the SAME Supabase project used by the frontend.
 
-- This is an implementation package prepared from your *uploaded* project ZIP plus the preceding AI Lesson Builder's `lesson-media`. It has been statically checked but **not** run against your live Supabase project, Gemini quota, or physical ESP32.
-- AI output can be inaccurate or mislabel sensory observations. Nothing saves until the teacher approves the draft. Commons image search may return irrelevant images or restrictive attribution requirements: always inspect the image, source page and license.
-- `question_set` is a text label, not yet a separate table. Editing a set name on one question moves only that question, rather than renaming the entire set.
-- A saved lesson from the currently chosen year is used; imported PDFs are sent to the Edge Function for question generation, not automatically saved to your public PDF bucket.
-- If no questions exist in the selected set, the game shows a message instead of silently falling back to demo questions. With “All approved questions” and an empty bank, the existing demo fallback is kept.
-- Deployed `lesson-media` must work for automatic picture suggestions and AI illustrations. Image-generation model access/quotas vary by Gemini project.
+## Scope and safety
 
-## Rollback
+No Supabase project secrets, `GEMINI_API_KEY`, ESP32 firmware, or Windows Controller App files are included in this patch. Don't paste keys in GitHub. Teacher must inspect picture appropriateness, answer accuracy and Commons license/attribution before publishing.
 
-Restore original frontend/game files from your GitHub commit if necessary. The additive 007 metadata migration can safely remain; don't drop columns and lose question data. Existing questions are approved and assigned to “General Questions” by default.
+This patch was syntax-checked locally but was **not live-tested** against your hosted Supabase account or physical ESP32; test with one new five-question set before using it in class.

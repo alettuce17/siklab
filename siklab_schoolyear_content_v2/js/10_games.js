@@ -58,7 +58,7 @@ function renderCustomGamesList() {
 function filterGamesByQuarter() { // Legacy name retained for compatibility: no quarter filter.
     const launchSelect = document.getElementById('launch-game');
     const settingSelect = document.getElementById('setting-game');
-    const options = allGames.map(game => `<option value="${siklabSafe(game.path)}">${siklabSafe(game.name.replace(/^Quarter\s*\d+[, :]*|^Week\s*\d+[, :]*|^Q\d+[, :]*/i, ''))}</option>`).join('');
+    const options = allGames.map(game => `<option value="${siklabSafe(game.path)}">${siklabSafe(getModuleFromPath(game.path)==='W1' ? 'Picture Challenge' : game.name.replace(/^Quarter\s*\d+[, :]*|^Week\s*\d+[, :]*|^Q\d+[, :]*/i, ''))}</option>`).join('');
     if (launchSelect) launchSelect.innerHTML = options || '<option value="">No games available</option>';
     if (settingSelect) settingSelect.innerHTML = options || '<option value="">No games available</option>';
     const active = localStorage.getItem('siklab_active_game_path');

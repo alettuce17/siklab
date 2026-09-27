@@ -28,7 +28,7 @@ async function loadCustomQuestions() {
         const db = requireSupabase();
         const { data, error } = await db
             .from('custom_question')
-            .select('question_id,school_year_id,game_module,prompt,correct_ans,time_limit,image_url,question_set,explanation,topic,review_status')
+            .select('question_id,school_year_id,game_module,prompt,correct_ans,answer_options,time_limit,image_url,image_query,image_attribution,image_license,image_source,question_set,explanation,topic,review_status')
             .eq('school_year_id', yearId)
             .eq('game_module', module)
             .order('question_id', { ascending: true });
@@ -39,7 +39,9 @@ async function loadCustomQuestions() {
             schoolYearId: Number(q.school_year_id),
             prompt: q.prompt,
             ans: Number(q.correct_ans),
+            options: Array.isArray(q.answer_options) && q.answer_options.length===5 ? q.answer_options : ['Sight','Touch','Hearing','Smell','Taste'],
             img: q.image_url || '',
+            image_query: q.image_query || '',image_attribution: q.image_attribution || '',image_license: q.image_license || '',image_source:q.image_source || '',
             timeLimit: Number(q.time_limit) || 10,
             set: q.question_set || 'General Questions', explanation: q.explanation || '', topic: q.topic || '' 
         }));
@@ -69,7 +71,7 @@ function renderQuestionsList() {
         return;
     }
 
-    const senseNames = ['BTN 1 (Sight/Square)','BTN 2 (Touch/Up)','BTN 3 (Hear/Circle)','BTN 4 (Smell/Star)','BTN 5 (Taste/Heart)'];
+    const senseNames = ['A / BTN 1','B / BTN 2','C / BTN 3','D / BTN 4','E / BTN 5'];
     const senseColors = ['text-blue-600 bg-blue-100','text-orange-600 bg-orange-100','text-green-600 bg-green-100','text-purple-600 bg-purple-100','text-red-600 bg-red-100'];
 
     container.innerHTML = customQuestions.map((q, i) => `
@@ -82,12 +84,13 @@ function renderQuestionsList() {
                     <p class="font-bold text-slate-800 text-sm">${escapeHtml(q.prompt)}</p>
                     <div class="flex gap-2 mt-1">
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded inline-block ${senseColors[q.ans] || 'text-slate-600 bg-slate-100'}">
-                            ${escapeHtml(senseNames[q.ans] || `BTN ${q.ans + 1}`)}
+                            ${escapeHtml(`${senseNames[q.ans] || `BTN ${q.ans+1}`}: ${(q.options||[])[q.ans] || ''}`)}
                         </span><span class="text-[10px] font-bold text-slate-500">${escapeHtml(q.set || 'General Questions')}</span>
                     </div>
                 </div>
             </div>
-            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex gap-2 flex-wrap items-center">
+                ${document.getElementById('cq-module')?.value === 'W1' && q.id ? `<button type="button" onclick="openQuestionImageManager(${Number(q.id)})" class="text-xs font-bold px-2 py-2 bg-orange-50 text-orange-700 rounded-lg border border-orange-200" title="Search, replace or remove saved picture">Manage Picture</button>` : ''}
                 <button onclick="editCustomQuestion(${i})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white"><i class="fa-solid fa-pen"></i></button>
                 <button onclick="deleteCustomQuestion(${q.id ? Number(q.id) : 'null'}, ${i})" class="w-8 h-8 flex-shrink-0 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button>
             </div>
@@ -102,6 +105,7 @@ function editCustomQuestion(index) {
     document.getElementById('cq-edit-id').value = q.id || '';
     document.getElementById('cq-prompt').value = q.prompt || '';
     document.getElementById('cq-answer').value = q.ans;
+    for(let n=0;n<5;n++){const el=document.getElementById(`cq-option-${n}`);if(el)el.value=(q.options||[])[n]||'';}
     document.getElementById('cq-set-name').value = q.set || 'General Questions';
     document.getElementById('cq-explanation').value = q.explanation || '';
 
@@ -134,6 +138,7 @@ function cancelEdit() {
     });
     const fileInput = document.getElementById('cq-image-file');
     if (fileInput) fileInput.value = '';
+    for(let n=0;n<5;n++){const el=document.getElementById(`cq-option-${n}`);if(el)el.value='';}
     const setField = document.getElementById('cq-set-name');
     if (setField) setField.value = 'General Questions';
     const helpText = document.getElementById('cq-image-help');
@@ -161,6 +166,8 @@ async function addCustomQuestion(event) {
         const ans = Number.parseInt(document.getElementById('cq-answer')?.value, 10);
         const fileInput = document.getElementById('cq-image-file');
         const existingImage = document.getElementById('cq-existing-image')?.value || '';
+        const options = Array.from({length:5},(_,n)=>document.getElementById(`cq-option-${n}`)?.value.trim().slice(0,55)||'');
+        if(module==='W1' && (options.some(value=>!value)||new Set(options.map(value=>value.toLowerCase())).size!==5))return showErrorToast('Enter five distinct options (A–E) for Picture Challenge.');
 
         if (!yearId) return showErrorToast('Select a school year first.');
         if (!prompt) return showErrorToast('Question prompt is required.');
@@ -185,12 +192,16 @@ async function addCustomQuestion(event) {
                 game_module: module,
                 prompt,
                 correct_ans: ans,
+                answer_options: module==='W1' ? options : null,
                 time_limit: 10,
                 image_url: finalImageUrl || null,
                 question_set: document.getElementById('cq-set-name')?.value.trim().slice(0, 90) || 'General Questions',
                 explanation: document.getElementById('cq-explanation')?.value.trim().slice(0, 500) || null,
                 review_status: 'approved'
             };
+            const oldQuestion = editId ? customQuestions.find(q=>Number(q.id)===Number(editId)) : null;
+            if(uploaded?.publicUrl){payload.image_attribution='Teacher supplied';payload.image_license='Teacher supplied';payload.image_source=null;}
+            else if(oldQuestion){payload.image_attribution=oldQuestion.image_attribution||null;payload.image_license=oldQuestion.image_license||null;payload.image_source=oldQuestion.image_source||null;}
 
             const db = requireSupabase();
             const result = editId

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SikLab: Sense Detectives (Week 1) - Cloud</title>
+    <title>SikLab: Picture Challenge (Game 1) - Cloud</title>
     
     <!-- OFFLINE READY: Local Tailwind CSS (Notice the / at the start!) -->
     <script src="/assets/tailwind.js"></script>
@@ -51,8 +51,8 @@
                     <i class="fa-solid fa-fire text-orange-500 text-sm"></i>
                     <span class="text-white font-black tracking-wide text-sm">SikLab</span>
                 </div>
-                <h1 class="text-xl font-black tracking-wider text-slate-800 detective-font leading-none">SENSE DETECTIVES</h1>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-tight" id="header-subtitle">MATATAG Wk 1: 5 Senses</p>
+                <h1 class="text-xl font-black tracking-wider text-slate-800 detective-font leading-none">PICTURE CHALLENGE</h1>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-tight" id="header-subtitle">Grade 3 Science • Picture Quiz</p>
             </div>
             
             <button onclick="returnToMenu()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center transition-colors shadow-sm" title="Main Menu">
@@ -88,9 +88,9 @@
                         <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
-                        <h2 class="text-5xl font-black text-slate-800 detective-font tracking-wide">SENSE DETECTIVES</h2>
+                        <h2 class="text-5xl font-black text-slate-800 detective-font tracking-wide">PICTURE CHALLENGE</h2>
                     </div>
-                    <p class="text-lg text-slate-500 mb-8 font-bold w-full">Week 1: Describe objects using your 5 Senses!</p>
+                    <p class="text-lg text-slate-500 mb-8 font-bold w-full">Explore science with pictures and five answer buttons!</p>
                     <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
                         <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
                     </button>
@@ -544,9 +544,9 @@
                     <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </div>
-                    <h2 class="text-5xl md:text-6xl font-black text-slate-800 detective-font tracking-wide">SENSE DETECTIVES</h2>
+                    <h2 class="text-5xl md:text-6xl font-black text-slate-800 detective-font tracking-wide">PICTURE CHALLENGE</h2>
                 </div>
-                <p class="text-lg text-slate-500 mb-8 font-bold w-full">Week 1: Describe objects using your 5 Senses!</p>
+                <p class="text-lg text-slate-500 mb-8 font-bold w-full">Explore science with pictures and five answer buttons!</p>
                 <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
                     <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
                 </button>
@@ -578,7 +578,7 @@
             const explain = document.getElementById('sense-feedback-explanation');
             if (explain) {
                 const explanation = mgData?.current?.explanation || '';
-                explain.textContent = explanation ? `${['Sight','Touch','Hearing','Smell','Taste'][mgData.current.ans] || 'Sense'}: ${explanation}` : '';
+                explain.textContent = explanation ? `${(mgData.current.answer_options || ['Sight','Touch','Hearing','Smell','Taste'])[mgData.current.ans] || 'Answer'}: ${explanation}` : '';
                 explain.classList.toggle('hidden', !explanation);
             }
             msg.className = "bg-white px-8 md:px-12 py-7 rounded-[2rem] border shadow-2xl transition-transform max-w-[90vw] ";
@@ -598,7 +598,7 @@
             const finalP2Name = p2Members ? `${p2Name} (${p2Members})` : p2Name;
 
             const historyData = {
-                game: 'Sense Detectives (W1)',
+                game: 'Picture Challenge (W1)',
                 p1Name: finalP1Name,
                 p2Name: finalP2Name,
                 p1Score: scores.p1,
@@ -681,7 +681,7 @@
                 if (!yearId) throw new Error('No school year selected');
                 const requestedSet = localStorage.getItem(`siklab_sense_question_set_${yearId}`) || '';
                 let query = db.from('custom_question')
-                    .select('prompt,correct_ans,image_url,explanation,image_attribution,image_license,image_source')
+                    .select('prompt,correct_ans,answer_options,image_url,explanation,image_attribution,image_license,image_source')
                     .eq('school_year_id', yearId)
                     .eq('game_module', 'W1')
                     .eq('review_status', 'approved');
@@ -694,6 +694,7 @@
                     qBank = data.map(q => ({
                         prompt: q.prompt,
                         ans: Number(q.correct_ans),
+                        answer_options: Array.isArray(q.answer_options) && q.answer_options.length === 5 ? q.answer_options : ['Sight','Touch','Hearing','Smell','Taste'],
                         img: q.image_url || '',
                         explanation: q.explanation || '',
                         image_attribution: q.image_attribution || '',
@@ -1216,36 +1217,29 @@
             ctx.strokeStyle = '#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,600); ctx.lineTo(canvas.width, 600); ctx.stroke();
 
             ctx.fillStyle = 'rgba(30, 41, 59, 0.9)'; ctx.fillRect(0, 620, canvas.width, 80);
+            // Five fixed physical button slots, but answer text changes with every question.
+            const currentOptions = Array.isArray(mgData.current.answer_options) && mgData.current.answer_options.length === 5
+                ? mgData.current.answer_options : ['Sight','Touch','Hearing','Smell','Taste'];
             HARDWARE_BUTTONS.forEach((btn, idx) => {
-                const x = 150 + idx * 175;
-                
-                // Draw pill background
-                ctx.fillStyle = btn.hex; 
-                ctx.beginPath(); 
-                ctx.roundRect(x - 30, 640, 60, 30, 5); 
-                ctx.fill();
-                
-                // If it's the white 'C' button, add a border so it doesn't blend in
-                if (btn.name === 'C') {
-                    ctx.strokeStyle = '#94a3b8'; 
-                    ctx.lineWidth = 2; 
-                    ctx.stroke();
-                    ctx.fillStyle = '#1e293b'; // Dark text inside pill
-                } else {
-                    ctx.fillStyle = '#ffffff'; // White text inside pill
+                const x = 104 + idx * 198;
+                ctx.fillStyle = btn.hex;
+                ctx.beginPath(); ctx.roundRect(x - 28, 610, 56, 29, 6); ctx.fill();
+                if (btn.name === 'C') {ctx.strokeStyle='#94a3b8';ctx.stroke();ctx.fillStyle='#1e293b';}
+                else ctx.fillStyle='#ffffff';
+                ctx.font='bold 16px Poppins';ctx.textAlign='center';ctx.textBaseline='middle';
+                ctx.fillText(btn.name,x,625);
+                ctx.fillStyle='#ffffff';ctx.font='bold 15px Poppins';
+                const text = String(currentOptions[idx] || '').trim();
+                const maxWidth = 183;
+                const words = text.split(/\s+/); const lines = [''];
+                for (const word of words) {
+                    const candidate = lines[lines.length-1] ? lines[lines.length-1]+' '+word : word;
+                    if (ctx.measureText(candidate).width > maxWidth && lines[lines.length-1]) lines.push(word);
+                    else lines[lines.length-1]=candidate;
                 }
-
-                // Draw inside pill text
-                ctx.font = 'bold 14px Poppins'; 
-                ctx.textAlign = 'center'; 
-                ctx.textBaseline = 'middle'; 
-                ctx.fillText(btn.name, x, 655);
-                
-                // Draw bottom text (A, B, C, D, E)
-                // Use a dark color for C so it shows up on the light background
-                ctx.fillStyle = btn.name === 'C' ? '#94a3b8' : btn.hex; 
-                ctx.font = 'bold 18px detective-font'; 
-                ctx.fillText(btn.name, x, 685);
+                if (lines.length > 2) {lines.length=2;let val=lines[1];while(val.length && ctx.measureText(val+'…').width>maxWidth)val=val.slice(0,-1);lines[1]=val+'…';}
+                ctx.fillText(lines[0] || '—',x,655);
+                if (lines[1])ctx.fillText(lines[1],x,679);
             });
 
             if (mgData.p1StunMs > 0) { ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.fillRect(0,0,500,canvas.height); ctx.fillStyle='#ef4444'; ctx.font='bold 50px Poppins'; ctx.fillText(`${p1Short} STUNNED!`, 250, 350); }

@@ -47,7 +47,7 @@ function renderSettingsForm(activePath) {
     if (!container) return;
 
     const schema = SETTINGS_SCHEMA[module] || SETTINGS_SCHEMA.DEFAULT;
-    if (title) title.innerText = module === 'W1' ? 'Sense Detectives • Gameplay Rules' : `${module} Game Rules`;
+    if (title) title.innerText = module === 'W1' ? 'Picture Challenge • Gameplay Rules' : `${module} Game Rules`;
 
     container.innerHTML = schema.map((field, index) => `
         <div class="${module === 'W1' && index >= 2 && field.id !== 'roundTimer' ? 'sense-advanced-field hidden' : ''}">
