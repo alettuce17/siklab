@@ -1,4 +1,4 @@
-// SikLab Sense Detectives: five-button question drafts, never publishes or stores directly.
+// SikLab Picture Challenge: five-choice image quiz drafts; no automatic publishing.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -34,11 +34,12 @@ const responseSchema = {
     questions: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
       prompt: { type: 'STRING' },
       correct_ans: { type: 'INTEGER' },
+      answer_options: { type: 'ARRAY', items: { type: 'STRING' } },
       explanation: { type: 'STRING' },
       image_query: { type: 'STRING' },
       topic: { type: 'STRING' },
       source_page: { type: 'STRING' },
-    }, required: ['prompt','correct_ans','explanation','image_query','topic','source_page'] } },
+    }, required: ['prompt','correct_ans','answer_options','explanation','image_query','topic','source_page'] } },
   }, required: ['questions'],
 }
 Deno.serve(async req => {
@@ -81,7 +82,8 @@ Deno.serve(async req => {
       if (topic.length < 3) return reply({error:'Enter a topic.'},400)
       sourceDescription = `Teacher-chosen topic: ${topic}. No reference PDF was supplied; the teacher must verify facts.`
     } else return reply({error:'Choose PDF, saved lesson or topic.'},400)
-    const instruction = `You draft educational questions for the SikLab "Sense Detectives" game for Grade 3 Science. IMPORTANT: answer controls are FIXED: 0 Sight, 1 Touch, 2 Hearing, 3 Smell, 4 Taste. There are NO multiple-choice distractors. Produce EXACTLY ${count} SHORT visual questions; each has ONE unambiguous correct sense 0..4. For example "Which sense tells you a bell is ringing?" => 2. Questions must be meaningfully about sensory observations grounded in the teacher-selected content. If the content is not about five senses, do not invent five-senses facts; instead use defensible observations of the objects or phenomena in the provided content. If it is impossible to create valid questions grounded in the content, return an empty questions list. Distribute the five senses where supported; don't force unsupported senses. Suggest a specific and relevant search phrase for an image of the object, without confusing or showing the answer explicitly. Use age-appropriate Grade 3 English; no trick questions, no student names. Keep the explanation 1 sentence. PDF/source page ONLY if certain, otherwise empty string; for saved lesson/topic always empty. Teacher's focus: ${focus||'entire reference'}. Source: ${sourceDescription}. Return JSON matching schema.\n` 
+    const instruction = `Create EXACTLY ${count} short, visual, general Grade 3 science QUIZ questions for SikLab Picture Challenge. Content MUST stay on the teacher-selected topic or uploaded reference; you are creating a general PICTURE QUIZ, NOT a five-senses quiz. Do not ask which sense (sight, touch, hearing, smell, taste) is used unless the teacher explicitly chose the five senses as the topic or those questions are required by the uploaded reference. For a topic such as apples, ask about observable parts, plant biology, growth, classification, or other age-appropriate facts—not which sense detects an apple. For a topic such as parts of plants, ask plant-part identification and functions, not senses. The ESP32 has five physical answer buttons A,B,C,D,E. For EACH question return exactly FIVE distinct short answer_options in the same display order as those buttons; correct_ans is the ZERO-BASED index 0..4 of the ONE correct option. Other options must be plausible but unambiguously wrong. E.g. image of a root, prompt 'Which part of a plant is shown?', answer_options ['Leaf','Root','Stem','Flower','Fruit'], correct_ans 1. Every question must be educationally accurate for the chosen source and appropriate for Grade 3 students. Questions MUST be answerable with the pictured object/phenomenon, and your image_query must search for a clear, specific image that SUPPORTS the question but DOES NOT label or give away its answer. Generate search keywords, NOT an image. Keep answer labels brief (max 55 characters), prompts (max 220 characters), explanation one sentence. Do not claim precise PDF pages unless certain. Return JSON matching schema. Teacher focus: ${focus||'entire reference'}. Source: ${sourceDescription}.`;
+
     const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash'
     const parts: Record<string,unknown>[] = [{text:instruction}]
     if (pdfPart) parts.push(pdfPart)
@@ -100,16 +102,18 @@ Deno.serve(async req => {
     const parsed = JSON.parse(content)
     const unique = new Set<string>()
     const questions = (Array.isArray(parsed?.questions) ? parsed.questions : []).slice(0,count).map((q:Record<string,unknown>)=>({
-      prompt:str(q.prompt,350),correct_ans:Number(q.correct_ans),explanation:str(q.explanation,500),
+      prompt:str(q.prompt,350),correct_ans:Number(q.correct_ans),
+      answer_options: Array.isArray(q.answer_options) ? q.answer_options.map((x:unknown)=>str(x,55)) : [],
+      explanation:str(q.explanation,500),
       image_query:str(q.image_query,160),topic:str(q.topic,160),source_page:isPdf?str(q.source_page,15):'',
     })).filter((q:{prompt:string,correct_ans:number,image_query:string})=>{
-      if(!q.prompt || !q.image_query || !Number.isInteger(q.correct_ans)||q.correct_ans<0||q.correct_ans>4)return false
+      if(!q.prompt || !q.image_query || !Number.isInteger(q.correct_ans)||q.correct_ans<0||q.correct_ans>4 || q.answer_options.length!==5 || q.answer_options.some((opt:string)=>!opt) || new Set(q.answer_options.map((opt:string)=>opt.toLowerCase())).size!==5)return false
       const normalized=q.prompt.toLowerCase().replace(/\s+/g,' ').trim()
       if(unique.has(normalized))return false
       unique.add(normalized);return true
     })
-    if(!questions.length) return reply({error:'The source did not produce valid five-senses questions. Try a more relevant topic or PDF.'},422)
-    return reply({questions,source_type:source,count:questions.length,needs_teacher_review:true})
+    if(!questions.length) return reply({error:'No valid picture-quiz questions were generated. Try another topic or a clearer PDF.'},422)
+    return reply({questions,source_type:source,count:questions.length,needs_teacher_review:true,source_summary:sourceDescription.slice(0,220),version:'general-picture-quiz-fix3'})
   } catch (error) {
     console.error('[ai-game-questions]',error)
     return reply({error:'Could not create the draft. Try a smaller text-based PDF or a shorter topic.'},500)

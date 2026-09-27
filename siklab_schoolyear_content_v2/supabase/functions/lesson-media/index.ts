@@ -46,28 +46,51 @@ Deno.serve(async req => {
     if (body?.action === 'search') {
       const query = String(body.query || '').trim().slice(0, 100)
       if (query.length < 2) return reply({ error: 'Enter image search keywords.' }, 400)
-      const params = new URLSearchParams({
-        action: 'query', generator: 'search', gsrsearch: `${query} filetype:bitmap`,
-        gsrnamespace: '6', gsrlimit: '18', prop: 'imageinfo',
-        iiprop: 'url|extmetadata|mime|size', iiurlwidth: '400', format: 'json', formatversion: '2',
-      })
-      const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`, { signal: AbortSignal.timeout(16000), headers: { 'User-Agent': 'SikLabEducationalLessonBuilder/1.0 (teacher-curated science images)' } })
-      if (!r.ok) return reply({ error: 'Image library unavailable. Use Add Image instead.' }, 502)
-      const json = await r.json()
-      const images = (json?.query?.pages || []).flatMap((item: Record<string, any>) => {
-        const info = item?.imageinfo?.[0]
-        if (!info || !/image\/(jpeg|png|webp)/.test(info.mime || '') || info.size > 5 * 1024 * 1024) return []
-        const url = wikimediaImageUrl(info.url)
-        const thumb = wikimediaImageUrl(info.thumburl || info.url)
-        if (!url || !thumb) return []
-        const meta = info.extmetadata || {}
-        const license = stripHtml(meta.LicenseShortName?.value || meta.License?.value)
-        if (!/(CC|public domain|PD-|GFDL)/i.test(license)) return []
-        return [{ title: stripHtml(item.title).replace(/^File:/i, ''), url, thumb,
-          artist: stripHtml(meta.Artist?.value || 'Wikimedia Commons contributor'), license,
-          page: String(info.descriptionurl || '').slice(0, 350) }]
-      }).slice(0, 12)
-      return reply({ images })
+      // Commons file search can surface SVG logos, PDFs, and files without usable
+      // licence metadata before JPEG/PNG/WebP photographs. Search beyond page one
+      // and retry picture-oriented phrases instead of silently returning [] to users.
+      const terms = [query, `${query} photograph`, `${query} photo`]
+      if (/^apples?$/i.test(query)) terms.splice(1, 0, 'apple fruit photograph')
+      const seen = new Set<string>()
+      const images: Array<Record<string,string>> = []
+      const diagnostics = { searched: [] as string[], files: 0, unsupportedType: 0, unverifiedLicense: 0, invalidUrl: 0 }
+      for (const term of [...new Set(terms)].slice(0, 3)) {
+        diagnostics.searched.push(term)
+        const params = new URLSearchParams({
+          action: 'query', generator: 'search', gsrsearch: term,
+          gsrnamespace: '6', gsrlimit: '40', prop: 'imageinfo',
+          iiprop: 'url|extmetadata|mime|size',
+          iiextmetadatafilter: 'Artist|LicenseShortName|License',
+          iiurlwidth: '400', format: 'json', formatversion: '2',
+        })
+        const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`, {
+          signal: AbortSignal.timeout(16000),
+          headers: { 'User-Agent': 'SikLabSchoolScience/3.0 (https://siklab2027.netlify.app; educational licensed image search)', 'Accept': 'application/json' },
+        })
+        if (!r.ok) return reply({ error: `Wikimedia search returned HTTP ${r.status}. Check lesson-media logs; no search results were received.` }, 502)
+        const json = await r.json()
+        if (json?.error) return reply({ error: `Wikimedia search: ${String(json.error.info || json.error.code || 'Unknown error').slice(0,180)}` }, 502)
+        const pages = Array.isArray(json?.query?.pages) ? json.query.pages : []
+        diagnostics.files += pages.length
+        for (const item of pages) {
+          const info = item?.imageinfo?.[0]
+          if (!info || !/^image\/(jpeg|png|webp)$/i.test(String(info.mime || ''))) { diagnostics.unsupportedType++; continue }
+          const thumb = wikimediaImageUrl(info.thumburl || info.url)
+          const url = wikimediaImageUrl(Number(info.size || 0) > 5 * 1024 * 1024 ? (info.thumburl || info.url) : info.url)
+          if (!url || !thumb) { diagnostics.invalidUrl++; continue }
+          const meta = info.extmetadata || {}
+          const license = stripHtml(meta.LicenseShortName?.value || meta.License?.value)
+          if (!/(CC|public domain|PD-|GFDL)/i.test(license)) { diagnostics.unverifiedLicense++; continue }
+          if (seen.has(url)) continue
+          seen.add(url)
+          images.push({ title: stripHtml(item.title).replace(/^File:/i, ''), url, thumb,
+            artist: stripHtml(meta.Artist?.value || 'Wikimedia Commons contributor'), license,
+            page: String(info.descriptionurl || '').slice(0, 350) })
+          if (images.length >= 12) break
+        }
+        if (images.length >= 8) break
+      }
+      return reply({ images, diagnostics, provider: 'Wikimedia Commons', version: 'picture-search-fix3' })
     }
     if (body?.action === 'generate') {
       const prompt = String(body.prompt || '').trim().slice(0, 180)
@@ -118,10 +141,11 @@ Deno.serve(async req => {
       if (size > 5 * 1024 * 1024) return reply({ error: 'Image is larger than 5 MB.' }, 400)
       const bytes = await r.arrayBuffer()
       if (bytes.byteLength > 5 * 1024 * 1024) return reply({ error: 'Image is larger than 5 MB.' }, 400)
+      const bucket = body.target === 'question' ? 'question-images' : 'lesson-images'
       const storagePath = `school-year-${yearId}/commons-${crypto.randomUUID()}.${extensions[type]}`
-      const { error } = await db.storage.from('lesson-images').upload(storagePath, bytes, { contentType: type, upsert: false })
+      const { error } = await db.storage.from(bucket).upload(storagePath, bytes, { contentType: type, upsert: false })
       if (error) return reply({ error: `Unable to save image: ${error.message}` }, 403)
-      const { data } = db.storage.from('lesson-images').getPublicUrl(storagePath)
+      const { data } = db.storage.from(bucket).getPublicUrl(storagePath)
       return reply({ publicUrl: data.publicUrl, attribution: String(body.attribution || '').slice(0, 200),
         license: String(body.license || '').slice(0, 100), source: String(body.source || '').slice(0, 350) })
     }

@@ -12,6 +12,8 @@ function senseChangeSource() {
     const source = senseEl('sense-source')?.value;
     for (const [name, id] of [['lesson','sense-lesson-wrap'], ['pdf','sense-pdf-wrap'], ['topic','sense-topic-wrap']])
         senseEl(id)?.classList.toggle('hidden', name !== source);
+    if (senseEl('sense-focus')) senseEl('sense-focus').value = ''; // Do not carry an old senses focus into a new source.
+    senseStatus(`Source selected: ${source}. Generate a NEW question set to change its subject; image search only changes the picture.`);
 }
 function openSenseQuestions() {
     switchTab('content');
@@ -98,7 +100,8 @@ async function senseGenerateQuestions() {
         senseSourceInfo = { source_type:source, source_label:source === 'pdf' ? body.filename : source === 'topic' ? body.topic : senseEl('sense-lesson').selectedOptions[0]?.textContent || '',
             lesson_module_id:source === 'lesson' ? body.lesson_module_id : null, school_year_id:yearId };
         senseRenderDrafts();
-        senseStatus(`Generated ${senseDrafts.length} drafts. Searching for image suggestions—please review before saving.`);
+        senseStatus(`Generated ${senseDrafts.length} drafts from ${source === 'topic' ? 'topic: '+body.topic : source === 'lesson' ? 'selected lesson' : 'uploaded PDF'}. Searching pictures…`);
+        console.info('[Picture Challenge AI]',data.version||'unversioned',data.source_summary||'');
         // Small batches avoid opening 15 parallel Wikimedia search requests.
         for (let start=0; start<senseDrafts.length; start+=3) {
             if (version !== senseRequestVersion) return;
@@ -150,7 +153,7 @@ function senseRenderDrafts() {
                 ${q.image_url?`<img class="sense-preview" src="${safe(q.image_url)}" alt="Selected game illustration"><div class="text-xs text-emerald-700 font-bold">Picture selected ✓ ${safe(q.image_attribution||'')}</div>`:'<div class="flex min-h-[150px] items-center justify-center text-sm font-bold text-slate-500 border border-dashed border-slate-300 rounded-xl">Choose a picture for this question</div>'}
                 <div class="flex flex-wrap gap-2"><button class="sense-action" type="button" onclick="senseFindImages(${i},true)">⌕ Find picture</button><label class="sense-action cursor-pointer">↑ Upload image<input class="hidden" type="file" accept="image/png,image/jpeg,image/webp" onchange="senseUploadImage(${i},this)"></label><button class="sense-action" type="button" onclick="senseClearImage(${i})">Remove</button></div>
                 ${q.image_error ? `<p class="text-sm text-red-700 font-bold" role="alert">${safe(q.image_error)}</p>` : ''}<div id="sense-images-${i}" class="sense-img-grid">${(q.image_candidates||[]).map((c,n)=>`<button type="button" onclick="sensePickImage(${i},${n})" title="Use this Commons image: ${safe(c.title)}"><img src="${safe(c.thumb)}" alt="${safe(c.title)}" loading="lazy"><span>${safe(c.title)}</span><small>${safe(c.license)}</small></button>`).join('')}</div>
-                <p class="text-xs text-slate-500">Wikimedia images are suggestions, not automatically approved. Check relevance and licensing.</p>
+                <p class="text-xs text-slate-500">Wikimedia images are suggestions, not automatically approved. Check relevance and licensing. <a class="underline text-orange-700" target="_blank" rel="noopener noreferrer" href="https://commons.wikimedia.org/wiki/Special:MediaSearch?type=image&amp;search=${encodeURIComponent(q.image_query||q.prompt)}">Browse Wikimedia manually</a> if search is empty.</p>
             </div>
         </div>
     </article>`).join('');
@@ -168,8 +171,11 @@ async function senseFindImages(index,notify=true,version=senseRequestVersion) {
         const data=await senseFunctionCall('lesson-media',{action:'search',query});
         if(version !== senseRequestVersion)return;
         q.image_candidates=Array.isArray(data.images)?data.images:[];
+        const diagnostic=data.diagnostics||{};
+        q.image_error=q.image_candidates.length?'':`Commons checked ${diagnostic.files ?? 'an unknown number of'} files; ${diagnostic.unsupportedType ?? '?'} unsupported formats, ${diagnostic.unverifiedLicense ?? '?'} without verified free-use license. Search tried: ${(diagnostic.searched||[query]).join(' → ')}. Try another phrase, browse Commons, or upload your own.`;
         senseRenderCandidates(index);
-        if(notify)senseStatus(q.image_candidates.length? 'Choose a picture to import it into SikLab.':'No matching pictures; try new keywords or upload your own.');
+        if(!q.image_candidates.length) senseRenderDrafts();
+        if(notify)senseStatus(q.image_candidates.length?`Found ${q.image_candidates.length} pictures (Wikimedia Commons). Choose one to import.`:q.image_error);
     } catch(error) {console.warn('[Picture search]',error);q.image_error=error.message||'Search unavailable';senseRenderDrafts();if(notify)senseStatus(q.image_error);}
     finally {q.busy=false;}
 }
@@ -244,7 +250,7 @@ function openQuestionImageManager(questionId) {
         <p class="text-sm text-slate-700">${senseEsc(q.prompt)}</p>
         <div id="picture-manager-preview">${q.img?`<img src="${senseEsc(q.img)}" class="h-36 rounded-lg object-contain" alt="Current question picture"><p class="text-xs">${senseEsc(q.image_attribution||'Current image')}</p>`:'<p class="text-sm text-slate-500">No picture attached yet.</p>'}</div>
         <div class="flex flex-wrap gap-2 items-end"><label class="flex-1 text-sm font-bold">Find licensed picture<input id="picture-manager-query" class="block w-full p-2 border rounded-lg" maxlength="100" value="${senseEsc(q.image_query||q.prompt)}"></label><button type="button" onclick="searchSavedQuestionImages()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg">Search</button></div>
-        <p id="picture-manager-status" role="status" class="text-sm text-slate-700">Choose from Wikimedia Commons or upload your own.</p>
+        <p id="picture-manager-status" role="status" class="text-sm text-slate-700">Choose from Wikimedia Commons or upload your own. <a class="underline text-orange-700" href="https://commons.wikimedia.org/wiki/Special:MediaSearch?type=image" target="_blank" rel="noopener noreferrer">Browse Commons</a></p>
         <div id="picture-manager-results" class="sense-img-grid"></div>
         <div class="flex flex-wrap gap-2 items-center border-t pt-3"><label class="bg-slate-100 px-4 py-2 rounded-lg font-bold cursor-pointer">Upload / Replace<input type="file" class="hidden" accept="image/png,image/jpeg,image/webp" onchange="uploadSavedQuestionImage(this)"></label><button type="button" onclick="removeSavedQuestionImage()" class="bg-red-50 text-red-700 font-bold rounded-lg px-4 py-2">Remove picture from question</button></div>
         <p class="text-xs text-slate-500">Removing a picture detaches it from this question; it does not delete the original Storage file because another school year may still use it.</p>
@@ -268,7 +274,8 @@ async function searchSavedQuestionImages(){
         const data=await senseFunctionCall('lesson-media',{action:'search',query});
         savedPictureCandidates=Array.isArray(data.images)?data.images:[];
         target.innerHTML=savedPictureCandidates.map((im,i)=>`<button type="button" onclick="chooseSavedQuestionImage(${i})" title="Attach ${senseEsc(im.title)}"><img src="${senseEsc(im.thumb)}" alt="${senseEsc(im.title)}" loading="lazy"><span>${senseEsc(im.title)}</span><small>${senseEsc(im.license)}</small></button>`).join('');
-        savedPictureStatus(savedPictureCandidates.length?`Found ${savedPictureCandidates.length} pictures. Select one to replace the current picture.`:'No images matched. Try fewer keywords or upload your own picture.');
+        const d=data.diagnostics||{};
+        savedPictureStatus(savedPictureCandidates.length?`Found ${savedPictureCandidates.length} pictures. Select one to replace the current picture.`:`No usable results from ${d.files ?? '?'} Commons files (${d.unsupportedType ?? '?'} unsupported formats, ${d.unverifiedLicense ?? '?'} without verified license). Try different terms or upload a picture.`);
     }catch(err){console.warn('[Saved picture search]',err);savedPictureStatus(err.message||'Picture search failed.');}
 }
 async function chooseSavedQuestionImage(index){
