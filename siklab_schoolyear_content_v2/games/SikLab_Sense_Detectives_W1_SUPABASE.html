@@ -24,52 +24,115 @@
         canvas { image-rendering: auto; }
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
         .animate-float { animation: float 3s ease-in-out infinite; }
+
+/* ---------------------------------------------------------
+   SIKLAB PICTURE CHALLENGE · GAME VISUALS V1
+   Visual-only skin.  Score, controls, question data and saving
+   continue to use the existing Game 1 implementation.
+   --------------------------------------------------------- */
+:root { color-scheme: light; --sk-orange:#ff772e; --sk-coral:#ff5465; --sk-navy:#24244b; --sk-purple:#7356df; --sk-blue:#3686f6; }
+body.siklab-game { background:#fdf4eb!important; color:var(--sk-navy); }
+body.siklab-game::before {
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(circle at 8% 15%,rgba(255,202,102,.34),transparent 30%),radial-gradient(circle at 95% 84%,rgba(151,139,254,.20),transparent 36%),#fff9f3;
+}
+.sk-header {
+    height:74px!important; min-height:74px; flex-shrink:0; padding:8px clamp(12px,3vw,36px)!important;
+    border:0!important; background:rgba(255,255,255,.94)!important;
+    box-shadow:0 4px 28px rgba(56,36,90,.07)!important;
+}
+.sk-header .sk-brand-pill { background:linear-gradient(125deg,#ff7636,#ff4b79)!important; border:0!important; box-shadow:0 5px 16px rgba(248,93,60,.24)!important; }
+.sk-header .sk-brand-pill i { color:white!important; }
+.sk-header .sk-score {
+    min-width:110px; padding:6px 14px!important; border-radius:17px!important;
+    border:2px solid transparent!important; background:#edf4ff!important;
+    box-shadow:0 5px 0 rgba(45,95,180,.08);
+}
+.sk-header .sk-score.p2 { background:#fff0f2!important; box-shadow:0 5px 0 rgba(190,55,100,.08); }
+.sk-header .sk-score.p1 { border-color:#cfe0ff!important; }
+.sk-header .sk-score.p2 { border-color:#ffd8dc!important; }
+.sk-score .sk-score-value { font-size:27px!important; line-height:1.1!important; font-variant-numeric:tabular-nums; }
+.sk-score .sk-score-label { font-size:10px!important; letter-spacing:.06em!important; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sk-score-value.score-pop { animation:skScorePop .45s cubic-bezier(.18,1.5,.35,1); }
+.sk-icon-btn { background:#f5f2ff!important; color:#5947a8!important; border:1px solid #eae3ff; transition:transform .2s,background .2s; }
+.sk-icon-btn:hover { background:#e9e1ff!important; transform:translateY(-2px) scale(1.05); }
+.sk-stage { background:radial-gradient(circle at 50% 75%,rgba(255,255,255,.87),transparent 53%),radial-gradient(circle at 20% 12%,#fff1da,transparent 48%),#fff8ef!important; padding:clamp(6px,1.4vw,16px)!important; }
+.sk-canvas { width:100%; height:100%; max-width:1200px; max-height:calc(100vh - 102px); object-fit:contain; border:2px solid #ffddc5!important; border-radius:clamp(16px,2vw,30px)!important; box-shadow:0 17px 48px rgba(82,53,109,.13),0 3px 0 rgba(244,147,87,.12)!important; background:#fff9ef!important; }
+#center-message { background:rgba(37,26,71,.67)!important; z-index:40!important; backdrop-filter:blur(11px); }
+#menu-container { width:min(700px,92vw)!important; max-height:calc(100vh - 135px); overflow-y:auto; border:2px solid #fff!important; border-radius:32px!important; padding:clamp(22px,4vw,42px)!important; background:linear-gradient(165deg,#fffdf9 0%,#fff2e9 100%)!important; box-shadow:0 24px 0 rgba(63,35,89,.15),0 34px 90px rgba(29,18,64,.33)!important; animation:skMenuEnter .55s cubic-bezier(.2,1.2,.4,1) both; }
+.sk-game-logo { display:flex; justify-content:center; align-items:center; gap:9px; color:#fff; background:linear-gradient(115deg,#ff7735,#ff4e86); border-radius:999px; padding:9px 23px; font-size:24px; font-weight:900; letter-spacing:.01em; box-shadow:0 9px 17px rgba(245,109,66,.22); margin-bottom:18px; }
+.sk-hero-icon { display:grid; place-items:center; color:#f56b35; font-size:52px; width:98px; height:98px; background:linear-gradient(155deg,#fff0d3,#ffd6bb); border:4px solid #fff; border-radius:30px; transform:rotate(-9deg); box-shadow:0 10px 0 rgba(230,127,72,.12); margin:6px auto 14px; animation:skBob 3.4s ease-in-out infinite; }
+.sk-menu-title { color:#292348; font-family:'Poppins','Segoe UI',sans-serif!important; line-height:1.03; letter-spacing:-.05em; font-size:clamp(32px,5vw,52px); font-weight:900; margin-bottom:12px; }
+.sk-menu-text { color:#655e7b; font-size:clamp(14px,2vw,18px); font-weight:600; line-height:1.55; margin-bottom:22px; }
+.sk-primary-btn { display:inline-flex; gap:13px; align-items:center; justify-content:center; min-height:62px; padding:14px 34px; border-radius:20px; background:linear-gradient(115deg,#ff7d34,#ff526f)!important; color:white!important; font-weight:900; font-size:clamp(16px,2vw,21px); box-shadow:0 8px 0 #cf4152,0 15px 32px rgba(240,84,81,.24); transition:transform .18s,box-shadow .18s; }
+.sk-primary-btn:hover { transform:translateY(-3px); box-shadow:0 11px 0 #cf4152,0 18px 34px rgba(240,84,81,.25); }
+.sk-primary-btn:active { transform:translateY(5px);box-shadow:0 3px 0 #cf4152; }
+.sk-menu-hint { margin-top:23px; font-size:12px; color:#837990; font-weight:700; }
+.sk-deco-dots { letter-spacing:12px; color:#ffae61; font-size:17px; margin-bottom:10px; }
+#feedback-overlay { z-index:45!important; background:rgba(34,27,72,.42)!important; backdrop-filter:blur(5px); }
+#feedback-message { position:relative; width:min(640px,90vw); max-height:min(66vh,480px); overflow-y:auto; padding:26px 31px!important; border:3px solid #fff!important; border-radius:30px!important; background:linear-gradient(150deg,#fff,#fff6ef)!important; box-shadow:0 17px 0 rgba(44,33,86,.15),0 24px 60px rgba(45,33,86,.22)!important; animation:skFeedbackEnter .52s cubic-bezier(.19,1.38,.3,1) both; }
+#feedback-text { font-family:'Poppins','Segoe UI',sans-serif!important; font-size:clamp(28px,5vw,51px)!important; line-height:1.15!important; letter-spacing:-.04em; }
+#feedback-subtext { font-size:clamp(18px,2.5vw,29px)!important; color:#f07931!important; }
+#sense-feedback-explanation { font-size:clamp(14px,1.65vw,18px)!important; line-height:1.45; }
+.sk-feedback-icon { display:grid;place-items:center;margin:0 auto 12px;width:64px;height:64px;border-radius:20px;font-size:33px;background:#fff0c5;box-shadow:0 7px 0 rgba(232,146,60,.15); }
+#sense-image-credit { bottom:16px!important;right:20px!important; font-size:10px!important; opacity:.85; }
+#audio-debugger { display:none; }
+@keyframes skBob {0%,100%{transform:translateY(0) rotate(-9deg)}50%{transform:translateY(-10px) rotate(-5deg)}}
+@keyframes skScorePop {0%{transform:scale(1)}45%{transform:scale(1.27)}100%{transform:scale(1)}}
+@keyframes skMenuEnter {from{opacity:0;transform:translateY(34px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes skFeedbackEnter {from{opacity:0;transform:translateY(28px) scale(.72)}to{opacity:1;transform:translateY(0) scale(1)}}
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {animation-duration:.01ms!important; animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+@media (max-width:760px) { .sk-header {height:66px!important;min-height:66px;padding:5px 8px!important;} .sk-header .sk-score {min-width:68px!important; padding:4px 7px!important;} .sk-score .sk-score-label {font-size:8px!important;max-width:80px;} .sk-score .sk-score-value{font-size:21px!important}.sk-header .sk-brand-subtitle{display:none!important}.sk-header .sk-brand-title{font-size:13px!important}.sk-header .sk-brand-pill{display:none!important}.sk-header .sk-icon-btn{width:30px!important;height:30px!important;} .sk-stage{padding:5px!important}.sk-canvas{border-radius:13px!important;max-height:calc(100vh - 75px)}#menu-container{border-radius:22px!important;max-height:calc(100vh - 90px)}}
+
     </style>
         <!-- OFFLINE READY: Local FontAwesome (Notice the / at the start!) -->
     <link rel="stylesheet" href="/assets/fontawesome/css/all.min.css">
     
 </head>
-<body class="w-screen h-screen flex flex-col selection:bg-none text-slate-800 m-0 p-0 relative">
+<body class="siklab-game w-screen h-screen flex flex-col selection:bg-none text-slate-800 m-0 p-0 relative">
 
     <!-- DASHBOARD-STYLE HEADER -->
-    <div class="bg-white h-20 px-6 md:px-8 flex justify-between items-center shadow-sm z-40 relative border-b border-orange-200">
+    <div class="sk-header bg-white h-20 px-6 md:px-8 flex justify-between items-center shadow-sm z-40 relative border-b border-orange-200">
         <div class="flex items-center gap-4">
-            <div class="bg-blue-50 px-6 py-1 rounded-xl border border-blue-200 shadow-sm flex flex-col items-center">
-                <span id="lbl-p1-clues" class="text-[10px] text-blue-500 font-black uppercase tracking-widest leading-none mt-1">P1 Clues</span>
-                <span id="score-p1" class="text-2xl font-black text-blue-700 leading-none mb-1">0</span>
+            <div class="sk-score p1 bg-blue-50 px-6 py-1 rounded-xl border border-blue-200 shadow-sm flex flex-col items-center">
+                <span id="lbl-p1-clues" class="sk-score-label text-[10px] text-blue-500 font-black uppercase tracking-widest leading-none mt-1">P1 Clues</span>
+                <span id="score-p1" class="sk-score-value text-2xl font-black text-blue-700 leading-none mb-1">0</span>
             </div>
         </div>
         
         <div class="flex items-center gap-4 md:gap-8">
-            <button onclick="toggleControllers()" class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 flex items-center justify-center transition-colors shadow-sm" title="Toggle Virtual Controllers">
+            <button onclick="toggleControllers()" class="sk-icon-btn w-10 h-10 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 flex items-center justify-center transition-colors shadow-sm" title="Toggle Virtual Controllers">
                 <i class="fa-solid fa-gamepad"></i>
             </button>
             
             <!-- SIKLAB OFFICIAL BRANDING ADDED TO HEADER -->
             <div class="text-center hidden md:flex flex-col items-center justify-center">
-                <div class="flex items-center justify-center gap-1.5 bg-slate-900 px-3 py-0.5 rounded-full shadow-inner mb-0.5">
+                <div class="sk-brand-pill flex items-center justify-center gap-1.5 bg-slate-900 px-3 py-0.5 rounded-full shadow-inner mb-0.5">
                     <i class="fa-solid fa-fire text-orange-500 text-sm"></i>
                     <span class="text-white font-black tracking-wide text-sm">SikLab</span>
                 </div>
-                <h1 class="text-xl font-black tracking-wider text-slate-800 detective-font leading-none">PICTURE CHALLENGE</h1>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-tight" id="header-subtitle">Grade 3 Science • Picture Quiz</p>
+                <h1 class="sk-brand-title text-xl font-black tracking-wider text-slate-800 detective-font leading-none">PICTURE CHALLENGE</h1>
+                <p class="sk-brand-subtitle text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-tight" id="header-subtitle">Grade 3 Science • Picture Quiz</p>
             </div>
             
-            <button onclick="returnToMenu()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center transition-colors shadow-sm" title="Main Menu">
+            <button onclick="toggleAudioDebugger()" class="sk-icon-btn w-10 h-10 rounded-full flex items-center justify-center shadow-sm" title="Audio test tools (teacher only)" aria-label="Audio test tools"><i class="fa-solid fa-sliders"></i></button>
+            <button id="sk-motion-toggle" onclick="toggleMotion()" class="sk-icon-btn w-10 h-10 rounded-full flex items-center justify-center shadow-sm" title="Turn animations off" aria-label="Turn animations off"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+            <button onclick="returnToMenu()" class="sk-icon-btn w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center transition-colors shadow-sm" title="Main Menu">
                 <i class="fa-solid fa-house"></i>
             </button>
         </div>
 
         <div class="flex items-center gap-4 flex-row-reverse">
-            <div class="bg-red-50 px-6 py-1 rounded-xl border border-red-200 shadow-sm flex flex-col items-center">
-                <span id="lbl-p2-clues" class="text-[10px] text-red-500 font-black uppercase tracking-widest leading-none mt-1">P2 Clues</span>
-                <span id="score-p2" class="text-2xl font-black text-red-700 leading-none mb-1">0</span>
+            <div class="sk-score p2 bg-red-50 px-6 py-1 rounded-xl border border-red-200 shadow-sm flex flex-col items-center">
+                <span id="lbl-p2-clues" class="sk-score-label text-[10px] text-red-500 font-black uppercase tracking-widest leading-none mt-1">P2 Clues</span>
+                <span id="score-p2" class="sk-score-value text-2xl font-black text-red-700 leading-none mb-1">0</span>
             </div>
         </div>
     </div>
 
     <!-- GAMEPLAY AREA -->
-    <div class="flex-grow bg-orange-50/50 flex items-center justify-center relative z-10 w-full h-full overflow-hidden p-6">
+    <div class="sk-stage flex-grow bg-orange-50/50 flex items-center justify-center relative z-10 w-full h-full overflow-hidden p-6">
         
         <!-- DASHBOARD-STYLE MODALS -->
         <div id="game-ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-20">
@@ -79,28 +142,20 @@
                 <div id="menu-container" class="bg-white p-10 rounded-[2.5rem] border border-orange-100 text-center shadow-2xl pointer-events-auto flex flex-col items-center max-w-3xl w-full mx-4">
                     
                     <!-- SIKLAB BRANDING IN MAIN MENU -->
-                    <div class="flex items-center justify-center gap-2 bg-slate-900 px-6 py-2 rounded-full mb-6 shadow-md border-2 border-slate-700">
-                        <i class="fa-solid fa-fire text-orange-500 text-3xl"></i>
-                        <span class="text-3xl font-black text-white tracking-wide">SikLab</span>
-                    </div>
-
-                    <div class="flex items-center justify-center gap-4 mb-4 animate-float">
-                        <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <h2 class="text-5xl font-black text-slate-800 detective-font tracking-wide">PICTURE CHALLENGE</h2>
-                    </div>
-                    <p class="text-lg text-slate-500 mb-8 font-bold w-full">Explore science with pictures and five answer buttons!</p>
-                    <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
-                        <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
-                    </button>
-                    <p class="mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-circle-info text-orange-400 mr-1"></i> Questions synced from Dashboard</p>
+                    <div class="sk-game-logo"><i class="fa-solid fa-fire"></i> SikLab</div>
+                    <div class="sk-hero-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                    <div class="sk-deco-dots" aria-hidden="true">✦ ✧ ✦</div>
+                    <h2 class="sk-menu-title">PICTURE<br>CHALLENGE!</h2>
+                    <p class="sk-menu-text">Look closer. Think bigger. Discover Science!<br>Choose your answer using the five colorful buttons.</p>
+                    <button onclick="startMiniGame()" class="sk-primary-btn"><i class="fa-solid fa-play"></i> LET'S PLAY!</button>
+                    <p class="sk-menu-hint"><i class="fa-solid fa-circle-info mr-1"></i> Questions are ready from your teacher's dashboard.</p>
                 </div>
             </div>
 
             <!-- Feedback Overlay -->
             <div id="feedback-overlay" class="absolute inset-0 bg-slate-900/40 rounded-[2rem] flex items-center justify-center z-30 backdrop-blur-sm hidden pointer-events-none transition-opacity">
                 <div id="feedback-message" class="bg-white px-16 py-10 rounded-[2rem] border border-orange-200 shadow-2xl transform scale-110 transition-transform">
+                    <div id="sk-feedback-icon" class="sk-feedback-icon" aria-hidden="true"><i class="fa-solid fa-star"></i></div>
                     <h2 id="feedback-text" class="text-5xl font-black uppercase text-center detective-font text-slate-800"></h2>
                     <p id="feedback-subtext" class="text-xl font-bold text-center mt-3 text-orange-500 hidden"></p>
                     <p id="sense-feedback-explanation" class="text-base font-bold text-center text-slate-700 mt-3 max-w-lg hidden"></p>
@@ -108,12 +163,12 @@
             </div>
         </div>
 
-        <canvas id="gameCanvas" width="1000" height="700" class="max-w-full max-h-full object-contain bg-white shadow-sm rounded-3xl border border-orange-200"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" class="sk-canvas max-w-full max-h-full object-contain bg-white shadow-sm rounded-3xl border border-orange-200"></canvas>
         <a id="sense-image-credit" class="absolute bottom-7 right-8 z-20 max-w-[45%] truncate rounded-lg bg-white/90 px-2 py-1 text-[10px] text-slate-600 hidden" rel="noopener noreferrer" target="_blank"></a>
     </div>
 
     <!-- AUDIO DEBUGGER PANEL -->
-    <div id="audio-debugger" class="fixed top-24 left-4 bg-stone-900/90 p-4 rounded-xl shadow-2xl border border-stone-700 text-white backdrop-blur-md" style="z-index: 9999;">
+    <div id="audio-debugger" class="fixed top-24 left-4 bg-stone-900/90 p-4 rounded-xl shadow-2xl border border-stone-700 text-white backdrop-blur-md" style="z-index: 9999; display:none;">
         <h4 class="text-xs font-black text-orange-500 mb-2 uppercase tracking-widest flex justify-between items-center">
             <span><i class="fa-solid fa-bug mr-1"></i> Audio Debugger</span>
             <button onclick="document.getElementById('audio-debugger').style.display='none'" class="text-stone-500 hover:text-white ml-4"><i class="fa-solid fa-xmark"></i></button>
@@ -469,10 +524,11 @@
         p2Label.innerHTML = '<i class="fa-solid fa-grip-lines text-slate-300 mr-2"></i>';
         p2Label.appendChild(document.createTextNode(p2Name));
 
+        // Offline demo fallback only: approved teacher questions are always loaded first.
         const DEFAULT_W1_QUESTIONS = [
-            { prompt: 'What color is the pencil\'s body?', ans: 0, img: '' },
-            { prompt: 'Does the pencil make a loud or soft sound when you tap it?', ans: 2, img: '' },
-            { prompt: 'Which sense would you use to know if a lemon is sour?', ans: 4, img: '' }
+            { prompt: 'Which part of a plant absorbs water from the soil?', ans: 1, answer_options: ['Leaf','Roots','Flower','Fruit','Stem'], img: '' },
+            { prompt: 'Which of these is a source of light?', ans: 0, answer_options: ['Sun','Stone','Chair','Cloud','Spoon'], img: '' },
+            { prompt: 'What do we call water when it freezes?', ans: 3, answer_options: ['Steam','Rain','Mist','Ice','Fog'], img: '' }
         ];
 
         const DEFAULT_W1_SETTINGS = { basePoints: 10, deduction: 2, stunDelay: 1.0, retryMultiplier: 0.5, roundTimer: 15 };
@@ -536,27 +592,44 @@
             updateUI();
             
             document.getElementById('menu-container').innerHTML = `
-                <div class="flex items-center justify-center gap-2 bg-slate-900 px-6 py-2 rounded-full mb-6 shadow-md border-2 border-slate-700">
-                    <i class="fa-solid fa-fire text-orange-500 text-3xl"></i>
-                    <span class="text-3xl font-black text-white tracking-wide">SikLab</span>
-                </div>
-                <div class="flex items-center justify-center gap-4 mb-4 animate-float">
-                    <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-4xl shadow-sm transform -rotate-3">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </div>
-                    <h2 class="text-5xl md:text-6xl font-black text-slate-800 detective-font tracking-wide">PICTURE CHALLENGE</h2>
-                </div>
-                <p class="text-lg text-slate-500 mb-8 font-bold w-full">Explore science with pictures and five answer buttons!</p>
-                <button onclick="startMiniGame()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-12 py-5 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
-                    <i class="fa-solid fa-play text-orange-400"></i> START INVESTIGATION
-                </button>
-                <p class="mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-circle-info text-orange-400 mr-1"></i> Questions synced from Dashboard</p>
+                <div class="sk-game-logo"><i class="fa-solid fa-fire"></i> SikLab</div>
+                <div class="sk-hero-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <div class="sk-deco-dots" aria-hidden="true">✦ ✧ ✦</div>
+                <h2 class="sk-menu-title">PICTURE<br>CHALLENGE!</h2>
+                <p class="sk-menu-text">Look closer. Think bigger. Discover Science!<br>Choose your answer using the five colorful buttons.</p>
+                <button onclick="startMiniGame()" class="sk-primary-btn"><i class="fa-solid fa-play"></i> LET'S PLAY!</button>
+                <p class="sk-menu-hint"><i class="fa-solid fa-circle-info mr-1"></i> Questions are ready from your teacher's dashboard.</p>
             `;
         }
 
+        function toggleAudioDebugger() {
+            const panel = document.getElementById('audio-debugger');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        function visualMotionOff() {
+            return document.body.classList.contains('reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        }
+        function toggleMotion() {
+            const off = document.body.classList.toggle('reduce-motion');
+            const button = document.getElementById('sk-motion-toggle');
+            button.title = off ? 'Turn animations on' : 'Turn animations off';
+            button.setAttribute('aria-label', button.title);
+            button.querySelector('i').className = off ? 'fa-solid fa-person-walking' : 'fa-solid fa-wand-magic-sparkles';
+            if (off) { particles.length = 0; screenFlash.alpha = 0; }
+        }
         function updateUI() {
-            document.getElementById('score-p1').innerText = scores.p1;
-            document.getElementById('score-p2').innerText = scores.p2;
+            ['p1','p2'].forEach(player => {
+                const score = document.getElementById('score-' + player);
+                const value = String(scores[player]);
+                if (score.textContent !== value) {
+                    score.textContent = value;
+                    if (!visualMotionOff()) {
+                        score.classList.remove('score-pop');
+                        void score.offsetWidth;
+                        score.classList.add('score-pop');
+                    }
+                }
+            });
         }
 
         function showFeedback(winner, text, pointsEarned = null) {
@@ -566,6 +639,13 @@
             const sub = document.getElementById('feedback-subtext');
             
             fb.classList.remove('hidden');
+            if (!visualMotionOff()) {
+                msg.style.animation = 'none';
+                void msg.offsetWidth;
+                msg.style.animation = '';
+            }
+            const icon = document.getElementById('sk-feedback-icon');
+            if (icon) icon.innerHTML = text.includes("TIME") ? '<i class="fa-solid fa-hourglass-end"></i>' : text.includes("TIE") ? '<i class="fa-solid fa-handshake"></i>' : '<i class="fa-solid fa-star"></i>';
             txt.innerText = text;
             
             if (pointsEarned !== null) {
@@ -761,14 +841,15 @@
                 const winText = scores.p1 > scores.p2 ? `${p1Name} WINS THE MATCH!` : scores.p2 > scores.p1 ? `${p2Name} WINS THE MATCH!` : "TIE MATCH!";
                 document.getElementById('center-message').classList.remove('hidden');
                 document.getElementById('menu-container').innerHTML = `
-                    <div class="w-24 h-24 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm">
-                        <i class="fa-solid fa-magnifying-glass-chart"></i>
-                    </div>
-                    <h2 class="text-5xl font-black text-slate-800 mb-2 detective-font">CASE CLOSED!</h2>
-                    <h3 class="text-2xl font-bold text-orange-600 mb-8 uppercase tracking-wide">${winText}</h3>
-                    <button onclick="returnToMenu()" class="bg-stone-800 hover:bg-stone-900 text-white text-xl font-black px-10 py-4 rounded-2xl shadow-xl hover:shadow-orange-500/20 active:scale-95 transition-all tracking-widest uppercase flex items-center gap-3">
-                        <i class="fa-solid fa-house text-orange-400"></i> BACK TO MENU
-                    </button>`;
+                    <div class="sk-game-logo"><i class="fa-solid fa-fire"></i> SikLab</div>
+                    <div class="sk-hero-icon"><i class="fa-solid fa-trophy"></i></div>
+                    <div class="sk-deco-dots" aria-hidden="true">✦ ★ ✦</div>
+                    <h2 class="sk-menu-title">AMAZING JOB!</h2>
+                    <h3 class="sk-menu-text" id="sk-match-result"></h3>
+                    <button onclick="returnToMenu()" class="sk-primary-btn"><i class="fa-solid fa-house"></i> BACK TO MENU</button>`;
+                const result = document.getElementById('sk-match-result');
+                if (result) result.textContent = winText;
+                if (!visualMotionOff()) spawnConfetti(500, 175, ['#ff8b44','#ffd35a','#9f83ff','#68d5d1'], 80);
                 return;
             }
 
@@ -777,6 +858,7 @@
             }
 
             mgData.round++;
+            mgData.roundStartedAt = performance.now();
             mgData.winner = null;
             mgData.animating = false;
             mgData.p1StunMs = 0; mgData.p2StunMs = 0;
@@ -809,18 +891,22 @@
             if (mgData.current.img && mgData.current.img.trim() !== '') {
                 const img = new Image();
                 img.crossOrigin = "Anonymous";
-                img.onload = () => { currentLoadedImage = img; };
+                const questionForImage = mgData.current;
+                img.onload = () => {
+                    if (mgData.current === questionForImage) currentLoadedImage = img;
+                };
                 img.src = mgData.current.img;
             }
         }
 
-        function triggerShake(intensity) { screenShake = intensity; }
+        function triggerShake(intensity) { screenShake = visualMotionOff() ? 0 : Math.min(3, intensity); }
 
         // ---------- VISUAL EFFECTS: CONFETTI PARTICLES + SCREEN FLASH ----------
         let particles = [];
         let screenFlash = { color: null, alpha: 0 };
 
         function spawnConfetti(x, y, colors, count = 45) {
+            if (visualMotionOff()) return;
             for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = 3 + Math.random() * 7;
@@ -839,7 +925,8 @@
         }
 
         function triggerFlash(color, peakAlpha = 0.32) {
-            screenFlash = { color, alpha: peakAlpha };
+            if (visualMotionOff()) return;
+            screenFlash = { color, alpha: Math.min(0.16, peakAlpha) };
         }
 
         function updateParticles() {
@@ -1082,170 +1169,192 @@
             resetPresses();
         }
 
-        function drawGame() {
-            if (gameState === 'MENU' || gameState === 'GAMEOVER') return;
-
-            ctx.save();
-            if (screenShake > 0) ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
-
-            if (gameState === 'PLAYING_RPS') {
-                ctx.fillStyle = '#fff7ed'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffedd5'; ctx.fillRect(20, 20, canvas.width-40, canvas.height-40);
-                
-                ctx.fillStyle = '#ea580c'; ctx.font = 'bold 50px detective-font'; ctx.textAlign = 'center';
-                ctx.fillText("ROCK PAPER SCISSORS!", 500, 100);
-                ctx.fillStyle = '#1e293b'; ctx.font = 'bold 20px Poppins';
-                ctx.fillText("Winner gets to control the Camera! (BTNS 1, 2, or 3)", 500, 140);
-
-                ctx.fillStyle = '#eff6ff'; ctx.beginPath(); ctx.roundRect(50, 180, 420, 450, 20); ctx.fill();
-                ctx.lineWidth = 4; ctx.strokeStyle = '#bfdbfe'; ctx.stroke();
-                ctx.fillStyle = '#1d4ed8'; ctx.font = 'bold 36px Poppins'; ctx.fillText(p1Name, 260, 230);
-                
-                if (mgData.rps.p1Choice === null) {
-                    ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 20px Poppins';
-                    ctx.fillText("WAITING FOR INPUT...", 260, 320);
-                    ctx.fillStyle = '#93c5fd'; ctx.beginPath(); ctx.roundRect(110, 380, 300, 200, 10); ctx.fill();
-                    ctx.fillStyle = '#1e3a8a';
-                    ctx.fillText("BTN 1 = 🪨 ROCK", 260, 430);
-                    ctx.fillText("BTN 2 = 📄 PAPER", 260, 480);
-                    ctx.fillText("BTN 3 = ✂️ SCISSORS", 260, 530);
-                } else if (mgData.rps.p2Choice === null) {
-                    ctx.fillStyle = '#10b981'; ctx.font = 'bold 40px Poppins';
-                    ctx.fillText("READY!", 260, 420);
-                } else {
-                    const emojis = ['🪨', '📄', '✂️'];
-                    ctx.font = '150px Arial'; ctx.fillText(emojis[mgData.rps.p1Choice], 260, 420);
-                }
-
-                ctx.fillStyle = '#fef2f2'; ctx.beginPath(); ctx.roundRect(530, 180, 420, 450, 20); ctx.fill();
-                ctx.lineWidth = 4; ctx.strokeStyle = '#fecaca'; ctx.stroke();
-                ctx.fillStyle = '#b91c1c'; ctx.font = 'bold 36px Poppins'; ctx.fillText(p2Name, 740, 230);
-                
-                if (mgData.rps.p2Choice === null) {
-                    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 20px Poppins';
-                    ctx.fillText("WAITING FOR INPUT...", 740, 320);
-                    ctx.fillStyle = '#fca5a5'; ctx.beginPath(); ctx.roundRect(590, 380, 300, 200, 10); ctx.fill();
-                    ctx.fillStyle = '#7f1d1d';
-                    ctx.fillText("BTN 1 = 🪨 ROCK", 740, 430);
-                    ctx.fillText("BTN 2 = 📄 PAPER", 740, 480);
-                    ctx.fillText("BTN 3 = ✂️ SCISSORS", 740, 530);
-                } else if (mgData.rps.p1Choice === null) {
-                    ctx.fillStyle = '#10b981'; ctx.font = 'bold 40px Poppins';
-                    ctx.fillText("READY!", 740, 420);
-                } else {
-                    const emojis = ['🪨', '📄', '✂️'];
-                    ctx.font = '150px Arial'; ctx.fillText(emojis[mgData.rps.p2Choice], 740, 420);
-                }
-
-                if (mgData.rps.resultText !== "") {
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; ctx.beginPath(); ctx.roundRect(100, 300, 800, 160, 20); ctx.fill();
-                    ctx.fillStyle = '#fde047'; ctx.font = 'bold 60px detective-font'; ctx.fillText(mgData.rps.resultText, 500, 380);
-                }
-                
-                ctx.restore();
-                return; 
+        // ============================================================
+        // PICTURE CHALLENGE V1 · CHILD-FRIENDLY CANVAS PRESENTATION
+        // The question index, five-button mapping, scoring, RPS and
+        // ESP32 controller handling are preserved by updatePhysics().
+        // ============================================================
+        function skBox(x,y,w,h,r,fill,stroke=null,line=1){
+            ctx.beginPath(); ctx.roundRect(x,y,w,h,r);
+            if(fill){ctx.fillStyle=fill;ctx.fill();}
+            if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=line;ctx.stroke();}
+        }
+        function skText(text,x,y,size=22,color='#262344',weight=800,align='center'){
+            ctx.fillStyle=color; ctx.font=`${weight} ${size}px Poppins, Segoe UI, sans-serif`;
+            ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(String(text),x,y);
+        }
+        function skWrap(text, maxWidth, maxLines, fontSize, weight=800){
+            ctx.font=`${weight} ${fontSize}px Poppins, Segoe UI, sans-serif`;
+            const all=String(text||'').trim().split(/\s+/).filter(Boolean);
+            const rows=[];let row='';
+            for(const word of all){
+                if(!row){row=word;continue;}
+                if(ctx.measureText(row+' '+word).width<=maxWidth){row+=' '+word;}
+                else{rows.push(row);row=word;}
             }
-
-            ctx.fillStyle = '#fff7ed'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
-            ctx.fillStyle = '#ffedd5'; ctx.fillRect(20, 20, canvas.width-40, canvas.height-40);
-            
-            const cx = 500;
-            const now = Date.now();
-            
-            ctx.fillStyle = mgData.cameraController === 'p1' ? '#3b82f6' : '#ef4444';
-            ctx.beginPath(); ctx.roundRect(350, 20, 300, 40, 10); ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Poppins'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            const controllerName = mgData.cameraController === 'p1' ? p1Short : p2Short;
-            ctx.fillText(`📷 ${controllerName} CONTROLS CAMERA`, 500, 40);
-
-            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(50, 70, 900, 20);
-            const timeLeft = Math.max(0, mgData.roundEndTime - now);
-            const timeRatio = timeLeft / mgData.roundDurationMs;
-            
-            ctx.fillStyle = timeRatio > 0.3 ? '#10b981' : '#ef4444';
-            ctx.fillRect(50, 70, 900 * timeRatio, 20);
-
-            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(800, 100, 150, 50, 10); ctx.fill();
-            ctx.lineWidth = 2; ctx.strokeStyle = '#fed7aa'; ctx.stroke();
-            ctx.fillStyle = '#ea580c'; ctx.font = 'bold 24px Poppins'; ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText(`${mgData.currentPointPool} PTS`, 875, 125);
-
-            ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 15; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 10;
-            ctx.beginPath(); ctx.rotate(-Math.PI/128); ctx.roundRect(cx - 200, 120, 400, 300, 20); ctx.fill();
-            ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-            
-            ctx.save();
-            ctx.clip(); 
-            
-            ctx.translate(cx, 270); 
-            ctx.scale(mgData.imgScale, mgData.imgScale);
-
-            if (currentLoadedImage) {
-                ctx.drawImage(currentLoadedImage, -180 + (mgData.imgX / mgData.imgScale), -140 + (mgData.imgY / mgData.imgScale), 360, 240);
-            } else {
-                ctx.fillStyle = '#f8fafc'; ctx.fillRect(-180, -140, 360, 240);
-                ctx.fillStyle = '#cbd5e1'; ctx.font = '60px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText('🕹️', mgData.imgX / mgData.imgScale, mgData.imgY / mgData.imgScale - 20);
+            if(row)rows.push(row);
+            if(rows.length>maxLines){
+                const kept=rows.slice(0,maxLines);
+                const rest=rows.slice(maxLines).join(' ');
+                let tail=kept[maxLines-1]+' '+rest;
+                while(tail.length && ctx.measureText(tail+'…').width>maxWidth)tail=tail.slice(0,-1);
+                kept[maxLines-1]=tail.trimEnd()+'…';return kept;
             }
-
-            ctx.restore();
-            ctx.restore();
-
+            return rows;
+        }
+        function skBackground(now){
+            const bg=ctx.createLinearGradient(0,0,1000,700);
+            bg.addColorStop(0,'#fff9ed');bg.addColorStop(.57,'#fff1df');bg.addColorStop(1,'#f7f1ff');
+            ctx.fillStyle=bg;ctx.fillRect(0,0,1000,700);
             ctx.save();
-            ctx.fillStyle = '#ffffff'; 
-            ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
-            ctx.beginPath(); ctx.roundRect(100, 450, 800, 120, 20); ctx.fill();
-            ctx.strokeStyle = '#ffedd5'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.shadowColor = 'transparent';
-            
-            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(500, 460, 8, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(498, 458, 3, 0, Math.PI*2); ctx.fill();
-
-            ctx.fillStyle = '#1e293b'; ctx.font = 'bold 28px detective-font'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
-            const prompt = mgData.current.prompt;
-            if(prompt.length > 40) {
-                const words = prompt.split(' ');
-                const mid = Math.ceil(words.length / 2);
-                ctx.fillText(words.slice(0,mid).join(' '), cx, 500);
-                ctx.fillText(words.slice(mid).join(' '), cx, 540);
-            } else {
-                ctx.fillText(prompt, cx, 510);
-            }
-            ctx.restore();
-
-            ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.roundRect(0, 600, canvas.width, 100, [0, 0, 20, 20]); ctx.fill();
-            ctx.strokeStyle = '#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,600); ctx.lineTo(canvas.width, 600); ctx.stroke();
-
-            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)'; ctx.fillRect(0, 620, canvas.width, 80);
-            // Five fixed physical button slots, but answer text changes with every question.
-            const currentOptions = Array.isArray(mgData.current.answer_options) && mgData.current.answer_options.length === 5
-                ? mgData.current.answer_options : ['Sight','Touch','Hearing','Smell','Taste'];
-            HARDWARE_BUTTONS.forEach((btn, idx) => {
-                const x = 104 + idx * 198;
-                ctx.fillStyle = btn.hex;
-                ctx.beginPath(); ctx.roundRect(x - 28, 610, 56, 29, 6); ctx.fill();
-                if (btn.name === 'C') {ctx.strokeStyle='#94a3b8';ctx.stroke();ctx.fillStyle='#1e293b';}
-                else ctx.fillStyle='#ffffff';
-                ctx.font='bold 16px Poppins';ctx.textAlign='center';ctx.textBaseline='middle';
-                ctx.fillText(btn.name,x,625);
-                ctx.fillStyle='#ffffff';ctx.font='bold 15px Poppins';
-                const text = String(currentOptions[idx] || '').trim();
-                const maxWidth = 183;
-                const words = text.split(/\s+/); const lines = [''];
-                for (const word of words) {
-                    const candidate = lines[lines.length-1] ? lines[lines.length-1]+' '+word : word;
-                    if (ctx.measureText(candidate).width > maxWidth && lines[lines.length-1]) lines.push(word);
-                    else lines[lines.length-1]=candidate;
-                }
-                if (lines.length > 2) {lines.length=2;let val=lines[1];while(val.length && ctx.measureText(val+'…').width>maxWidth)val=val.slice(0,-1);lines[1]=val+'…';}
-                ctx.fillText(lines[0] || '—',x,655);
-                if (lines[1])ctx.fillText(lines[1],x,679);
+            const moving=!visualMotionOff();
+            const t=moving?now*.0006:0;
+            [[54,52,58,'#ffe1ae'],[930,54,83,'#f1dcff'],[930,385,75,'#ffd7b9'],[80,459,81,'#e8e2ff'],[495,680,116,'#fff2cc']].forEach(([x,y,r,c],i)=>{
+                ctx.globalAlpha=.49;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+Math.sin(t+i)*9,y+Math.cos(t*.8+i)*8,r,0,Math.PI*2);ctx.fill();
             });
-
-            if (mgData.p1StunMs > 0) { ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.fillRect(0,0,500,canvas.height); ctx.fillStyle='#ef4444'; ctx.font='bold 50px Poppins'; ctx.fillText(`${p1Short} STUNNED!`, 250, 350); }
-            if (mgData.p2StunMs > 0) { ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.fillRect(500,0,500,canvas.height); ctx.fillStyle='#ef4444'; ctx.font='bold 50px Poppins'; ctx.fillText(`${p2Short} STUNNED!`, 750, 350); }
-
+            ctx.globalAlpha=.72;
+            for(let i=0;i<14;i++){
+                const x=(i*79+41)%974+9;const y=(i*143+42)%650+14;
+                ctx.fillStyle=i%2?'#ffcba2':'#d7ccf8';ctx.beginPath();ctx.arc(x,y,2.3+(i%3),0,Math.PI*2);ctx.fill();
+            }
+            ctx.restore();
+        }
+        function skPill(text,x,y,w,bg,fg,size=17){
+            skBox(x,y,w,36,18,bg);
+            skText(text,x+w/2,y+18,size,fg,900);
+        }
+        function skDrawRpsPlayer(x,name,short,choice,player,color,pale,now){
+            const selected=choice!==null;
+            ctx.save();ctx.shadowColor='rgba(59,33,87,.12)';ctx.shadowBlur=22;ctx.shadowOffsetY=10;
+            skBox(x,201,414,390,31,'#fff','#ffffff',2);ctx.restore();
+            skBox(x+16,218,382,50,21,pale);
+            skText(name,x+207,244,23,color,900);
+            if(selected){
+                skPill('READY!',x+116,284,180,'#e0f9e9','#168454',20);
+                skBox(x+93,341,228,176,28,pale);
+                skText(['✊','✋','✌️'][choice],x+207,428,108,color,900);
+            }else{
+                skPill('CHOOSE NOW',x+93,286,228,color,'#ffffff',18);
+                const scale=visualMotionOff()?1:1+Math.sin(now*.005)*.04;
+                ctx.save();ctx.translate(x+207,406);ctx.scale(scale,scale);
+                skText('?',0,0,107,color,900);ctx.restore();
+                skText('PRESS A BUTTON!',x+207,511,19,'#625e7b',800);
+            }
+            skText('1  ROCK     2  PAPER     3  SCISSORS',x+207,557,14,'#5f5a78',800);
+        }
+        function skDrawRps(now){
+            skBackground(now);
+            skPill('WHO GETS THE CAMERA?',310,36,380,'#fff','#ed673e',19);
+            skText('ROCK  •  PAPER  •  SCISSORS',500,114,41,'#302653',900);
+            skText('Press Button 1, 2, or 3 to make your choice!',500,158,21,'#6c647e',700);
+            skDrawRpsPlayer(54,p1Name,p1Short,mgData.rps.p1Choice,'p1','#2469d8','#e9f2ff',now);
+            skDrawRpsPlayer(532,p2Name,p2Short,mgData.rps.p2Choice,'p2','#e75470','#fff0f4',now);
+            ctx.save();ctx.shadowColor='rgba(90,60,130,.16)';ctx.shadowBlur=14;
+            skBox(450,359,100,88,29,'#ffbf60','#fff',6);ctx.restore();
+            skText('VS',500,402,36,'#56315c',900);
+            if(mgData.rps.resultText){
+                ctx.save();ctx.fillStyle='rgba(42,29,79,.35)';ctx.fillRect(0,0,1000,700);
+                ctx.shadowColor='rgba(61,31,93,.23)';ctx.shadowBlur=30;
+                skBox(152,286,696,142,33,'#fff','#ffce9e',5);ctx.restore();
+                skText(mgData.rps.resultText,500,358,36,'#e6653d',900);
+            }
+        }
+        function skDrawImage(now,ease){
+            const fx=268,fy=102,fw=464,fh=260;
+            ctx.save();ctx.shadowColor='rgba(71,47,99,.16)';ctx.shadowBlur=20;ctx.shadowOffsetY=9;
+            skBox(fx-11,fy-11,fw+22,fh+22,31,'#fff','#fff',3);ctx.restore();
+            skBox(fx,fy,fw,fh,21,'#fff7ef','#fff',3);
+            ctx.save();ctx.beginPath();ctx.roundRect(fx+4,fy+4,fw-8,fh-8,17);ctx.clip();
+            const soft=ctx.createLinearGradient(fx,fy,fx+fw,fy+fh);
+            soft.addColorStop(0,'#fff0de');soft.addColorStop(1,'#f3e9ff');
+            ctx.fillStyle=soft;ctx.fillRect(fx,fy,fw,fh);
+            ctx.translate(fx+fw/2+mgData.imgX,fy+fh/2+mgData.imgY);
+            ctx.scale(mgData.imgScale,mgData.imgScale);
+            if(currentLoadedImage && currentLoadedImage.complete){
+                const iw=currentLoadedImage.naturalWidth||currentLoadedImage.width||1;
+                const ih=currentLoadedImage.naturalHeight||currentLoadedImage.height||1;
+                const ratio=Math.min((fw-16)/iw,(fh-16)/ih);
+                ctx.drawImage(currentLoadedImage,-iw*ratio/2,-ih*ratio/2,iw*ratio,ih*ratio);
+            }else{
+                const grow=visualMotionOff()?0:Math.sin(now*.003)*3;
+                skText('🔎',0,-24+grow,63,'#a79bd4',900);
+                skText('Look closely!',0,56,24,'#8172a7',900);
+            }
+            ctx.restore();
+            if(ease<1){ctx.save();ctx.globalAlpha=(1-ease)*.40;skBox(fx+2,fy+2,fw-4,fh-4,20,'#ffffff');ctx.restore();}
+            skPill('🔎  LOOK AT THE PICTURE',352,fy+10,296,'#fff','#a15376',15);
+            skBox(fx+fw-91,fy+fh-37,75,24,12,'rgba(41,34,75,.66)');
+            skText('ZOOM +',fx+fw-54,fy+fh-25,11,'#fff',900);
+        }
+        function skDrawAnswer(index,btn,answer,now,ease){
+            const x=31+index*194,y=525,w=180,h=151;
+            const palette=[['#dfedff','#2d70dc'],['#efe6ff','#7b55d9'],['#fff2d7','#b55a23'],['#e3f8e7','#23815d'],['#ffe7ee','#d94568']];
+            const [light,ink]=palette[index];
+            ctx.save();
+            ctx.globalAlpha=ease;
+            ctx.translate(0,(1-ease)*24);
+            ctx.shadowColor='rgba(72,45,100,.1)';ctx.shadowBlur=12;ctx.shadowOffsetY=6;
+            skBox(x,y,w,h,20,'#fff','#e8dfef',1.7);
+            ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+            skBox(x+8,y+8,w-16,38,13,light);
+            skBox(x+14,y+12,42,29,11,btn.hex);
+            skText(btn.name,x+35,y+26.5,18,btn.name==='C'?'#34224e':'#fff',900);
+            skText('BUTTON '+(index+1),x+111,y+28,13,ink,900);
+            const value=String(answer||'—');
+            let size=19,rows=skWrap(value,w-24,3,size,800);
+            while(size>15 && (rows.length>3 || rows.some(r=>ctx.measureText(r).width>w-24))){size--;rows=skWrap(value,w-24,3,size,800);}
+            const lineH=size+6;
+            const centerY=y+99;
+            rows.forEach((row,i)=>skText(row,x+w/2,centerY+(i-(rows.length-1)/2)*lineH,size,'#312849',800));
+            ctx.restore();
+        }
+        function skDrawPlay(now){
+            skBackground(now);
+            const elapsed=Math.max(0,now-(mgData.roundStartedAt||now));
+            const ease=visualMotionOff()?1:1-Math.pow(1-Math.min(1,elapsed/480),3);
+            skPill(`QUESTION ${mgData.round} / ${mgData.maxRounds}`,32,26,204,'#fff','#584a83',15);
+            skPill(`${mgData.currentPointPool} POINTS`,777,26,189,'#fff','#ed693c',17);
+            const left=Math.max(0,mgData.roundEndTime-Date.now());
+            const ratio=Math.max(0,Math.min(1,left/Math.max(1,mgData.roundDurationMs)));
+            skBox(255,35,493,17,8,'#eadff1');
+            const tc=ratio>.6?'#3ac6ad':ratio>.3?'#ffb247':'#ff5a6e';
+            if(ratio>0.001)skBox(255,35,493*ratio,17,8,tc);
+            skPill(`${Math.ceil(left/1000)}s`,454,64,92,ratio>.3?'#fff':'#ffedf0',ratio>.3?'#4b4269':'#ce3957',18);
+            const owner=mgData.cameraController==='p1'?p1Short:p2Short;
+            const ownerColor=mgData.cameraController==='p1'?'#3073de':'#e35377';
+            skPill('CAMERA: '+owner,32,86,199,ownerColor,'#fff',15);
+            skPill('PAN  ◀ ▶   ZOOM  ▲ ▼',759,86,211,'#fff','#756b96',12);
+            skDrawImage(now,ease);
+            ctx.save();ctx.globalAlpha=ease;ctx.translate(0,(1-ease)*26);
+            ctx.shadowColor='rgba(79,47,89,.12)';ctx.shadowBlur=15;ctx.shadowOffsetY=8;
+            skBox(38,389,924,116,26,'#fff','#f1dfd9',2);ctx.restore();
+            skPill('✨  THINK & ANSWER!',375,379,250,'#ffddae','#92501d',16);
+            const prompt=String(mgData.current?.prompt||'Look at the picture and choose your answer!');
+            let qSize=26,lines=skWrap(prompt,857,3,qSize,900);
+            if(prompt.length>125){qSize=21;lines=skWrap(prompt,857,3,qSize,900);}
+            const lh=qSize+7;const mid=455;
+            lines.forEach((line,i)=>skText(line,500,mid+(i-(lines.length-1)/2)*lh,qSize,'#2c234c',900));
+            const currentOptions=Array.isArray(mgData.current.answer_options)&&mgData.current.answer_options.length===5?mgData.current.answer_options:['Sight','Touch','Hearing','Smell','Taste'];
+            HARDWARE_BUTTONS.forEach((btn,i)=>skDrawAnswer(i,btn,currentOptions[i],now,visualMotionOff()?1:Math.max(0,Math.min(1,(elapsed-i*70)/440))));
+            const drawStun=(player,remaining,x)=>{
+                if(remaining<=0)return;
+                ctx.save();ctx.fillStyle='rgba(240,63,97,.14)';ctx.fillRect(x,0,500,700);
+                skBox(x+86,270,328,95,23,'#fff4f5','#ffc7d0',2);
+                skText(`${player} TRY AGAIN!`,x+250,314,28,'#d34463',900);
+                ctx.restore();
+            };
+            drawStun(p1Short,mgData.p1StunMs,0);
+            drawStun(p2Short,mgData.p2StunMs,500);
             drawParticles();
+        }
+        function drawGame(){
+            if(gameState==='MENU'||gameState==='GAMEOVER')return;
+            const now=performance.now();
+            ctx.save();
+            if(screenShake>0&&!visualMotionOff())ctx.translate((Math.random()-.5)*screenShake,(Math.random()-.5)*screenShake);
+            if(gameState==='PLAYING_RPS')skDrawRps(now);
+            else if(mgData?.current)skDrawPlay(now);
+            ctx.restore();
         }
 
         function gameLoop() {
