@@ -76,6 +76,67 @@
 
     </style>
 
+    <!-- Picture Challenge: fix suggested photos inside a 206px scrolling box. -->
+    <style id="siklab-gallery-hard-limit">
+      /* The separate viewport is the scroll container in Fix 7. */
+      #sense-drafts .sense-image-viewport,
+      #picture-manager-overlay .sense-image-viewport {
+        display: block !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 206px !important;
+        max-height: 206px !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+      }
+      #sense-drafts .sense-image-viewport[hidden],
+      #picture-manager-overlay .sense-image-viewport[hidden] {
+        display: none !important;
+      }
+
+      /* Image tiles grow INSIDE the viewport; they don't stretch the question. */
+      #sense-drafts .sense-image-viewport .sense-img-grid,
+      #picture-manager-overlay .sense-image-viewport .sense-img-grid {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        align-content: start !important;
+      }
+
+      /* Support an older cached picker without the separate viewport. */
+      #sense-drafts .sense-img-grid,
+      #picture-manager-overlay #picture-manager-results {
+        height: 206px !important;
+        max-height: 206px !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        align-content: start !important;
+      }
+      /* More-specific override when the grid sits INSIDE the viewport. */
+      #sense-drafts .sense-image-viewport .sense-img-grid,
+      #picture-manager-overlay .sense-image-viewport .sense-img-grid {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      #sense-drafts .sense-draft > .grid > *,
+      #picture-manager-overlay .sense-image-viewport {
+        min-width: 0 !important;
+      }
+      #sense-drafts .sense-image-viewport::-webkit-scrollbar,
+      #picture-manager-overlay .sense-image-viewport::-webkit-scrollbar { width: 7px; }
+      #sense-drafts .sense-image-viewport::-webkit-scrollbar-thumb,
+      #picture-manager-overlay .sense-image-viewport::-webkit-scrollbar-thumb {
+        background: #fdba74;
+        border-radius: 10px;
+      }
+    </style>
+
 </head>
 <body class="text-slate-800 antialiased h-screen overflow-hidden flex flex-col bg-slate-50" onload="initializeApp()">
 
@@ -1386,6 +1447,6 @@
     <script src="js/12_admin.js"></script>
     <script src="js/13_device_setup.js"></script>
     <script src="js/14_content_management.js"></script>
-    <script src="js/15_sense_ai.js?v=scrollfix7"></script>
+    <script src="js/15_sense_ai.js?v=gallery206-final"></script>
 </body>
 </html>
