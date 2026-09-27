@@ -35,7 +35,7 @@ function switchTab(tabId) {
             curriculum: { t: 'Curriculum Manager', s: 'Create school years, copy curriculum, and manage content.' },
             'student-preview': { t: 'Student Portal Preview', s: 'Preview the lessons students will see.' },
             history: { t: 'Match History', s: 'Review game results and scores.' },
-            settings: { t: 'System Settings', s: 'Configure game modules and scoring.' },
+            settings: { t: 'Game Management', s: 'Configure each game’s relevant rules.' },
             'device-setup': { t: 'ESP Player Setup', s: 'Pair and monitor internet-connected controllers.' },
             admin: { t: 'Admin & Analytics', s: 'Manage school years and student progress.' }
         };
@@ -51,7 +51,7 @@ function switchTab(tabId) {
             initWheel();
             renderGroupSetDropdown();
         }
-        if (tabId === 'content' && typeof loadCustomQuestions === 'function') loadCustomQuestions();
+        if (tabId === 'content' && typeof loadCustomQuestions === 'function') { loadCustomQuestions(); if (typeof senseRefreshLessons === 'function') senseRefreshLessons(); }
         if (tabId === 'curriculum' && typeof loadContentManagement === 'function') loadContentManagement();
         if (tabId === 'student-preview' && typeof refreshStudentPreview === 'function') refreshStudentPreview();
         if (tabId === 'history') loadHistory();

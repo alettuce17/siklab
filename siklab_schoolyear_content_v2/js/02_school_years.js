@@ -91,6 +91,8 @@ async function changeSchoolYear(yearId) {
     // Every content editor must reflect the newly selected year.
     if (typeof cancelEdit === 'function') cancelEdit();
     if (typeof loadCustomQuestions === 'function') await loadCustomQuestions();
+    if (typeof loadSenseQuestionSets === 'function') await loadSenseQuestionSets();
+    if (typeof senseRefreshLessons === 'function') await senseRefreshLessons();
 
     const settingsGame = document.getElementById('setting-game');
     if (settingsGame && typeof renderSettingsForm === 'function') {

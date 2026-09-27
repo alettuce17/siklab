@@ -460,7 +460,7 @@
                 </button>
 
                 <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all mt-4"><i class="fa-solid fa-clock-rotate-left text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Match History</span></button>
-                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-gear text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Game Settings</span></button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-gear text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Game Management</span></button>
 
                 <button onclick="switchTab('device-setup'); initializeDeviceSetup();" id="nav-device-setup" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all border border-orange-500/20">
                     <i class="fa-solid fa-microchip text-xl w-8 text-center text-orange-400"></i>
@@ -564,19 +564,7 @@
                             <h2 class="text-4xl font-black mt-4 mb-6">Start the Class Session!</h2>
                             
                             <div class="flex flex-col sm:flex-row gap-4">
-                                <div class="w-full sm:w-1/3">
-                                    <label class="block text-xs font-bold text-orange-200 uppercase tracking-widest mb-1">Select Quarter</label>
-                                    <div class="relative">
-                                        <select id="launch-quarter" onchange="filterGamesByQuarter()" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-bold outline-none focus:border-yellow-400 transition-colors cursor-pointer appearance-none">
-                                            <option value="1">Quarter 1</option>
-                                            <option value="2">Quarter 2</option>
-                                            <option value="3">Quarter 3</option>
-                                            <option value="4">Quarter 4</option>
-                                        </select>
-                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-orange-300 pointer-events-none"></i>
-                                    </div>
-                                </div>
-                                <div class="w-full sm:w-2/3">
+                                <div class="w-full">
                                     <label class="block text-xs font-bold text-orange-200 uppercase tracking-widest mb-1">Select Game Module</label>
                                     <div class="relative">
                                         <select id="launch-game" onchange="updateGameModeUI('launch-game')" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-bold outline-none focus:border-yellow-400 transition-colors cursor-pointer appearance-none">
@@ -588,7 +576,15 @@
                             </div>
                         </div>
                         
-                        <div class="w-full md:w-1/3 flex justify-end">
+                        <div class="w-full md:w-1/3 flex flex-col gap-2">
+                            <div id="sense-quick-launch" class="rounded-xl bg-orange-900/40 border border-orange-300/30 p-3">
+                                <label for="launch-question-set" class="block text-xs font-bold text-orange-100 mb-1">SENSE DETECTIVES • QUESTION SET</label>
+                                <select id="launch-question-set" onchange="saveSenseQuestionSet()" class="w-full p-2 rounded-lg bg-white text-slate-800 font-bold text-sm"><option value="">All approved questions</option></select>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="button" onclick="openSenseQuestions()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Manage Questions</button>
+                                    <button type="button" onclick="openSenseSettings()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Game Settings</button>
+                                </div>
+                            </div>
                             <button onclick="launchGame()" class="w-full md:w-auto bg-white text-orange-700 hover:bg-orange-50 font-black text-xl px-10 py-6 rounded-2xl shadow-2xl transition-transform hover:scale-105 flex flex-col items-center justify-center gap-2 group">
                                 <i class="fa-solid fa-power-off text-3xl group-hover:text-red-600 transition-colors"></i> 
                                 <span>LAUNCH</span>
@@ -628,7 +624,7 @@
                         </form>
                     </div>
                     
-                    <div class="w-2/3 bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                    <div class="w-full lg:w-[63%] bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
                         <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
                             <h3 class="font-black text-slate-800"><i class="fa-solid fa-list-ul text-orange-400 mr-2"></i> Class Roster</h3>
                             
@@ -680,9 +676,23 @@
             </div>
 
             <!-- VIEW: CONTENT -->
-            <div id="view-content" class="view-section hidden p-8 h-full flex flex-col">
-                <div class="flex gap-8 h-full">
-                    <div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-orange-200 flex flex-col h-fit sticky top-0">
+            <div id="view-content" class="view-section hidden p-4 md:p-6 h-full overflow-y-auto">
+                <section class="sense-panel bg-white border border-orange-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="AI Sense Detectives Question Generator">
+                    <div class="flex flex-wrap gap-3 items-center justify-between mb-3"><div><h3 class="text-xl font-black text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-orange-500 mr-2"></i>Generate Sense Detectives Questions</h3><p class="text-sm text-slate-600">Create five-senses questions from a PDF, a saved lesson or your topic. Review before saving.</p></div><span class="rounded-full bg-orange-50 text-orange-800 px-3 py-1 text-xs font-black">Player buttons: Sight • Touch • Hearing • Smell • Taste</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <label class="sense-field"><span>Question source</span><select id="sense-source" onchange="senseChangeSource()"><option value="lesson">Existing SikLab lesson</option><option value="pdf">Upload PDF</option><option value="topic">Type topic</option></select></label>
+                        <label id="sense-lesson-wrap" class="sense-field"><span>Saved lesson</span><select id="sense-lesson"><option value="">Loading lessons…</option></select></label>
+                        <label id="sense-pdf-wrap" class="sense-field hidden"><span>Reference PDF (up to 5 MB)</span><input id="sense-pdf" type="file" accept=".pdf,application/pdf"></label>
+                        <label id="sense-topic-wrap" class="sense-field hidden"><span>Science topic</span><input id="sense-topic" type="text" maxlength="160" placeholder="e.g. Sounds around us"></label>
+                        <label class="sense-field"><span>Question count</span><select id="sense-count"><option value="5">5 questions</option><option value="10">10 questions</option><option value="15">15 questions</option></select></label>
+                        <label class="sense-field"><span>Question set name</span><input id="sense-set-name" maxlength="90" placeholder="e.g. Five Senses - Week 1" value="Sense Detectives AI Set"></label>
+                        <label class="sense-field md:col-span-2"><span>Optional focus (five senses)</span><input id="sense-focus" maxlength="160" placeholder="e.g. identify objects using hearing and smell"></label>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-center mt-3"><button type="button" id="sense-generate-btn" onclick="senseGenerateQuestions()" class="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black">✦ Generate editable draft</button><span id="sense-status" class="text-sm text-slate-600" role="status" aria-live="polite">AI drafts are not saved until you approve them.</span></div>
+                    <div id="sense-drafts" class="mt-4 space-y-3" aria-live="polite"></div>
+                </section>
+                <div class="flex flex-col lg:flex-row gap-4 min-h-[460px]">
+                    <div class="w-full lg:w-[37%] bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-orange-200 flex flex-col h-fit">
                         <h3 id="form-cq-title" class="text-xl font-black text-slate-800 mb-4 border-b border-orange-100 pb-4"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i> Add Question</h3>
                         <form onsubmit="addCustomQuestion(event)" class="space-y-4">
                             <input type="hidden" id="cq-edit-id" value="">
@@ -715,6 +725,8 @@
                                 </select>
                             </div>
                             <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Question set (optional)</label><input id="cq-set-name" maxlength="90" value="General Questions" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 mb-3" placeholder="General Questions">
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Explanation (optional)</label><textarea id="cq-explanation" maxlength="500" rows="2" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 mb-3" placeholder="Why is this sense correct?"></textarea>
                                 <label class="block text-sm font-bold text-slate-600 mb-1">Upload Image (Optional)</label>
                                 <input type="file" id="cq-image-file" accept="image/*" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors bg-white cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                                 <p id="cq-image-help" class="text-xs text-orange-500 mt-2 font-bold hidden"></p>
@@ -726,7 +738,7 @@
                         </form>
                     </div>
 
-                    <div class="w-2/3 bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                    <div class="w-full lg:w-[63%] bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
                         <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
                             <div>
                                 <h3 class="font-black text-slate-800"><i class="fa-solid fa-database text-orange-400 mr-2"></i> Custom Questions Bank</h3>
@@ -874,23 +886,16 @@
             <div id="view-settings" class="view-section hidden p-8 max-w-4xl mx-auto w-full">
                 <div class="bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden">
                     <div class="bg-stone-800 p-6 border-b-4 border-orange-500">
-                        <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-sliders text-orange-400 mr-2"></i> System Configuration</h2>
+                        <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-gamepad text-orange-400 mr-2"></i> Game Management</h2>
                     </div>
-                    <div class="p-8 space-y-8">
+                    <div class="p-4 md:p-6 space-y-5">
                         
-                        <div class="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-300">
+                        <details class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><summary class="font-bold text-slate-700 cursor-pointer">Advanced • Manage game files</summary><div class="pt-4">
                             <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-custom-game-title"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i>Add Custom Game Module</h3>
                             <form onsubmit="handleAddCustomGame(event)" class="flex flex-col gap-4">
                                 <input type="hidden" id="edit-custom-game-id" value="">
                                 <div class="flex gap-4 w-full">
-                                    <div class="w-1/4">
-                                        <select id="new-game-quarter" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium cursor-pointer">
-                                            <option value="1">Quarter 1</option>
-                                            <option value="2">Quarter 2</option>
-                                            <option value="3">Quarter 3</option>
-                                            <option value="4">Quarter 4</option>
-                                        </select>
-                                    </div>
+                                    <input id="new-game-quarter" type="hidden" value="1">
                                     <div class="flex-1"><input type="text" id="new-game-name" placeholder="Game Name (e.g. Week 1: Space)" required class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium transition-colors"></div>
                                 </div>
                                 <div class="flex gap-4 w-full">
@@ -902,22 +907,17 @@
                             
                             <div id="custom-games-list" class="mt-6 space-y-2 max-h-48 overflow-y-auto pr-2">
                                 </div>
-                        </div>
+                        </div></details>
 
-                        <hr class="border-slate-200">
-                        
                         <div>
-                            <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Active Curriculum Game Module</label>
+                            <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Configure a game</label>
                             <div class="relative">
                                 <select id="setting-game" onchange="updateGameModeUI('setting-game')" class="w-full appearance-none px-5 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 focus:border-orange-500 focus:bg-white outline-none font-bold text-slate-800 text-lg cursor-pointer">
-                                    <option value="sorter">Quarter 1, Week 4: Material Testers (Factory)</option>
-                                    <option value="ecopatrol" selected>Quarter 1, Week 5: Eco-Patrol (Park Defense)</option>
-                                    <option value="workshop">Quarter 1, Week 6: Maker's Workshop</option>
-                                    <option value="foundry">Quarter 1, Week 8: Element Foundry</option>
+                                    <option value="">Loading games…</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down absolute right-5 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                             </div>
-                            <p class="text-sm text-slate-500 mt-2"><i class="fa-solid fa-circle-info text-orange-500"></i> The Orange Pi display will automatically load this module in its isolated iframe.</p>
+                            <p class="text-sm text-slate-500 mt-2">Only settings used by the selected game appear below. Select the game to launch on the Dashboard.</p>
                         </div>
 
                         <hr class="border-slate-200">
@@ -927,12 +927,12 @@
                                 <i class="fa-solid fa-star-half-stroke text-orange-500 mr-2"></i> 
                                 <span id="dynamic-settings-title">Dynamic Scoring Rules</span>
                             </h3>
-                            <div id="dynamic-settings-container" class="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-orange-50 p-6 rounded-2xl border border-orange-100">
+                            <div id="dynamic-settings-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50 p-4 rounded-2xl border border-orange-100">
                             </div>
                         </div>
 
                         <div class="pt-6">
-                            <button onclick="saveGameConfig()" class="bg-stone-800 hover:bg-stone-900 text-white font-black px-8 py-3 rounded-xl shadow-md transition-colors w-full md:w-auto">Save System Configuration</button>
+                            <button onclick="saveGameConfig()" class="bg-stone-800 hover:bg-stone-900 text-white font-black px-8 py-3 rounded-xl shadow-md transition-colors w-full md:w-auto">Save Game Settings</button>
                         </div>
                     </div>
                 </div>
@@ -1375,5 +1375,6 @@
     <script src="js/12_admin.js"></script>
     <script src="js/13_device_setup.js"></script>
     <script src="js/14_content_management.js"></script>
+    <script src="js/15_sense_ai.js"></script>
 </body>
 </html>

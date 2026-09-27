@@ -42,7 +42,6 @@ function renderCustomGamesList() {
     container.innerHTML = allGames.map((game, index) => `
         <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm ${game.is_editable ? '' : 'bg-slate-50 opacity-90'}">
             <div>
-                <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded mr-2">Q${Number(game.quarter) || 1}</span>
                 <span class="font-bold text-slate-700">${siklabSafe(game.name)}</span>
                 <p class="text-xs text-slate-400 mt-1">${siklabSafe(game.path)}</p>
             </div>
@@ -56,31 +55,19 @@ function renderCustomGamesList() {
     `).join('');
 }
 
-function filterGamesByQuarter() {
-    const quarter = Number.parseInt(document.getElementById('launch-quarter')?.value, 10) || 1;
+function filterGamesByQuarter() { // Legacy name retained for compatibility: no quarter filter.
     const launchSelect = document.getElementById('launch-game');
     const settingSelect = document.getElementById('setting-game');
-    const filteredGames = allGames.filter(game => Number(game.quarter) === quarter);
-
-    const optionsHTML = filteredGames.length
-        ? filteredGames.map(game => `<option value="${siklabSafe(game.path)}">${siklabSafe(game.name)}</option>`).join('')
-        : `<option value="">-- No games found for Q${quarter} --</option>`;
-
-    const allOptionsHTML = allGames.map(game => `<option value="${siklabSafe(game.path)}">${siklabSafe(game.name)}</option>`).join('');
-
-    if (launchSelect) launchSelect.innerHTML = optionsHTML;
-    if (settingSelect) settingSelect.innerHTML = allOptionsHTML;
-
+    const options = allGames.map(game => `<option value="${siklabSafe(game.path)}">${siklabSafe(game.name.replace(/^Quarter\s*\d+[, :]*|^Week\s*\d+[, :]*|^Q\d+[, :]*/i, ''))}</option>`).join('');
+    if (launchSelect) launchSelect.innerHTML = options || '<option value="">No games available</option>';
+    if (settingSelect) settingSelect.innerHTML = options || '<option value="">No games available</option>';
     const active = localStorage.getItem('siklab_active_game_path');
-    if (active) {
-        if (launchSelect && [...launchSelect.options].some(option => option.value === active)) launchSelect.value = active;
-        if (settingSelect && [...settingSelect.options].some(option => option.value === active)) settingSelect.value = active;
-    } else if (filteredGames.length > 0) {
-        if (launchSelect) launchSelect.value = filteredGames[0].path;
-        if (settingSelect) settingSelect.value = filteredGames[0].path;
+    if (active && allGames.some(game => game.path === active)) {
+        if (launchSelect) launchSelect.value = active;
+        if (settingSelect) settingSelect.value = active;
     }
-
     if (typeof updateGameModeUI === 'function') updateGameModeUI();
+    if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
 }
 
 function updateGameModeUI(sourceId) {
@@ -101,6 +88,7 @@ function updateGameModeUI(sourceId) {
 
         localStorage.setItem('siklab_active_game_path', activePath);
         if (typeof renderSettingsForm === 'function') renderSettingsForm(activePath);
+        if (typeof showSenseQuickLaunch === 'function') showSenseQuickLaunch(activePath);
     });
 }
 
@@ -120,6 +108,7 @@ function launchGame() {
         const gameIframe = document.getElementById('game-iframe');
         if (!overlay || !gameIframe) return showErrorToast('Game iframe not found.');
 
+        if (getModuleFromPath(select.value) === 'W1' && typeof saveSenseQuestionSet === 'function') saveSenseQuestionSet();
         gameIframe.src = select.value;
         overlay.classList.remove('hidden');
         overlay.classList.add('flex', 'flex-col');
@@ -143,7 +132,7 @@ function editCustomGame(index) {
     if (!game?.is_editable) return;
 
     document.getElementById('edit-custom-game-id').value = game.id || '';
-    document.getElementById('new-game-quarter').value = game.quarter;
+    document.getElementById('new-game-quarter').value = game.quarter; // legacy DB field, not shown on dashboard
     document.getElementById('new-game-name').value = game.name;
     document.getElementById('new-game-path').value = game.path;
     document.getElementById('form-custom-game-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>Edit Custom Game';
@@ -205,11 +194,7 @@ function handleAddCustomGame(event) {
             showToast(editId ? 'Game module updated!' : 'Custom game added!');
             cancelEditCustomGame();
 
-            const launchQuarter = document.getElementById('launch-quarter');
-            if (launchQuarter) {
-                launchQuarter.value = quarter;
-                filterGamesByQuarter();
-            }
+            filterGamesByQuarter();
         } catch (error) {
             console.error('[save game]', error);
             showErrorToast(error.message || 'Could not save game module.');

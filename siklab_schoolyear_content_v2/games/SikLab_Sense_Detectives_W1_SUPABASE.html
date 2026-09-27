@@ -103,11 +103,13 @@
                 <div id="feedback-message" class="bg-white px-16 py-10 rounded-[2rem] border border-orange-200 shadow-2xl transform scale-110 transition-transform">
                     <h2 id="feedback-text" class="text-5xl font-black uppercase text-center detective-font text-slate-800"></h2>
                     <p id="feedback-subtext" class="text-xl font-bold text-center mt-3 text-orange-500 hidden"></p>
+                    <p id="sense-feedback-explanation" class="text-base font-bold text-center text-slate-700 mt-3 max-w-lg hidden"></p>
                 </div>
             </div>
         </div>
 
         <canvas id="gameCanvas" width="1000" height="700" class="max-w-full max-h-full object-contain bg-white shadow-sm rounded-3xl border border-orange-200"></canvas>
+        <a id="sense-image-credit" class="absolute bottom-7 right-8 z-20 max-w-[45%] truncate rounded-lg bg-white/90 px-2 py-1 text-[10px] text-slate-600 hidden" rel="noopener noreferrer" target="_blank"></a>
     </div>
 
     <!-- AUDIO DEBUGGER PANEL -->
@@ -573,7 +575,13 @@
                 sub.classList.add('hidden');
             }
             
-            msg.className = "bg-white px-16 py-10 rounded-[2rem] border shadow-2xl transform scale-110 transition-transform ";
+            const explain = document.getElementById('sense-feedback-explanation');
+            if (explain) {
+                const explanation = mgData?.current?.explanation || '';
+                explain.textContent = explanation ? `${['Sight','Touch','Hearing','Smell','Taste'][mgData.current.ans] || 'Sense'}: ${explanation}` : '';
+                explain.classList.toggle('hidden', !explanation);
+            }
+            msg.className = "bg-white px-8 md:px-12 py-7 rounded-[2rem] border shadow-2xl transition-transform max-w-[90vw] ";
             if (winner === 'p1') { msg.classList.add('border-blue-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-blue-600'; }
             else if (winner === 'p2') { msg.classList.add('border-red-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-red-600'; }
             else { msg.classList.add('border-orange-200'); txt.className = 'text-5xl font-black uppercase text-center detective-font text-orange-500'; }
@@ -671,11 +679,14 @@
 
                 const yearId = await resolveGameSchoolYearId();
                 if (!yearId) throw new Error('No school year selected');
-                const { data, error } = await db
-                    .from('custom_question')
-                    .select('prompt,correct_ans,image_url')
+                const requestedSet = localStorage.getItem(`siklab_sense_question_set_${yearId}`) || '';
+                let query = db.from('custom_question')
+                    .select('prompt,correct_ans,image_url,explanation,image_attribution,image_license,image_source')
                     .eq('school_year_id', yearId)
-                    .eq('game_module', 'W1');
+                    .eq('game_module', 'W1')
+                    .eq('review_status', 'approved');
+                if (requestedSet) query = query.eq('question_set', requestedSet);
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -683,7 +694,11 @@
                     qBank = data.map(q => ({
                         prompt: q.prompt,
                         ans: Number(q.correct_ans),
-                        img: q.image_url || ''
+                        img: q.image_url || '',
+                        explanation: q.explanation || '',
+                        image_attribution: q.image_attribution || '',
+                        image_license: q.image_license || '',
+                        image_source: q.image_source || ''
                     }));
                 }
             } catch (error) {
@@ -698,7 +713,16 @@
                     }
                 }
             }
-            if(qBank.length === 0) qBank = [...DEFAULT_W1_QUESTIONS];
+            if (qBank.length === 0) {
+                const yearId = await resolveGameSchoolYearId();
+                const chosen = yearId ? localStorage.getItem(`siklab_sense_question_set_${yearId}`) : '';
+                if (chosen) {
+                    document.getElementById('center-message').classList.remove('hidden');
+                    document.getElementById('menu-container').innerHTML = '<h2 class="text-2xl font-black text-slate-800 mb-3">No approved questions in this set</h2><p class="text-slate-600">Choose another question set in the Teacher Dashboard or add questions first.</p><button onclick="returnToMenu()" class="bg-orange-600 text-white font-bold px-5 py-3 rounded-xl mt-5">BACK</button>';
+                    return;
+                }
+                qBank = [...DEFAULT_W1_QUESTIONS];
+            }
 
             mgData = { 
                 round: 0, maxRounds: qBank.length,
@@ -768,6 +792,18 @@
 
             for(let i=0;i<5;i++){ BTNS.p1[i]=false; BTNS.p2[i]=false; BTNS_PRESSED_THIS_FRAME.p1[i]=false; BTNS_PRESSED_THIS_FRAME.p2[i]=false; }
             
+            const imageCredit = document.getElementById('sense-image-credit');
+            if (imageCredit) {
+                const current = mgData.current;
+                const label = [current.image_attribution, current.image_license].filter(Boolean).join(' · ');
+                imageCredit.textContent = label ? `Picture: ${label}` : '';
+                imageCredit.classList.toggle('hidden', !label || !current.img);
+                if (/^https:\/\/commons\.wikimedia\.org\//.test(current.image_source || '')) {
+                    imageCredit.href = current.image_source;
+                } else {
+                    imageCredit.removeAttribute('href');
+                }
+            }
             currentLoadedImage = null;
             if (mgData.current.img && mgData.current.img.trim() !== '') {
                 const img = new Image();

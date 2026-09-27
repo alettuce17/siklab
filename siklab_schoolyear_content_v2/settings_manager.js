@@ -47,21 +47,21 @@ function renderSettingsForm(activePath) {
     if (!container) return;
 
     const schema = SETTINGS_SCHEMA[module] || SETTINGS_SCHEMA.DEFAULT;
-    if (title) title.innerText = `${module} Dynamic Rules`;
+    if (title) title.innerText = module === 'W1' ? 'Sense Detectives • Gameplay Rules' : `${module} Game Rules`;
 
-    container.innerHTML = schema.map(field => `
-        <div>
-            <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">${escapeHtml(field.label)}</label>
+    container.innerHTML = schema.map((field, index) => `
+        <div class="${module === 'W1' && index >= 2 && field.id !== 'roundTimer' ? 'sense-advanced-field hidden' : ''}">
+            <label class="block text-sm font-bold text-slate-600 mb-1">${escapeHtml(field.label)}</label>
             <input
                 type="number"
                 id="setting-${escapeAttr(field.id)}"
                 step="${escapeAttr(field.step ?? 'any')}"
                 min="${escapeAttr(field.min ?? 0)}"
                 ${Number.isFinite(field.max) ? `max="${escapeAttr(field.max)}"` : ''}
-                class="w-full px-5 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-lg transition-colors"
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-orange-500 outline-none font-bold text-base transition-colors"
             >
         </div>
-    `).join('');
+    `).join('') + (module === 'W1' ? '<button type="button" onclick="toggleSenseAdvanced()" class="sm:col-span-2 text-left text-sm font-bold text-orange-700">▸ Show / hide advanced gameplay rules</button>' : '');
 
     loadGameConfig(module, schema);
 }
@@ -82,6 +82,7 @@ async function loadGameConfig(module, schema) {
             .maybeSingle();
         if (error) throw error;
         moduleSettings = data?.settings_json || {};
+        window.siklabLoadedGameSettings = { module, settings: moduleSettings };
     } catch (error) {
         console.error('[settings load]', error);
         showErrorToast(error.message || 'Could not load game settings.');
@@ -101,7 +102,8 @@ async function saveGameConfig() {
     const activePath = document.getElementById('setting-game')?.value || '';
     const module = getModuleFromPath(activePath);
     const schema = SETTINGS_SCHEMA[module] || SETTINGS_SCHEMA.DEFAULT;
-    const settings = {};
+    const cached = window.siklabLoadedGameSettings;
+    const settings = cached?.module === module ? { ...cached.settings } : {};
 
     for (const field of schema) {
         const input = document.getElementById(`setting-${field.id}`);
@@ -127,4 +129,8 @@ async function saveGameConfig() {
         console.error('[settings save]', error);
         showErrorToast(error.message || 'Could not save game settings.');
     }
+}
+
+function toggleSenseAdvanced() {
+    document.querySelectorAll('.sense-advanced-field').forEach(el => el.classList.toggle('hidden'));
 }

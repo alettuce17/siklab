@@ -28,7 +28,7 @@ async function loadCustomQuestions() {
         const db = requireSupabase();
         const { data, error } = await db
             .from('custom_question')
-            .select('question_id,school_year_id,game_module,prompt,correct_ans,time_limit,image_url')
+            .select('question_id,school_year_id,game_module,prompt,correct_ans,time_limit,image_url,question_set,explanation,topic,review_status')
             .eq('school_year_id', yearId)
             .eq('game_module', module)
             .order('question_id', { ascending: true });
@@ -40,7 +40,8 @@ async function loadCustomQuestions() {
             prompt: q.prompt,
             ans: Number(q.correct_ans),
             img: q.image_url || '',
-            timeLimit: Number(q.time_limit) || 10
+            timeLimit: Number(q.time_limit) || 10,
+            set: q.question_set || 'General Questions', explanation: q.explanation || '', topic: q.topic || '' 
         }));
 
         if (!customQuestions.length) {
@@ -82,7 +83,7 @@ function renderQuestionsList() {
                     <div class="flex gap-2 mt-1">
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded inline-block ${senseColors[q.ans] || 'text-slate-600 bg-slate-100'}">
                             ${escapeHtml(senseNames[q.ans] || `BTN ${q.ans + 1}`)}
-                        </span>
+                        </span><span class="text-[10px] font-bold text-slate-500">${escapeHtml(q.set || 'General Questions')}</span>
                     </div>
                 </div>
             </div>
@@ -101,6 +102,8 @@ function editCustomQuestion(index) {
     document.getElementById('cq-edit-id').value = q.id || '';
     document.getElementById('cq-prompt').value = q.prompt || '';
     document.getElementById('cq-answer').value = q.ans;
+    document.getElementById('cq-set-name').value = q.set || 'General Questions';
+    document.getElementById('cq-explanation').value = q.explanation || '';
 
     const existingImage = document.getElementById('cq-existing-image');
     if (existingImage) existingImage.value = q.img || '';
@@ -125,12 +128,14 @@ function editCustomQuestion(index) {
 }
 
 function cancelEdit() {
-    ['cq-edit-id','cq-prompt','cq-existing-image'].forEach(id => {
+    ['cq-edit-id','cq-prompt','cq-existing-image','cq-explanation'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
     const fileInput = document.getElementById('cq-image-file');
     if (fileInput) fileInput.value = '';
+    const setField = document.getElementById('cq-set-name');
+    if (setField) setField.value = 'General Questions';
     const helpText = document.getElementById('cq-image-help');
     if (helpText) helpText.classList.add('hidden');
 
@@ -181,7 +186,10 @@ async function addCustomQuestion(event) {
                 prompt,
                 correct_ans: ans,
                 time_limit: 10,
-                image_url: finalImageUrl || null
+                image_url: finalImageUrl || null,
+                question_set: document.getElementById('cq-set-name')?.value.trim().slice(0, 90) || 'General Questions',
+                explanation: document.getElementById('cq-explanation')?.value.trim().slice(0, 500) || null,
+                review_status: 'approved'
             };
 
             const db = requireSupabase();
@@ -196,6 +204,7 @@ async function addCustomQuestion(event) {
             // Do not delete an old saved image automatically. Curriculum copied
             // between years can intentionally share the same Storage URL.
             await loadCustomQuestions();
+            if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
             cancelEdit();
             if (typeof loadContentManagement === 'function') loadContentManagement();
             showToast(editId ? 'Question updated!' : 'Question saved to this school year!');
@@ -229,6 +238,7 @@ async function deleteCustomQuestion(dbId, arrayIndex) {
             // Storage file is intentionally retained because copied questions in
             // another school year may still reference the same URL.
             await loadCustomQuestions();
+            if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
             if (typeof loadContentManagement === 'function') loadContentManagement();
             showToast('Question deleted from this school year.');
         } catch (error) {
