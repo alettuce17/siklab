@@ -1,10 +1,84 @@
 /* SikLab Picture Challenge: teacher-reviewed five-choice image questions; physical button order A-E unchanged. */
-/* UI-only hotfix: loaded by the same JS that renders search results, to avoid stale style.css deployments. */
-(function installPictureChallengeScrollFix() {
-    if (document.getElementById('siklab-picture-challenge-scroll-fix6')) return;
+/* Picture Challenge Fix 7: scroll a fixed-height VIEWPORT around the results grid. */
+(function installPictureChallengeScrollFix7() {
+    if (document.getElementById('siklab-picture-challenge-scroll-fix7')) return;
     const style = document.createElement('style');
-    style.id = 'siklab-picture-challenge-scroll-fix6';
-    style.textContent = '/* SikLab Picture Challenge: limit draft and saved-question search to one visible row. */\n.sense-img-grid {\n    display: grid !important;\n    grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)) !important;\n    grid-auto-rows: 182px !important;\n    gap: 10px !important;\n    max-height: 192px !important;\n    min-height: 0 !important;\n    overflow-y: auto !important;\n    overflow-x: hidden !important;\n    align-content: start !important;\n    overscroll-behavior: contain;\n    padding: 2px 6px 2px 2px !important;\n    box-sizing: border-box !important;\n}\n.sense-img-grid > div {\n    display: flex !important;\n    flex-direction: column !important;\n    min-width: 0 !important;\n    height: 182px !important;\n    max-height: 182px !important;\n    overflow: hidden !important;\n    box-sizing: border-box !important;\n}\n.sense-img-grid > div > button {\n    display: flex !important;\n    flex-direction: column !important;\n    flex: 1 1 auto !important;\n    min-height: 0 !important;\n    width: 100% !important;\n    overflow: hidden !important;\n}\n.sense-img-grid > div > button > img {\n    width: 100% !important;\n    height: 76px !important;\n    min-height: 76px !important;\n    flex: 0 0 76px !important;\n    object-fit: cover !important;\n}\n.sense-img-grid > div > button > span {\n    display: -webkit-box !important;\n    -webkit-box-orient: vertical !important;\n    -webkit-line-clamp: 2 !important;\n    overflow: hidden !important;\n    line-height: 1.3 !important;\n    flex: 0 0 auto !important;\n}\n.sense-img-grid > div > button > small {\n    display: block !important;\n    white-space: nowrap !important;\n    overflow: hidden !important;\n    text-overflow: ellipsis !important;\n    max-width: 100% !important;\n}\n.sense-img-grid > div > a {\n    flex: 0 0 auto !important;\n    font-size: 11px !important;\n    white-space: nowrap !important;\n    overflow: hidden !important;\n    text-overflow: ellipsis !important;\n}\n.sense-img-grid::-webkit-scrollbar { width: 7px; }\n.sense-img-grid::-webkit-scrollbar-thumb { background: #fdba74; border-radius: 9px; }\n';
+    style.id = 'siklab-picture-challenge-scroll-fix7';
+    style.textContent = `
+/* The outer viewport has a fixed height. The inner grid may be as tall as it needs. */
+.sense-image-viewport {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 206px !important;
+    max-height: 206px !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    box-sizing: border-box !important;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    background: #fff;
+    padding: 5px;
+}
+.sense-image-viewport[hidden] { display: none !important; }
+.sense-image-viewport .sense-img-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(122px, 1fr)) !important;
+    grid-auto-rows: 188px !important;
+    gap: 8px !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    align-content: start !important;
+    padding: 0 !important;
+}
+.sense-image-viewport .sense-img-grid > div {
+    height: 188px !important;
+    max-height: 188px !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+.sense-image-viewport .sense-img-grid > div > button {
+    min-height: 0 !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+.sense-image-viewport .sense-img-grid > div > button > img {
+    width: 100% !important;
+    height: 78px !important;
+    min-height: 78px !important;
+    flex: 0 0 78px !important;
+    object-fit: cover !important;
+}
+.sense-image-viewport .sense-img-grid > div > button > span {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    line-height: 1.3 !important;
+}
+.sense-image-viewport .sense-img-grid > div > button > small,
+.sense-image-viewport .sense-img-grid > div > a {
+    display: block !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 10px !important;
+}
+.sense-image-viewport::-webkit-scrollbar { width: 7px; }
+.sense-image-viewport::-webkit-scrollbar-thumb { background: #fdba74; border-radius: 10px; }
+.sense-image-viewport::-webkit-scrollbar-track { background: #fff7ed; }
+`;
     document.head.appendChild(style);
 })();
 const senseLabels = ['A • Button 1', 'B • Button 2', 'C • Button 3', 'D • Button 4', 'E • Button 5'];
@@ -192,7 +266,7 @@ function senseRenderDrafts() {
                     <label class="flex gap-2 items-start my-2"><input type="checkbox" id="sense-upload-${i}-confirm" class="mt-1"><span>I checked that I can upload and display this picture in SikLab, including the published website.</span></label>
                     <label class="sense-action inline-flex cursor-pointer">↑ Choose JPG / PNG / WebP<input class="hidden" type="file" accept="image/png,image/jpeg,image/webp" onchange="senseUploadImage(${i},this)"></label>
                 </details>
-                ${q.image_error ? `<p class="text-sm text-red-700 font-bold" role="alert">${safe(q.image_error)}</p>` : ''}<div id="sense-images-${i}" class="sense-img-grid" style="max-height:192px;overflow-y:auto;overflow-x:hidden;grid-auto-rows:182px;overscroll-behavior:contain">${(q.image_candidates||[]).map((c,n)=>senseCandidateMarkup(c,`sensePickImage(${i},${n})`)).join('')}</div>
+                ${q.image_error ? `<p class="text-sm text-red-700 font-bold" role="alert">${safe(q.image_error)}</p>` : ''}<div class="sense-image-viewport" data-sense-results="draft" ${((q.image_candidates||[]).length ? '' : 'hidden')} aria-label="Suggested pictures; scroll to see more"><div id="sense-images-${i}" class="sense-img-grid">${(q.image_candidates||[]).map((c,n)=>senseCandidateMarkup(c,`sensePickImage(${i},${n})`)).join('')}</div></div>
                 <p class="text-xs text-slate-500">Check scientific relevance and image rights before saving. Other sources: ${senseBrowseLinks(q.image_query||q.prompt)}. Pexels in-app search requires an optional free API key; Google is browser-only, not an automatic importer.</p>
             </div>
         </div>
@@ -202,6 +276,7 @@ function senseRenderCandidates(index) {
     const q=senseDrafts[index], target=senseEl(`sense-images-${index}`);
     if (!q || !target) return;
     target.innerHTML = (q.image_candidates || []).map((c,n)=>senseCandidateMarkup(c,`sensePickImage(${index},${n})`)).join('');
+    if (target.parentElement?.classList.contains('sense-image-viewport')) target.parentElement.hidden = !(q.image_candidates || []).length;
 }
 async function senseFindImages(index,notify=true,version=senseRequestVersion) {
     const q=senseDrafts[index]; if(!q || q.busy)return;
@@ -293,7 +368,7 @@ function openQuestionImageManager(questionId) {
         <div class="flex flex-wrap gap-2 items-end"><label class="flex-1 text-sm font-bold">Picture search<input id="picture-manager-query" class="block w-full p-2 border rounded-lg" maxlength="100" value="${senseEsc(q.image_query||q.prompt)}"></label><label class="text-sm font-bold">Library<select id="picture-manager-provider" class="block border rounded-lg p-2"><option value="commons">Commons</option><option value="pexels">Pexels photos</option></select></label><button type="button" onclick="searchSavedQuestionImages()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg">Search</button></div>
         <p id="picture-manager-status" role="status" class="text-sm text-slate-700">Search Commons or Pexels, or upload a picture you have permission to use.</p>
         <p class="text-xs text-slate-600">Browse other sources: ${senseBrowseLinks(q.image_query||q.prompt)} · Photos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" class="underline">Pexels</a></p>
-        <div id="picture-manager-results" class="sense-img-grid" style="max-height:192px;overflow-y:auto;overflow-x:hidden;grid-auto-rows:182px;overscroll-behavior:contain"></div>
+        <div class="sense-image-viewport" data-sense-results="saved" hidden aria-label="Suggested pictures; scroll to see more"><div id="picture-manager-results" class="sense-img-grid"></div></div>
         <details class="border rounded-xl p-3"><summary class="font-bold text-orange-700 cursor-pointer">Upload / replace with my own or another website image</summary><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm my-2"><label>Usage rights<select id="saved-upload-rights" class="block w-full border rounded p-2"><option value="">Choose…</option><option value="Self-created">I created this image</option><option value="Licensed for this use">License permits using it here</option><option value="Permission granted">I have permission to use it</option><option value="Other rights verified">I verified other applicable rights</option></select></label><label>Creator / credit<input id="saved-upload-credit" class="block w-full border rounded p-2" placeholder="Photographer or source name"></label><label class="sm:col-span-2">Original image/source link<input id="saved-upload-source" class="block w-full border rounded p-2" placeholder="https://..."></label></div><label class="text-sm flex items-start gap-2 my-2"><input id="saved-upload-confirm" class="mt-1" type="checkbox">I verified I can upload/display this picture in SikLab, including the published website.</label><label class="bg-slate-100 px-4 py-2 rounded-lg font-bold cursor-pointer inline-flex">Choose JPG / PNG / WebP<input type="file" class="hidden" accept="image/png,image/jpeg,image/webp" onchange="uploadSavedQuestionImage(this)"></label></details>
         <button type="button" onclick="removeSavedQuestionImage()" class="bg-red-50 text-red-700 font-bold rounded-lg px-4 py-2">Remove picture from question</button>
         <p class="text-xs text-slate-500">Removing a picture detaches it from this question; it does not delete the original Storage file because another school year may still use it.</p>
@@ -317,6 +392,7 @@ async function searchSavedQuestionImages(){
         const data=await senseFunctionCall('lesson-media',{action:'search',query,provider:senseEl('picture-manager-provider')?.value||'commons'});
         savedPictureCandidates=Array.isArray(data.images)?data.images:[];
         target.innerHTML=savedPictureCandidates.map((im,i)=>senseCandidateMarkup(im,`chooseSavedQuestionImage(${i})`)).join('');
+        if (target.parentElement?.classList.contains('sense-image-viewport')) target.parentElement.hidden = !savedPictureCandidates.length;
         const d=data.diagnostics||{};
         savedPictureStatus(savedPictureCandidates.length?`Found ${savedPictureCandidates.length} pictures from ${data.provider||'Commons'}. Select one to replace the current picture.`:`No usable results from ${d.files ?? '?'} ${data.provider||'Commons'} files (${d.unsupportedType ?? '?'} unsupported formats, ${d.unverifiedLicense ?? '?'} without verified license). Try different terms or upload a picture.`);
     }catch(err){console.warn('[Saved picture search]',err);savedPictureStatus(err.message||'Picture search failed.');}
