@@ -96,7 +96,7 @@ async function senseGenerateQuestions() {
         if (error || data?.error) throw new Error(data?.error || error?.message || 'AI request failed.');
         if (!Array.isArray(data?.questions) || !data.questions.length) throw new Error('Gemini returned no valid picture-quiz questions.');
         const version = ++senseRequestVersion;
-        senseDrafts = data.questions.map(q => ({...q, image_url:'',image_candidates:[],image_attribution:'',image_license:'',image_source:'',image_error:'',busy:false}));
+        senseDrafts = data.questions.map(q => ({...q, image_url:'',image_candidates:[],image_attribution:'',image_license:'',image_source:'',image_error:'',busy:false,image_provider:senseEl('sense-image-provider')?.value || 'commons'}));
         senseSourceInfo = { source_type:source, source_label:source === 'pdf' ? body.filename : source === 'topic' ? body.topic : senseEl('sense-lesson').selectedOptions[0]?.textContent || '',
             lesson_module_id:source === 'lesson' ? body.lesson_module_id : null, school_year_id:yearId };
         senseRenderDrafts();
@@ -136,6 +136,32 @@ function senseDraftOptions(q,index,safe=senseEsc){
     return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">${values.map((value,n)=>
         `<label class="sense-field"><span>Option ${'ABCDE'[n]} / Button ${n+1}</span><input maxlength="55" value="${safe(value)}" oninput="senseUpdateOption(${index},${n},this.value)" /></label>`).join('')}</div>`;
 }
+function senseProviderChange(index,value) {
+    const q=senseDrafts[index]; if (!q)return;
+    q.image_provider=value === 'pexels' ? 'pexels' : 'commons';
+    q.image_candidates=[];q.image_error='';senseRenderDrafts();
+}
+function senseBrowseLinks(query) {
+    const encoded=encodeURIComponent(String(query||'').slice(0,120));
+    return `<a target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?tbm=isch&q=${encoded}" class="underline text-blue-700">Google Images</a> · <a target="_blank" rel="noopener noreferrer" href="https://www.pexels.com/search/${encoded}/" class="underline text-blue-700">Pexels</a> · <a target="_blank" rel="noopener noreferrer" href="https://commons.wikimedia.org/wiki/Special:MediaSearch?type=image&amp;search=${encoded}" class="underline text-blue-700">Commons</a>`;
+}
+function senseUploadRights(prefix) {
+    const rights=senseEl(`${prefix}-rights`)?.value||'';
+    const confirm=senseEl(`${prefix}-confirm`)?.checked;
+    const credit=senseEl(`${prefix}-credit`)?.value.trim().slice(0,200)||'';
+    const source=senseEl(`${prefix}-source`)?.value.trim().slice(0,350)||'';
+    if (!rights || !confirm) throw new Error('Before uploading, choose your image rights/permission and check the confirmation box.');
+    if (source && !/^https:\/\//i.test(source)) throw new Error('Image source must be an https:// link or left blank.');
+    return { attribution:credit || (rights==='Self-created'?'Teacher-created image':'Teacher-provided image'),
+        license: `Teacher verified: ${rights}`, source: source || null };
+}
+function senseSafeHref(raw) {
+    try { const u=new URL(String(raw||''));return u.protocol==='https:'&&!u.username&&!u.password ? u.toString() : ''; }
+    catch(_){return '';}
+}
+function senseCandidateMarkup(c,click) {
+    return `<div class="rounded-xl border border-slate-200 p-1 bg-white"><button type="button" onclick="${click}" title="Select ${senseEsc(c.title)}"><img src="${senseEsc(c.thumb)}" alt="${senseEsc(c.title)}" loading="lazy"><span>${senseEsc(c.title)}</span><small>${senseEsc(c.license)} · ${senseEsc(c.provider||'Commons')}</small></button>${senseSafeHref(c.page)?`<a class="block text-xs text-blue-700 underline p-1" href="${senseEsc(senseSafeHref(c.page))}" target="_blank" rel="noopener noreferrer">View photo & rights</a>`:''}</div>`;
+}
 function senseRenderDrafts() {
     const target=senseEl('sense-drafts'); if(!target)return;
     if (!senseDrafts.length) {target.innerHTML='';return;}
@@ -150,10 +176,16 @@ function senseRenderDrafts() {
             <label class="sense-field"><span>Explanation (teacher review)</span><textarea rows="2" maxlength="500" oninput="senseUpdate(${i},'explanation',this.value)">${safe(q.explanation||'')}</textarea></label>
             <label class="sense-field"><span>Picture search words</span><input maxlength="160" value="${safe(q.image_query||'')}" onchange="senseUpdate(${i},'image_query',this.value)"></label></div>
             <div class="space-y-3">
-                ${q.image_url?`<img class="sense-preview" src="${safe(q.image_url)}" alt="Selected game illustration"><div class="text-xs text-emerald-700 font-bold">Picture selected ✓ ${safe(q.image_attribution||'')}</div>`:'<div class="flex min-h-[150px] items-center justify-center text-sm font-bold text-slate-500 border border-dashed border-slate-300 rounded-xl">Choose a picture for this question</div>'}
-                <div class="flex flex-wrap gap-2"><button class="sense-action" type="button" onclick="senseFindImages(${i},true)">⌕ Find picture</button><label class="sense-action cursor-pointer">↑ Upload image<input class="hidden" type="file" accept="image/png,image/jpeg,image/webp" onchange="senseUploadImage(${i},this)"></label><button class="sense-action" type="button" onclick="senseClearImage(${i})">Remove</button></div>
-                ${q.image_error ? `<p class="text-sm text-red-700 font-bold" role="alert">${safe(q.image_error)}</p>` : ''}<div id="sense-images-${i}" class="sense-img-grid">${(q.image_candidates||[]).map((c,n)=>`<button type="button" onclick="sensePickImage(${i},${n})" title="Use this Commons image: ${safe(c.title)}"><img src="${safe(c.thumb)}" alt="${safe(c.title)}" loading="lazy"><span>${safe(c.title)}</span><small>${safe(c.license)}</small></button>`).join('')}</div>
-                <p class="text-xs text-slate-500">Wikimedia images are suggestions, not automatically approved. Check relevance and licensing. <a class="underline text-orange-700" target="_blank" rel="noopener noreferrer" href="https://commons.wikimedia.org/wiki/Special:MediaSearch?type=image&amp;search=${encodeURIComponent(q.image_query||q.prompt)}">Browse Wikimedia manually</a> if search is empty.</p>
+                ${q.image_url?`<img class="sense-preview" src="${safe(q.image_url)}" alt="Selected game illustration"><div class="text-xs text-emerald-700 font-bold">Picture selected ✓ ${safe(q.image_attribution||'')} · ${safe(q.image_license||'')}</div>${senseSafeHref(q.image_source) ? `<a class="text-xs underline text-blue-700" href="${safe(senseSafeHref(q.image_source))}" target="_blank" rel="noopener noreferrer">View image source / rights</a>` : ''}`:'<div class="flex min-h-[150px] items-center justify-center text-sm font-bold text-slate-500 border border-dashed border-slate-300 rounded-xl">Choose a picture for this question</div>'}
+                <div class="flex flex-wrap gap-2 items-center"><label class="text-sm font-bold text-slate-700">Search in <select class="rounded-lg border px-2 py-1.5" onchange="senseProviderChange(${i},this.value)"><option value="commons" ${q.image_provider!=='pexels'?'selected':''}>Commons</option><option value="pexels" ${q.image_provider==='pexels'?'selected':''}>Pexels photos</option></select></label><button class="sense-action" type="button" onclick="senseFindImages(${i},true)">⌕ Find picture</button><button class="sense-action" type="button" onclick="senseClearImage(${i})">Remove picture</button></div>
+                <details class="rounded-lg border border-slate-200 p-3 text-sm"><summary class="font-bold cursor-pointer text-orange-700">↑ Upload my own / another website image</summary>
+                    <p class="text-xs text-slate-600 my-2">Browse ${senseBrowseLinks(q.image_query||q.prompt)}. Download a picture only if its license or your permission allows you to use it in SikLab.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label>Usage rights / permission<select id="sense-upload-${i}-rights" class="block w-full rounded border p-2"><option value="">Choose…</option><option value="Self-created">I created this image</option><option value="Licensed for this use">License permits using it here</option><option value="Permission granted">I have permission to use it</option><option value="Other rights verified">I verified other applicable rights</option></select></label><label>Creator / image credit<input id="sense-upload-${i}-credit" class="block w-full rounded border p-2" placeholder="Photographer or source name"></label><label class="sm:col-span-2">Original image/source link (if available)<input id="sense-upload-${i}-source" class="block w-full rounded border p-2" placeholder="https://..."></label></div>
+                    <label class="flex gap-2 items-start my-2"><input type="checkbox" id="sense-upload-${i}-confirm" class="mt-1"><span>I checked that I can upload and display this picture in SikLab, including the published website.</span></label>
+                    <label class="sense-action inline-flex cursor-pointer">↑ Choose JPG / PNG / WebP<input class="hidden" type="file" accept="image/png,image/jpeg,image/webp" onchange="senseUploadImage(${i},this)"></label>
+                </details>
+                ${q.image_error ? `<p class="text-sm text-red-700 font-bold" role="alert">${safe(q.image_error)}</p>` : ''}<div id="sense-images-${i}" class="sense-img-grid">${(q.image_candidates||[]).map((c,n)=>senseCandidateMarkup(c,`sensePickImage(${i},${n})`)).join('')}</div>
+                <p class="text-xs text-slate-500">Check scientific relevance and image rights before saving. Other sources: ${senseBrowseLinks(q.image_query||q.prompt)}. Pexels in-app search requires an optional free API key; Google is browser-only, not an automatic importer.</p>
             </div>
         </div>
     </article>`).join('');
@@ -161,21 +193,21 @@ function senseRenderDrafts() {
 function senseRenderCandidates(index) {
     const q=senseDrafts[index], target=senseEl(`sense-images-${index}`);
     if (!q || !target) return;
-    target.innerHTML = (q.image_candidates || []).map((c,n)=>`<button type="button" onclick="sensePickImage(${index},${n})" title="Use this Commons image: ${senseEsc(c.title)}"><img src="${senseEsc(c.thumb)}" alt="${senseEsc(c.title)}" loading="lazy"><span>${senseEsc(c.title)}</span><small>${senseEsc(c.license)}</small></button>`).join('');
+    target.innerHTML = (q.image_candidates || []).map((c,n)=>senseCandidateMarkup(c,`sensePickImage(${index},${n})`)).join('');
 }
 async function senseFindImages(index,notify=true,version=senseRequestVersion) {
     const q=senseDrafts[index]; if(!q || q.busy)return;
     q.busy=true;const query = q.image_query || q.prompt;
     try {
         q.image_error='';if(notify)senseStatus(`Searching pictures for Question ${index+1}…`);
-        const data=await senseFunctionCall('lesson-media',{action:'search',query});
+        const data=await senseFunctionCall('lesson-media',{action:'search',query,provider:q.image_provider||'commons'});
         if(version !== senseRequestVersion)return;
         q.image_candidates=Array.isArray(data.images)?data.images:[];
         const diagnostic=data.diagnostics||{};
-        q.image_error=q.image_candidates.length?'':`Commons checked ${diagnostic.files ?? 'an unknown number of'} files; ${diagnostic.unsupportedType ?? '?'} unsupported formats, ${diagnostic.unverifiedLicense ?? '?'} without verified free-use license. Search tried: ${(diagnostic.searched||[query]).join(' → ')}. Try another phrase, browse Commons, or upload your own.`;
+        q.image_error=q.image_candidates.length?'':`${data.provider||'Commons'} checked ${diagnostic.files ?? 'an unknown number of'} files; ${diagnostic.unsupportedType ?? '?'} unsupported formats, ${diagnostic.unverifiedLicense ?? '?'} without verified free-use license. Search tried: ${(diagnostic.searched||[query]).join(' → ')}. Try another phrase, browse Commons, or upload your own.`;
         senseRenderCandidates(index);
         if(!q.image_candidates.length) senseRenderDrafts();
-        if(notify)senseStatus(q.image_candidates.length?`Found ${q.image_candidates.length} pictures (Wikimedia Commons). Choose one to import.`:q.image_error);
+        if(notify)senseStatus(q.image_candidates.length?`Found ${q.image_candidates.length} pictures (${data.provider||'Commons'}). Choose one to import.`:q.image_error);
     } catch(error) {console.warn('[Picture search]',error);q.image_error=error.message||'Search unavailable';senseRenderDrafts();if(notify)senseStatus(q.image_error);}
     finally {q.busy=false;}
 }
@@ -193,9 +225,10 @@ async function senseUploadImage(index,input){
     const q=senseDrafts[index], file=input.files?.[0];if(!q||!file)return;
     try {
         if(!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size>5*1024*1024)throw new Error('Choose PNG, JPG or WebP under 5 MB.');
+        const rights=senseUploadRights(`sense-upload-${index}`);
         const compressed=await compressSikLabImage(file,1200,0.82);
         const uploaded=await uploadSikLabImage('question-images',compressed,`school-year-${senseYear()}/W1`);
-        q.image_error='';q.image_url=uploaded.publicUrl;q.image_attribution='Teacher provided';q.image_license='Teacher supplied';q.image_source='';
+        q.image_error='';q.image_url=uploaded.publicUrl;q.image_attribution=rights.attribution;q.image_license=rights.license;q.image_source=rights.source||'';
         senseRenderDrafts();senseStatus(`Question ${index+1}: custom picture saved.`);
     } catch(error){senseStatus(error.message);showErrorToast(error.message);}
 }
@@ -248,11 +281,13 @@ function openQuestionImageManager(questionId) {
     overlay.innerHTML=`<div role="dialog" aria-modal="true" aria-label="Manage saved question picture" class="bg-white max-w-3xl w-full max-h-[95vh] overflow-y-auto rounded-2xl p-5 space-y-3 shadow-2xl">
         <div class="flex items-center justify-between"><h3 class="text-lg font-black">Manage Picture — Saved Question</h3><button type="button" onclick="closeQuestionImageManager()" class="rounded bg-slate-100 px-3 py-2">Close ✕</button></div>
         <p class="text-sm text-slate-700">${senseEsc(q.prompt)}</p>
-        <div id="picture-manager-preview">${q.img?`<img src="${senseEsc(q.img)}" class="h-36 rounded-lg object-contain" alt="Current question picture"><p class="text-xs">${senseEsc(q.image_attribution||'Current image')}</p>`:'<p class="text-sm text-slate-500">No picture attached yet.</p>'}</div>
-        <div class="flex flex-wrap gap-2 items-end"><label class="flex-1 text-sm font-bold">Find licensed picture<input id="picture-manager-query" class="block w-full p-2 border rounded-lg" maxlength="100" value="${senseEsc(q.image_query||q.prompt)}"></label><button type="button" onclick="searchSavedQuestionImages()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg">Search</button></div>
-        <p id="picture-manager-status" role="status" class="text-sm text-slate-700">Choose from Wikimedia Commons or upload your own. <a class="underline text-orange-700" href="https://commons.wikimedia.org/wiki/Special:MediaSearch?type=image" target="_blank" rel="noopener noreferrer">Browse Commons</a></p>
+        <div id="picture-manager-preview">${q.img?`<img src="${senseEsc(q.img)}" class="h-36 rounded-lg object-contain" alt="Current question picture"><p class="text-xs">${senseEsc(q.image_attribution||'Current image')} · ${senseEsc(q.image_license||'')}</p>${senseSafeHref(q.image_source) ? `<a href="${senseEsc(senseSafeHref(q.image_source))}" target="_blank" rel="noopener noreferrer" class="underline text-xs text-blue-700">View source / rights</a>` : ''}`:'<p class="text-sm text-slate-500">No picture attached yet.</p>'}</div>
+        <div class="flex flex-wrap gap-2 items-end"><label class="flex-1 text-sm font-bold">Picture search<input id="picture-manager-query" class="block w-full p-2 border rounded-lg" maxlength="100" value="${senseEsc(q.image_query||q.prompt)}"></label><label class="text-sm font-bold">Library<select id="picture-manager-provider" class="block border rounded-lg p-2"><option value="commons">Commons</option><option value="pexels">Pexels photos</option></select></label><button type="button" onclick="searchSavedQuestionImages()" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-lg">Search</button></div>
+        <p id="picture-manager-status" role="status" class="text-sm text-slate-700">Search Commons or Pexels, or upload a picture you have permission to use.</p>
+        <p class="text-xs text-slate-600">Browse other sources: ${senseBrowseLinks(q.image_query||q.prompt)} · Photos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" class="underline">Pexels</a></p>
         <div id="picture-manager-results" class="sense-img-grid"></div>
-        <div class="flex flex-wrap gap-2 items-center border-t pt-3"><label class="bg-slate-100 px-4 py-2 rounded-lg font-bold cursor-pointer">Upload / Replace<input type="file" class="hidden" accept="image/png,image/jpeg,image/webp" onchange="uploadSavedQuestionImage(this)"></label><button type="button" onclick="removeSavedQuestionImage()" class="bg-red-50 text-red-700 font-bold rounded-lg px-4 py-2">Remove picture from question</button></div>
+        <details class="border rounded-xl p-3"><summary class="font-bold text-orange-700 cursor-pointer">Upload / replace with my own or another website image</summary><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm my-2"><label>Usage rights<select id="saved-upload-rights" class="block w-full border rounded p-2"><option value="">Choose…</option><option value="Self-created">I created this image</option><option value="Licensed for this use">License permits using it here</option><option value="Permission granted">I have permission to use it</option><option value="Other rights verified">I verified other applicable rights</option></select></label><label>Creator / credit<input id="saved-upload-credit" class="block w-full border rounded p-2" placeholder="Photographer or source name"></label><label class="sm:col-span-2">Original image/source link<input id="saved-upload-source" class="block w-full border rounded p-2" placeholder="https://..."></label></div><label class="text-sm flex items-start gap-2 my-2"><input id="saved-upload-confirm" class="mt-1" type="checkbox">I verified I can upload/display this picture in SikLab, including the published website.</label><label class="bg-slate-100 px-4 py-2 rounded-lg font-bold cursor-pointer inline-flex">Choose JPG / PNG / WebP<input type="file" class="hidden" accept="image/png,image/jpeg,image/webp" onchange="uploadSavedQuestionImage(this)"></label></details>
+        <button type="button" onclick="removeSavedQuestionImage()" class="bg-red-50 text-red-700 font-bold rounded-lg px-4 py-2">Remove picture from question</button>
         <p class="text-xs text-slate-500">Removing a picture detaches it from this question; it does not delete the original Storage file because another school year may still use it.</p>
     </div>`;
     document.body.append(overlay);
@@ -271,11 +306,11 @@ async function searchSavedQuestionImages(){
     const target=senseEl('picture-manager-results');if(!target)return;
     try{
         savedPictureStatus('Searching licensed images…');target.replaceChildren();
-        const data=await senseFunctionCall('lesson-media',{action:'search',query});
+        const data=await senseFunctionCall('lesson-media',{action:'search',query,provider:senseEl('picture-manager-provider')?.value||'commons'});
         savedPictureCandidates=Array.isArray(data.images)?data.images:[];
-        target.innerHTML=savedPictureCandidates.map((im,i)=>`<button type="button" onclick="chooseSavedQuestionImage(${i})" title="Attach ${senseEsc(im.title)}"><img src="${senseEsc(im.thumb)}" alt="${senseEsc(im.title)}" loading="lazy"><span>${senseEsc(im.title)}</span><small>${senseEsc(im.license)}</small></button>`).join('');
+        target.innerHTML=savedPictureCandidates.map((im,i)=>senseCandidateMarkup(im,`chooseSavedQuestionImage(${i})`)).join('');
         const d=data.diagnostics||{};
-        savedPictureStatus(savedPictureCandidates.length?`Found ${savedPictureCandidates.length} pictures. Select one to replace the current picture.`:`No usable results from ${d.files ?? '?'} Commons files (${d.unsupportedType ?? '?'} unsupported formats, ${d.unverifiedLicense ?? '?'} without verified license). Try different terms or upload a picture.`);
+        savedPictureStatus(savedPictureCandidates.length?`Found ${savedPictureCandidates.length} pictures from ${data.provider||'Commons'}. Select one to replace the current picture.`:`No usable results from ${d.files ?? '?'} ${data.provider||'Commons'} files (${d.unsupportedType ?? '?'} unsupported formats, ${d.unverifiedLicense ?? '?'} without verified license). Try different terms or upload a picture.`);
     }catch(err){console.warn('[Saved picture search]',err);savedPictureStatus(err.message||'Picture search failed.');}
 }
 async function chooseSavedQuestionImage(index){
@@ -293,9 +328,10 @@ async function uploadSavedQuestionImage(input){
     try{
         if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024)throw new Error('Choose JPG, PNG, or WebP up to 5 MB.');
         savedPictureStatus('Uploading selected picture…');
+        const rights=senseUploadRights('saved-upload');
         const compressed=await compressSikLabImage(file,1200,0.82);
         const uploaded=await uploadSikLabImage('question-images',compressed,`school-year-${senseYear()}/W1`);
-        await updateSavedPicture({image_url:uploaded.publicUrl,image_attribution:'Teacher supplied',image_license:'Teacher supplied',image_source:null});
+        await updateSavedPicture({image_url:uploaded.publicUrl,image_attribution:rights.attribution,image_license:rights.license,image_source:rights.source});
         showToast('Custom question picture uploaded.');
     }catch(err){console.warn('[Saved picture upload]',err);savedPictureStatus(err.message||'Upload failed.');}
 }
