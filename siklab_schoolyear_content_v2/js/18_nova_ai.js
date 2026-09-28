@@ -1,7 +1,7 @@
 /* =========================================================
  * SCIENCE CARNIVAL SHOOTER — AI QUESTION GENERATOR V2
  * Sources: typed topic, saved SikLab lesson, PDF (<=5 MB)
- * Output: 4-choice MC questions for Buttons 2-5
+ * Output: 5-choice MC questions for Buttons 1-5 during question mode
  * Saved only after teacher review into the selected NOVA topic.
  * ========================================================= */
 
@@ -128,7 +128,7 @@ async function novaAiGenerateQuestions() {
             button.disabled = true;
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating…';
         }
-        novaAiStatus('Preparing a four-choice Science Carnival draft…', 'busy');
+        novaAiStatus('Preparing a five-choice Science Carnival draft…', 'busy');
 
         if (source === 'pdf') {
             const file = novaAiEl('nova-ai-pdf')?.files?.[0];
@@ -148,20 +148,31 @@ async function novaAiGenerateQuestions() {
         if (!Array.isArray(data?.questions) || !data.questions.length) throw new Error('Gemini returned no valid Science Carnival questions.');
 
         const version = ++novaAiRequestVersion;
-        novaAiDrafts = data.questions
-            .filter(q => Array.isArray(q.answer_options) && q.answer_options.length === 4)
-            .map((q, index) => ({
-                id: `${version}-${index}`,
-                include: true,
-                prompt: String(q.prompt || '').trim(),
-                answer_options: q.answer_options.map(v => String(v || '').trim()).slice(0, 4),
-                correct_ans: Number(q.correct_ans),
-                explanation: String(q.explanation || '').trim(),
-                source_page: String(q.source_page || '').trim(),
-                difficulty
-            }));
+        const normalizeOptions = q => {
+            if (Array.isArray(q?.answer_options)) return q.answer_options;
+            if (Array.isArray(q?.choices)) return q.choices;
+            if (Array.isArray(q?.options)) return q.options;
+            const keyed = ['a','b','c','d','e'].map(k => q?.[`option_${k}`] ?? q?.[k.toUpperCase()]).filter(v => v != null);
+            return keyed;
+        };
 
-        if (!novaAiDrafts.length) throw new Error('AI returned questions, but none had four valid answer choices.');
+        novaAiDrafts = data.questions
+            .map((q, index) => {
+                const options = normalizeOptions(q).map(v => String(v || '').trim()).filter(Boolean);
+                return {
+                    id: `${version}-${index}`,
+                    include: true,
+                    prompt: String(q.prompt || q.question || '').trim(),
+                    answer_options: options.slice(0, 5),
+                    correct_ans: Number(q.correct_ans ?? q.correct ?? q.answer_index),
+                    explanation: String(q.explanation || '').trim(),
+                    source_page: String(q.source_page || '').trim(),
+                    difficulty
+                };
+            })
+            .filter(q => q.prompt && q.answer_options.length === 5 && Number.isInteger(q.correct_ans) && q.correct_ans >= 0 && q.correct_ans <= 4);
+
+        if (!novaAiDrafts.length) throw new Error('AI returned questions, but none had five valid answer choices. Redeploy the V3 ai-game-questions function if this continues.');
 
         const lessonSelect = novaAiEl('nova-ai-lesson');
         novaAiSourceInfo = {
@@ -241,7 +252,7 @@ function novaAiRenderDrafts() {
         return;
     }
 
-    const labels = ['A / Button 2','B / Button 3','C / Button 4','D / Button 5'];
+    const labels = ['A / Button 1','B / Button 2','C / Button 3','D / Button 4','E / Button 5'];
     target.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
@@ -307,10 +318,10 @@ async function novaAiSaveDrafts() {
         const correct = Number(q.correct_ans);
 
         if (!prompt) return showErrorToast(`Question ${index + 1} needs question text.`);
-        if (options.length !== 4 || options.some(v => !v) || new Set(options.map(v => v.toLowerCase())).size !== 4) {
-            return showErrorToast(`Question ${index + 1} needs four different answer choices.`);
+        if (options.length !== 5 || options.some(v => !v) || new Set(options.map(v => v.toLowerCase())).size !== 5) {
+            return showErrorToast(`Question ${index + 1} needs five different answer choices.`);
         }
-        if (!Number.isInteger(correct) || correct < 0 || correct > 3) {
+        if (!Number.isInteger(correct) || correct < 0 || correct > 4) {
             return showErrorToast(`Question ${index + 1} needs one correct answer.`);
         }
 

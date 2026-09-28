@@ -530,6 +530,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
 }
 .q-choice-key{display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;vertical-align:middle;border:1.5px solid rgba(255,255,255,.4);box-shadow:0 0 5px rgba(0,0,0,.4);}
 .q-choice:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.38);transform:translateY(-1px);}
+.q-choice:nth-child(5){grid-column:1/-1;}
 .q-choice.correct{background:rgba(126,247,160,.18);border-color:var(--green);color:var(--green);box-shadow:0 0 16px rgba(126,247,160,.2);}
 .q-choice.wrong{background:rgba(255,107,107,.18);border-color:var(--red);color:var(--red);}
 
@@ -1281,11 +1282,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
     <div class="controls-grid">
       <div class="ctrl-card">
         <div class="ctrl-name" style="color:var(--blue)">🔵 Player 1 · Top</div>
-        <div class="ctrl-keys">Move: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span><br>Shoot: <span class="key">1</span> or hw btn 1<br>Answer: 🟢⚪🔵🟡 (keys 2/3/4/5) or hw btn 2-5</div>
+        <div class="ctrl-keys">Move: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span><br>Shoot: <span class="key">1</span> or hw btn 1<br>During question: A-E = keys 1/2/3/4/5 or hw btn 1-5</div>
       </div>
       <div class="ctrl-card">
         <div class="ctrl-name" style="color:var(--orange)">🔴 Player 2 · Bottom</div>
-        <div class="ctrl-keys">Move: <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span><br>Shoot: <span class="key">7</span> or hw btn 1<br>Answer: 🟢⚪🔵🟡 (keys 8/9/0/-) or hw btn 2-5</div>
+        <div class="ctrl-keys">Move: <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span><br>Shoot: <span class="key">7</span> or hw btn 1<br>During question: A-E = keys 7/8/9/0/- or hw btn 1-5</div>
       </div>
     </div>
     <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;max-width:320px;line-height:1.7;">Fill your <strong style="color:var(--gold)">Question Meter</strong> by shooting 5 correct targets → Answer a question → Score a point!<br><strong style="color:var(--green)">First to 5 question points wins! 🏆</strong></div>
@@ -1461,10 +1462,10 @@ function applySikLabGameConfig(config){
   const mapped = {easy:[], medium:[], hard:[]};
 
   for (const row of questions) {
-    const opts = Array.isArray(row.answer_options) ? row.answer_options.slice(0,4) : [];
+    const opts = Array.isArray(row.answer_options) ? row.answer_options.slice(0,5) : [];
     const correct = Number(row.correct_ans);
     const diff = ['easy','medium','hard'].includes(row.difficulty) ? row.difficulty : difficulty;
-    if (!row.prompt || opts.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    if (!row.prompt || opts.length !== 5 || !Number.isInteger(correct) || correct < 0 || correct > 4) continue;
     mapped[diff].push({
       q: String(row.prompt),
       choices: opts.map(String),
@@ -1693,7 +1694,7 @@ Rules:
 - MEDIUM questions: grade-level comprehension, plausible wrong choices, requires understanding ("Why does…", "Which best describes…").
 - HARD questions: application, analysis or tricky distractors — wrong choices should be very close to correct, requires deeper thinking ("What is the key difference…", "If… then…", "Which characteristic…").
 - Each difficulty level must have EXACTLY 10 questions. Total = 30 questions.
-- All questions must have 4 choices and a 0-based correct index.
+- All questions must have 5 choices and a 0-based correct index.
 - trueFalseQuestions must be about the LESSON CONTENT itself (facts, definitions, examples), not just restating category names. Each difficulty level must have EXACTLY 5 true/false statements (mix of true and false answers), each with a short one-sentence explanation.
 - All content must come from the lesson plan — do not invent content not in the lesson.
 - Keep labels under 12 characters.
@@ -2733,7 +2734,7 @@ function showQuestion(qData,player){
   timerFill.style.width='100%';
   timerFill.style.transition='none';
 
-  const BTN_COLORS=['#7ef7a0','#ffffff','#5aacff','#f5c842']; // green, white, blue, yellow — matches hardware button order
+  const BTN_COLORS=['#7ef7a0','#ffffff','#5aacff','#f5c842','#ff7a5a']; // five controller buttons A-E while a question is open
   qData.choices.forEach((c,i)=>{
     const btn=document.createElement('button');
     btn.className='q-choice';
@@ -3218,11 +3219,12 @@ function gameLoop(ts){
     // Shoot button — suppressed during any active challenge (Sort handles btn0 itself via sortRafLoop)
     if(BTNS_PRESSED_THIS_FRAME[pk][0] && !questionActive[p]) tryShoot(p);
 
-    // Answer buttons (2/3/4/5, i.e. btnId 1-4) — during MC/TF question only (not Sort)
+    // During a multiple-choice question, ALL five physical buttons become A-E.
+    // Button 1 is only Shoot/Grab during the shooting phase; shooting is already suppressed while questionActive is true.
     if(questionActive[p]&&currentQuestion[p]&&challengeType[p]!=='sort'){
-      for(let i=1;i<=4;i++){
+      for(let i=0;i<=4;i++){
         if(BTNS_PRESSED_THIS_FRAME[pk][i]){
-          const choiceIdx=i-1;
+          const choiceIdx=i;
           if(choiceIdx<currentQuestion[p].choices.length){
             answerQuestion(p,choiceIdx,currentQuestion[p].correct,currentQuestion[p].choices);
           }
@@ -3230,15 +3232,15 @@ function gameLoop(ts){
         }
       }
     }
-    // Tutorial step 5: answer buttons work even though questionActive is false
+    // Tutorial step 5: all five answer buttons work even though questionActive is false
     if(tutActive && tutStep===5 && !tutData.p1Answered && p===0){
-      for(let i=1;i<=4;i++){
-        if(BTNS_PRESSED_THIS_FRAME.p1[i]){ tutAnswerPress(0, i-1); break; }
+      for(let i=0;i<=4;i++){
+        if(BTNS_PRESSED_THIS_FRAME.p1[i]){ tutAnswerPress(0, i); break; }
       }
     }
     if(tutActive && tutStep===5 && !tutData.p2Answered && p===1){
-      for(let i=1;i<=4;i++){
-        if(BTNS_PRESSED_THIS_FRAME.p2[i]){ tutAnswerPress(1, i-1); break; }
+      for(let i=0;i<=4;i++){
+        if(BTNS_PRESSED_THIS_FRAME.p2[i]){ tutAnswerPress(1, i); break; }
       }
     }
 
@@ -3764,7 +3766,7 @@ function tutGoStep(n) {
     case 5:
       setTutContent(
         'Step 5 of 6', '❓ Answer Questions!',
-        'A question will appear in your half. Press any colored answer button to choose! Hardware buttons 2-5 for P1, 8-0-minus for P2.',
+        'A question will appear in your half. During questions, all five controller buttons become answers A-E. Button 1 returns to Shoot/Grab after the question closes.',
         '🎯 Both players: tap <strong>any answer choice</strong> in your half below!',
         false, ['center-mid','bottom']
       );
@@ -3818,8 +3820,8 @@ function showTutQuestion(player) {
   timerFill.style.width='100%';
   timerFill.style.transition='none';
 
-  const opts = ['🌱 Plant','🪨 Rock','💧 Water','🪑 Chair'];
-  const BTN_COLORS=['#7ef7a0','#ffffff','#5aacff','#f5c842'];
+  const opts = ['🌱 Plant','🪨 Rock','💧 Water','🪑 Chair','🚗 Car'];
+  const BTN_COLORS=['#7ef7a0','#ffffff','#5aacff','#f5c842','#ff7a5a'];
   choices.innerHTML='';
   opts.forEach((c,i)=>{
     const btn=document.createElement('button');

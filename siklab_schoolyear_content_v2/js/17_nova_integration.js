@@ -1,5 +1,5 @@
 /* =========================================================
- * SCIENCE CARNIVAL SHOOTER (NOVA) INTEGRATION V2
+ * SCIENCE CARNIVAL SHOOTER (NOVA) INTEGRATION V3
  * - Topic CRUD per school year
  * - Topic-scoped Question Bank
  * - Target category configuration
@@ -407,11 +407,9 @@ function setNovaQuestionFormMode() {
     const optionWrap = document.getElementById('cq-options-wrap');
     const option5 = document.getElementById('cq-option-field-4');
     if (optionWrap) optionWrap.classList.toggle('hidden', !(isGame1 || isNova));
-    if (option5) option5.classList.toggle('hidden', isNova);
+    if (option5) option5.classList.remove('hidden');
 
-    const labels = isNova
-        ? ['A / Button 2','B / Button 3','C / Button 4','D / Button 5','E']
-        : ['A / Button 1','B / Button 2','C / Button 3','D / Button 4','E / Button 5'];
+    const labels = ['A / Button 1','B / Button 2','C / Button 3','D / Button 4','E / Button 5'];
     for (let i = 0; i < 5; i++) {
         const label = document.getElementById(`cq-option-label-${i}`);
         if (label) label.firstChild.textContent = labels[i];
@@ -421,14 +419,12 @@ function setNovaQuestionFormMode() {
     if (moduleLabel) moduleLabel.textContent = isNova ? 'Science Carnival Question Bank' : (isGame1 ? 'Picture Challenge Question Bank' : `${module} Question Bank`);
     const helper = document.querySelector('#cq-options-wrap > p');
     if (helper) helper.textContent = isNova
-        ? 'Science Carnival uses four answer choices. Button 1 stays reserved for Shoot/Grab; Buttons 2–5 answer A–D.'
+        ? 'Science Carnival uses all five controller buttons for A–E while a question is open. Button 1 returns to Shoot/Grab during the shooting phase.'
         : 'Picture Challenge uses five labeled choices on Buttons 1–5.';
 
     const answer = document.getElementById('cq-answer');
     if (answer) {
-        const answerLabels = isNova
-            ? ['A (BTN 2)','B (BTN 3)','C (BTN 4)','D (BTN 5)']
-            : ['A (BTN 1)','B (BTN 2)','C (BTN 3)','D (BTN 4)','E (BTN 5)'];
+        const answerLabels = ['A (BTN 1)','B (BTN 2)','C (BTN 3)','D (BTN 4)','E (BTN 5)'];
         answer.replaceChildren(...answerLabels.map((text, i) => new Option(text, String(i))));
     }
 }
@@ -493,7 +489,7 @@ async function getNovaLaunchPayload() {
     if (questionError) throw questionError;
     if (settingError) throw settingError;
 
-    const validQuestions = (questions || []).filter(q => Array.isArray(q.answer_options) && q.answer_options.length === 4 && Number(q.correct_ans) >= 0 && Number(q.correct_ans) <= 3);
+    const validQuestions = (questions || []).filter(q => Array.isArray(q.answer_options) && q.answer_options.length === 5 && Number(q.correct_ans) >= 0 && Number(q.correct_ans) <= 4);
     if (!validQuestions.length) throw new Error(`No approved ${difficulty} questions are saved in “${topic.topic_name}”.`);
 
     const gameConfig = topic.game_config && typeof topic.game_config === 'object' ? topic.game_config : {};

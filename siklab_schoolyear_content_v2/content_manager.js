@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------
  * SIKLAB QUESTION BANK - SCHOOL-YEAR + TOPIC SCOPED
  * Picture Challenge (W1): 5 choices / Buttons 1-5
- * Science Carnival (NOVA): 4 choices / Buttons 2-5
+ * Science Carnival (NOVA): 5 choices / Buttons 1-5 during questions
  * --------------------------------------------------------- */
 let customQuestions = [];
 const DEFAULT_QUESTIONS = { W1: [], NOVA: [], W2: [], W3: [], W4: [], W5: [], W6: [], W7: [], W8: [] };
@@ -133,9 +133,7 @@ function renderQuestionsList() {
     }
 
     const isNova = module === 'NOVA';
-    const buttonNames = isNova
-        ? ['A / BTN 2','B / BTN 3','C / BTN 4','D / BTN 5']
-        : ['A / BTN 1','B / BTN 2','C / BTN 3','D / BTN 4','E / BTN 5'];
+    const buttonNames = ['A / BTN 1','B / BTN 2','C / BTN 3','D / BTN 4','E / BTN 5'];
     const colors = ['text-blue-600 bg-blue-100','text-orange-600 bg-orange-100','text-green-600 bg-green-100','text-purple-600 bg-purple-100','text-red-600 bg-red-100'];
 
     const topicOptions = module === 'W1' && typeof game1Topics !== 'undefined'
@@ -250,7 +248,7 @@ async function addCustomQuestion(event) {
         const existingImage = document.getElementById('cq-existing-image')?.value || '';
         const fileInput = document.getElementById('cq-image-file');
         const rawOptions = Array.from({ length: 5 }, (_, n) => document.getElementById(`cq-option-${n}`)?.value.trim().slice(0, 80) || '');
-        const neededChoices = module === 'NOVA' ? 4 : module === 'W1' ? 5 : 0;
+        const neededChoices = (module === 'NOVA' || module === 'W1') ? 5 : 0;
         const options = neededChoices ? rawOptions.slice(0, neededChoices) : [];
         const topic = selectedTopicForModule(module);
 
@@ -382,7 +380,7 @@ function importQuestions(event) {
 
             const imported = JSON.parse(e.target.result);
             if (!Array.isArray(imported)) throw new Error('JSON must contain an array.');
-            const neededChoices = module === 'NOVA' ? 4 : module === 'W1' ? 5 : 0;
+            const neededChoices = (module === 'NOVA' || module === 'W1') ? 5 : 0;
 
             const rows = imported.map(q => {
                 const opts = q.options || q.answer_options || null;
