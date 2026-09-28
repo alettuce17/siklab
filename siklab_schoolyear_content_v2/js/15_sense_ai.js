@@ -100,7 +100,7 @@ function senseChangeSource() {
 function openSenseQuestions() {
     switchTab('content');
     if (senseEl('cq-module')) senseEl('cq-module').value = 'W1';
-    loadCustomQuestions();
+    if (typeof loadGame1Topics === 'function') loadGame1Topics().then(()=>loadCustomQuestions()); else loadCustomQuestions();
     senseRefreshLessons();
 }
 function openSenseSettings() {
@@ -157,6 +157,8 @@ async function sensePdfBase64(file) {
 async function senseGenerateQuestions() {
     const button = senseEl('sense-generate-btn'); const yearId = senseYear();
     if (!yearId) return showErrorToast('Choose a school year first.');
+    const bankTopic = typeof getSelectedGame1Topic === 'function' ? getSelectedGame1Topic() : null;
+    if (!bankTopic) return showErrorToast('Create or select a Game 1 topic before generating questions.');
     const count = Number(senseEl('sense-count')?.value || 5);
     const source = senseEl('sense-source')?.value || 'lesson';
     const body = { source_type: source, school_year_id: yearId, question_count: count,
@@ -171,7 +173,7 @@ async function senseGenerateQuestions() {
             body.lesson_module_id = Number(senseEl('sense-lesson')?.value || 0);
             if (!body.lesson_module_id) throw new Error('Select a saved lesson first.');
         } else {
-            body.topic = senseEl('sense-topic')?.value.trim().slice(0,160) || '';
+            body.topic = senseEl('sense-topic')?.value.trim().slice(0,160) || bankTopic.topic_name || '';
             if (body.topic.length < 3) throw new Error('Enter a science topic first.');
         }
         const { data, error } = await requireSupabase().functions.invoke('ai-game-questions',{body});
@@ -180,7 +182,8 @@ async function senseGenerateQuestions() {
         const version = ++senseRequestVersion;
         senseDrafts = data.questions.map(q => ({...q, image_url:'',image_candidates:[],image_attribution:'',image_license:'',image_source:'',image_error:'',busy:false,image_provider:senseEl('sense-image-provider')?.value || 'commons'}));
         senseSourceInfo = { source_type:source, source_label:source === 'pdf' ? body.filename : source === 'topic' ? body.topic : senseEl('sense-lesson').selectedOptions[0]?.textContent || '',
-            lesson_module_id:source === 'lesson' ? body.lesson_module_id : null, school_year_id:yearId };
+            lesson_module_id:source === 'lesson' ? body.lesson_module_id : null, school_year_id:yearId,
+            topic_id:Number(bankTopic.topic_id), topic_name:bankTopic.topic_name };
         senseRenderDrafts();
         senseStatus(`Generated ${senseDrafts.length} drafts from ${source === 'topic' ? 'topic: '+body.topic : source === 'lesson' ? 'selected lesson' : 'uploaded PDF'}. Searching pictures…`);
         console.info('[Picture Challenge AI]',data.version||'unversioned',data.source_summary||'');
@@ -318,28 +321,34 @@ async function senseUploadImage(index,input){
 function senseClearImage(index){if(!senseDrafts[index])return;Object.assign(senseDrafts[index],{image_url:'',image_attribution:'',image_license:'',image_source:''});senseRenderDrafts();}
 async function senseSaveDrafts() {
     const button=senseEl('sense-save-btn'), requireImages=senseRequireImages;
-    const yearId=senseYear(), setName=senseEl('sense-set-name')?.value.trim().slice(0,90)||'Picture Challenge AI Set';
+    const yearId=senseYear();
+    const bankTopic=typeof getSelectedGame1Topic === 'function' ? getSelectedGame1Topic() : null;
+    if(!bankTopic)return showErrorToast('Create or select a Game 1 topic before saving AI questions.');
+    const setName=bankTopic.topic_name;
     if(!yearId || yearId!==senseSourceInfo.school_year_id)return showErrorToast('Your school year changed. Generate new drafts for the selected year.');
+    if(Number(senseSourceInfo.topic_id)!==Number(bankTopic.topic_id))return showErrorToast('The selected topic changed. Generate a fresh draft for this topic before saving.');
     if(!senseDrafts.length)return;
     const rows=[];
     for (const [index,q] of senseDrafts.entries()) {
         if(!q.prompt?.trim() || !Number.isInteger(Number(q.correct_ans)) || Number(q.correct_ans)<0 || Number(q.correct_ans)>4) return showErrorToast(`Check question ${index+1} and its correct option.`);
         if(!Array.isArray(q.answer_options)||q.answer_options.length!==5||q.answer_options.some(v=>!String(v).trim())||new Set(q.answer_options.map(v=>String(v).trim().toLowerCase())).size!==5)return showErrorToast(`Question ${index+1} needs five different answer options.`);
         if(requireImages && !q.image_url)return showErrorToast(`Choose or upload a picture for Question ${index+1}.`);
-        rows.push({school_year_id:yearId,game_module:'W1',question_set:setName,prompt:q.prompt.trim().slice(0,350),correct_ans:Number(q.correct_ans),answer_options:q.answer_options.map(v=>String(v).trim().slice(0,55)),image_url:q.image_url||null,
-            time_limit:10,explanation:q.explanation?.trim().slice(0,500)||null,topic:q.topic||null,source_type:senseSourceInfo.source_type,
+        rows.push({school_year_id:yearId,game_module:'W1',topic_id:Number(bankTopic.topic_id),question_set:setName,prompt:q.prompt.trim().slice(0,350),correct_ans:Number(q.correct_ans),answer_options:q.answer_options.map(v=>String(v).trim().slice(0,55)),image_url:q.image_url||null,
+            time_limit:10,explanation:q.explanation?.trim().slice(0,500)||null,topic:bankTopic.topic_name,source_type:senseSourceInfo.source_type,
             source_label:senseSourceInfo.source_label?.slice(0,150)||null,lesson_module_id:senseSourceInfo.lesson_module_id,
             image_query:q.image_query?.slice(0,160)||null,image_attribution:q.image_attribution||null,image_license:q.image_license||null,image_source:q.image_source||null,
             ai_generated:true,review_status:'approved'});
     }
-    if(!confirm(`Save ${rows.length} teacher-reviewed questions to set "${setName}"?`))return;
+    if(!confirm(`Save ${rows.length} teacher-reviewed questions to topic "${setName}"?`))return;
     try {
         button.disabled=true;button.textContent='Saving…';
         const {error}=await requireSupabase().from('custom_question').insert(rows);
         if(error)throw error;
-        senseDrafts=[];senseRequestVersion++;senseRenderDrafts();await loadCustomQuestions();await loadSenseQuestionSets();
-        if(senseEl('launch-question-set')) {senseEl('launch-question-set').value=setName;saveSenseQuestionSet();}
-        senseStatus(`Saved ${rows.length} approved questions to "${setName}". Select this set on the Game Dashboard.`);
+        senseDrafts=[];senseRequestVersion++;senseRenderDrafts();
+        if(typeof loadGame1Topics==='function')await loadGame1Topics({preferredValue:String(bankTopic.topic_id)});
+        await loadCustomQuestions();
+        if(senseEl('launch-game1-topic')){senseEl('launch-game1-topic').value=String(bankTopic.topic_id);if(typeof saveGame1LaunchTopic==='function')saveGame1LaunchTopic();}
+        senseStatus(`Saved ${rows.length} approved questions to topic "${setName}". Select this topic before launching Game 1.`);
         if(typeof loadContentManagement==='function')loadContentManagement();
         showToast(`${rows.length} Picture Challenge questions saved!`);
     } catch(error){senseStatus(error.message);showErrorToast(error.message);}

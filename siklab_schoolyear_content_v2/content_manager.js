@@ -26,17 +26,31 @@ async function loadCustomQuestions() {
 
     try {
         const db = requireSupabase();
-        const { data, error } = await db
+        let query = db
             .from('custom_question')
-            .select('question_id,school_year_id,game_module,prompt,correct_ans,answer_options,time_limit,image_url,image_query,image_attribution,image_license,image_source,question_set,explanation,topic,review_status')
+            .select('question_id,school_year_id,game_module,topic_id,prompt,correct_ans,answer_options,time_limit,image_url,image_query,image_attribution,image_license,image_source,question_set,explanation,topic,review_status')
             .eq('school_year_id', yearId)
-            .eq('game_module', module)
-            .order('question_id', { ascending: true });
+            .eq('game_module', module);
+
+        if (module === 'W1' && typeof getSelectedGame1TopicFilter === 'function') {
+            const filter = getSelectedGame1TopicFilter();
+            if (filter.mode === 'none') {
+                customQuestions = [];
+                renderQuestionsList();
+                return;
+            }
+            query = filter.mode === 'unassigned'
+                ? query.is('topic_id', null)
+                : query.eq('topic_id', filter.topicId);
+        }
+
+        const { data, error } = await query.order('question_id', { ascending: true });
         if (error) throw error;
 
         customQuestions = (data || []).map(q => ({
             id: q.question_id,
             schoolYearId: Number(q.school_year_id),
+            topicId: q.topic_id == null ? null : Number(q.topic_id),
             prompt: q.prompt,
             ans: Number(q.correct_ans),
             options: Array.isArray(q.answer_options) && q.answer_options.length===5 ? q.answer_options : ['Sight','Touch','Hearing','Smell','Taste'],
@@ -66,13 +80,24 @@ function renderQuestionsList() {
         return;
     }
 
+    if (document.getElementById('cq-module')?.value === 'W1' && typeof getSelectedGame1TopicFilter === 'function' && getSelectedGame1TopicFilter().mode === 'none') {
+        container.innerHTML = '<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-layer-group text-3xl text-orange-200 mb-3"></i><p class="font-bold">Create or select a Game 1 topic first.</p><p class="text-xs mt-1">Questions are separated by topic instead of one combined bank.</p></div>';
+        return;
+    }
+
     if (!customQuestions.length) {
-        container.innerHTML = `<div class="text-center text-slate-400 mt-10"><p>No questions in ${escapeHtml(window.currentSchoolYearLabel || 'this school year')} for this module yet.</p></div>`;
+        const selectedName = typeof getSelectedGame1Topic === 'function' && getSelectedGame1Topic()
+            ? getSelectedGame1Topic().topic_name
+            : (typeof getSelectedGame1TopicFilter === 'function' && getSelectedGame1TopicFilter().mode === 'unassigned' ? 'Unassigned Questions' : 'this topic');
+        container.innerHTML = `<div class="text-center text-slate-400 mt-10"><p>No questions in <strong>${escapeHtml(selectedName)}</strong> yet.</p></div>`;
         return;
     }
 
     const senseNames = ['A / BTN 1','B / BTN 2','C / BTN 3','D / BTN 4','E / BTN 5'];
     const senseColors = ['text-blue-600 bg-blue-100','text-orange-600 bg-orange-100','text-green-600 bg-green-100','text-purple-600 bg-purple-100','text-red-600 bg-red-100'];
+    const moveOptions = typeof game1Topics !== 'undefined'
+        ? game1Topics.map(t => `<option value="${Number(t.topic_id)}">${escapeHtml(t.topic_name)}</option>`).join('')
+        : '';
 
     container.innerHTML = customQuestions.map((q, i) => `
         <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl mb-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group">
@@ -85,11 +110,12 @@ function renderQuestionsList() {
                     <div class="flex gap-2 mt-1">
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded inline-block ${senseColors[q.ans] || 'text-slate-600 bg-slate-100'}">
                             ${escapeHtml(`${senseNames[q.ans] || `BTN ${q.ans+1}`}: ${(q.options||[])[q.ans] || ''}`)}
-                        </span><span class="text-[10px] font-bold text-slate-500">${escapeHtml(q.set || 'General Questions')}</span>
+                        </span><span class="text-[10px] font-bold text-slate-500">${escapeHtml(typeof game1TopicName === 'function' && q.topicId ? game1TopicName(q.topicId) : (q.topic || 'Unassigned'))}</span>
                     </div>
                 </div>
             </div>
             <div class="flex gap-2 flex-wrap items-center">
+                ${document.getElementById('cq-module')?.value === 'W1' && q.id && moveOptions ? `<select aria-label="Move question to another topic" onchange="if(this.value){moveGame1QuestionToTopic(${Number(q.id)},this.value);this.value='';}" class="text-xs font-bold px-2 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200"><option value="">Move to…</option>${moveOptions}</select>` : ''}
                 ${document.getElementById('cq-module')?.value === 'W1' && q.id ? `<button type="button" onclick="openQuestionImageManager(${Number(q.id)})" class="text-xs font-bold px-2 py-2 bg-orange-50 text-orange-700 rounded-lg border border-orange-200" title="Search, replace or remove saved picture">Manage Picture</button>` : ''}
                 <button onclick="editCustomQuestion(${i})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white"><i class="fa-solid fa-pen"></i></button>
                 <button onclick="deleteCustomQuestion(${q.id ? Number(q.id) : 'null'}, ${i})" class="w-8 h-8 flex-shrink-0 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white"><i class="fa-solid fa-trash"></i></button>
@@ -106,8 +132,9 @@ function editCustomQuestion(index) {
     document.getElementById('cq-prompt').value = q.prompt || '';
     document.getElementById('cq-answer').value = q.ans;
     for(let n=0;n<5;n++){const el=document.getElementById(`cq-option-${n}`);if(el)el.value=(q.options||[])[n]||'';}
-    document.getElementById('cq-set-name').value = q.set || 'General Questions';
     document.getElementById('cq-explanation').value = q.explanation || '';
+    const topicSelect = document.getElementById('cq-topic-id');
+    if (topicSelect && q.topicId && [...topicSelect.options].some(o => o.value === String(q.topicId))) topicSelect.value = String(q.topicId);
 
     const existingImage = document.getElementById('cq-existing-image');
     if (existingImage) existingImage.value = q.img || '';
@@ -139,8 +166,6 @@ function cancelEdit() {
     const fileInput = document.getElementById('cq-image-file');
     if (fileInput) fileInput.value = '';
     for(let n=0;n<5;n++){const el=document.getElementById(`cq-option-${n}`);if(el)el.value='';}
-    const setField = document.getElementById('cq-set-name');
-    if (setField) setField.value = 'General Questions';
     const helpText = document.getElementById('cq-image-help');
     if (helpText) helpText.classList.add('hidden');
 
@@ -167,6 +192,8 @@ async function addCustomQuestion(event) {
         const fileInput = document.getElementById('cq-image-file');
         const existingImage = document.getElementById('cq-existing-image')?.value || '';
         const options = Array.from({length:5},(_,n)=>document.getElementById(`cq-option-${n}`)?.value.trim().slice(0,55)||'');
+        const game1Topic = module === 'W1' && typeof getSelectedGame1Topic === 'function' ? getSelectedGame1Topic() : null;
+        if(module==='W1' && !game1Topic)return showErrorToast('Create or select a Game 1 topic before saving a question.');
         if(module==='W1' && (options.some(value=>!value)||new Set(options.map(value=>value.toLowerCase())).size!==5))return showErrorToast('Enter five distinct options (A–E) for Picture Challenge.');
 
         if (!yearId) return showErrorToast('Select a school year first.');
@@ -195,7 +222,9 @@ async function addCustomQuestion(event) {
                 answer_options: module==='W1' ? options : null,
                 time_limit: 10,
                 image_url: finalImageUrl || null,
-                question_set: document.getElementById('cq-set-name')?.value.trim().slice(0, 90) || 'General Questions',
+                topic_id: module === 'W1' ? Number(game1Topic.topic_id) : null,
+                question_set: module === 'W1' ? game1Topic.topic_name : 'General Questions',
+                topic: module === 'W1' ? game1Topic.topic_name : null,
                 explanation: document.getElementById('cq-explanation')?.value.trim().slice(0, 500) || null,
                 review_status: 'approved'
             };
@@ -215,7 +244,7 @@ async function addCustomQuestion(event) {
             // Do not delete an old saved image automatically. Curriculum copied
             // between years can intentionally share the same Storage URL.
             await loadCustomQuestions();
-            if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
+            if (typeof loadGame1Topics === 'function') await loadGame1Topics({ preferredValue: module === 'W1' ? String(game1Topic.topic_id) : undefined });
             cancelEdit();
             if (typeof loadContentManagement === 'function') loadContentManagement();
             showToast(editId ? 'Question updated!' : 'Question saved to this school year!');
@@ -249,7 +278,7 @@ async function deleteCustomQuestion(dbId, arrayIndex) {
             // Storage file is intentionally retained because copied questions in
             // another school year may still reference the same URL.
             await loadCustomQuestions();
-            if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
+            if (typeof loadGame1Topics === 'function') await loadGame1Topics();
             if (typeof loadContentManagement === 'function') loadContentManagement();
             showToast('Question deleted from this school year.');
         } catch (error) {
@@ -273,7 +302,8 @@ function exportQuestions() {
     const a = document.createElement('a');
     a.href = dataStr;
     const safeYear = String(window.currentSchoolYearLabel || 'SchoolYear').replace(/[^a-zA-Z0-9_-]+/g, '_');
-    a.download = `SikLab_${safeYear}_Questions_${module}.json`;
+    const topicPart = module === 'W1' && typeof getSelectedGame1Topic === 'function' && getSelectedGame1Topic() ? '_' + String(getSelectedGame1Topic().topic_name).replace(/[^a-zA-Z0-9_-]+/g, '_') : '';
+    a.download = `SikLab_${safeYear}_Questions_${module}${topicPart}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -294,18 +324,27 @@ function importQuestions(event) {
             if (!Array.isArray(imported)) throw new Error('JSON must contain an array.');
 
             const module = document.getElementById('cq-module')?.value || 'W1';
+            const game1Topic = module === 'W1' && typeof getSelectedGame1Topic === 'function' ? getSelectedGame1Topic() : null;
+            if (module === 'W1' && !game1Topic) throw new Error('Create or select a Game 1 topic before importing questions.');
             const rows = imported.map(q => ({
                 school_year_id: yearId,
                 game_module: module,
+                topic_id: module === 'W1' ? Number(game1Topic.topic_id) : null,
+                topic: module === 'W1' ? game1Topic.topic_name : (q.topic || null),
+                question_set: module === 'W1' ? game1Topic.topic_name : (q.question_set || 'General Questions'),
                 prompt: String(q.prompt || '').trim(),
                 correct_ans: Number(q.ans ?? q.correct_ans),
+                answer_options: module === 'W1' ? (q.options || q.answer_options || null) : null,
+                explanation: q.explanation || null,
+                review_status: 'approved',
                 time_limit: Number(q.timeLimit ?? q.time_limit ?? 10) || 10,
                 image_url: q.img || q.image_url || null
             })).filter(q =>
                 q.prompt &&
                 Number.isInteger(q.correct_ans) &&
                 q.correct_ans >= 0 &&
-                q.correct_ans <= 4
+                q.correct_ans <= 4 &&
+                (module !== 'W1' || (Array.isArray(q.answer_options) && q.answer_options.length === 5))
             );
 
             if (!rows.length) throw new Error('No valid questions found.');
@@ -314,6 +353,7 @@ function importQuestions(event) {
             const { error } = await db.from('custom_question').insert(rows);
             if (error) throw error;
 
+            if (typeof loadGame1Topics === 'function') await loadGame1Topics({ preferredValue: module === 'W1' ? String(game1Topic.topic_id) : undefined });
             await loadCustomQuestions();
             if (typeof loadContentManagement === 'function') loadContentManagement();
             showToast(`Imported ${rows.length} questions into ${window.currentSchoolYearLabel}.`);

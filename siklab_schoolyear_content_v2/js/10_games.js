@@ -67,7 +67,8 @@ function filterGamesByQuarter() { // Legacy name retained for compatibility: no 
         if (settingSelect) settingSelect.value = active;
     }
     if (typeof updateGameModeUI === 'function') updateGameModeUI();
-    if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
+    if (typeof loadGame1Topics === 'function') loadGame1Topics();
+    else if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
 }
 
 function updateGameModeUI(sourceId) {
@@ -88,7 +89,8 @@ function updateGameModeUI(sourceId) {
 
         localStorage.setItem('siklab_active_game_path', activePath);
         if (typeof renderSettingsForm === 'function') renderSettingsForm(activePath);
-        if (typeof showSenseQuickLaunch === 'function') showSenseQuickLaunch(activePath);
+        if (typeof showGame1TopicQuickLaunch === 'function') showGame1TopicQuickLaunch(activePath);
+        else if (typeof showSenseQuickLaunch === 'function') showSenseQuickLaunch(activePath);
     });
 }
 
@@ -108,11 +110,24 @@ function launchGame() {
         const gameIframe = document.getElementById('game-iframe');
         if (!overlay || !gameIframe) return showErrorToast('Game iframe not found.');
 
-        if (getModuleFromPath(select.value) === 'W1' && typeof saveSenseQuestionSet === 'function') saveSenseQuestionSet();
-        gameIframe.src = select.value;
+        let launchUrl = select.value;
+        if (getModuleFromPath(select.value) === 'W1') {
+            const topicId = typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null;
+            const yearId = Number(window.currentSchoolYearId || 0);
+            if (!topicId) return showErrorToast('Choose a Game 1 topic before launching Picture Challenge.');
+            if (typeof saveGame1LaunchTopic === 'function') saveGame1LaunchTopic();
+
+            const separator = launchUrl.includes('?') ? '&' : '?';
+            launchUrl += `${separator}topic_id=${encodeURIComponent(topicId)}${yearId ? `&school_year_id=${encodeURIComponent(yearId)}` : ''}`;
+        }
+
+        gameIframe.src = launchUrl;
         overlay.classList.remove('hidden');
         overlay.classList.add('flex', 'flex-col');
-        showToast('Game launched!');
+        const topicName = getModuleFromPath(select.value) === 'W1' && typeof game1TopicName === 'function'
+            ? game1TopicName(typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null)
+            : '';
+        showToast(topicName ? `Picture Challenge launched: ${topicName}` : 'Game launched!');
     });
 }
 

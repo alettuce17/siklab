@@ -759,13 +759,20 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 
                 const yearId = await resolveGameSchoolYearId();
                 if (!yearId) throw new Error('No school year selected');
-                const requestedSet = localStorage.getItem(`siklab_sense_question_set_${yearId}`) || '';
+
+                const params = new URLSearchParams(window.location.search);
+                const storedTopic = localStorage.getItem(`siklab_game1_topic_${yearId}`) || '';
+                const requestedTopicId = Number(params.get('topic_id') || storedTopic || 0);
+                if (!Number.isSafeInteger(requestedTopicId) || requestedTopicId <= 0) {
+                    throw new Error('No Game 1 topic selected');
+                }
+
                 let query = db.from('custom_question')
-                    .select('prompt,correct_ans,answer_options,image_url,explanation,image_attribution,image_license,image_source')
+                    .select('prompt,correct_ans,answer_options,image_url,explanation,image_attribution,image_license,image_source,topic_id')
                     .eq('school_year_id', yearId)
                     .eq('game_module', 'W1')
+                    .eq('topic_id', requestedTopicId)
                     .eq('review_status', 'approved');
-                if (requestedSet) query = query.eq('question_set', requestedSet);
                 const { data, error } = await query;
 
                 if (error) throw error;
@@ -795,14 +802,9 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
                 }
             }
             if (qBank.length === 0) {
-                const yearId = await resolveGameSchoolYearId();
-                const chosen = yearId ? localStorage.getItem(`siklab_sense_question_set_${yearId}`) : '';
-                if (chosen) {
-                    document.getElementById('center-message').classList.remove('hidden');
-                    document.getElementById('menu-container').innerHTML = '<h2 class="text-2xl font-black text-slate-800 mb-3">No approved questions in this set</h2><p class="text-slate-600">Choose another question set in the Teacher Dashboard or add questions first.</p><button onclick="returnToMenu()" class="bg-orange-600 text-white font-bold px-5 py-3 rounded-xl mt-5">BACK</button>';
-                    return;
-                }
-                qBank = [...DEFAULT_W1_QUESTIONS];
+                document.getElementById('center-message').classList.remove('hidden');
+                document.getElementById('menu-container').innerHTML = '<h2 class="text-2xl font-black text-slate-800 mb-3">No approved questions in this topic</h2><p class="text-slate-600">Return to the Teacher Dashboard, choose a Game 1 topic with saved questions, then launch again.</p><button onclick="returnToMenu()" class="bg-orange-600 text-white font-bold px-5 py-3 rounded-xl mt-5">BACK</button>';
+                return;
             }
 
             mgData = { 
