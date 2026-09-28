@@ -1,43 +1,48 @@
 /* ---------------------------------------------------------
- * SIKLAB SETTINGS MANAGER - SUPABASE
- * Validated numeric settings for each game module.
+ * SIKLAB SETTINGS MANAGER - SCHOOL-YEAR SCOPED
  * --------------------------------------------------------- */
 const SETTINGS_SCHEMA = {
     W1: [
-        { id: 'basePoints', label: 'Base Points (Per Question)', type: 'number', default: 10, min: 0, max: 1000, step: 1 },
-        { id: 'deduction', label: 'Deduction (If wrong)', type: 'number', default: 2, min: 0, max: 1000, step: 1 },
-        { id: 'stunDelay', label: 'Error Stun Delay (Sec)', type: 'number', default: 1.0, min: 0, max: 30, step: 0.1 },
-        { id: 'roundTimer', label: 'Global Round Timer (Sec)', type: 'number', default: 15, min: 1, max: 600, step: 1 },
-        { id: 'retryMultiplier', label: 'Retry Multiplier (0.0 - 1.0)', type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 }
+        { id: 'basePoints', label: 'Base Points', type: 'number', default: 10 },
+        { id: 'deduction', label: 'Wrong Answer Deduction', type: 'number', default: 2 },
+        { id: 'stunDelay', label: 'Error Stun Delay (Sec)', type: 'number', default: 1.0 },
+        { id: 'roundTimer', label: 'Question Timer (Sec)', type: 'number', default: 15 },
+        { id: 'retryMultiplier', label: 'Retry Multiplier', type: 'number', default: 0.5 }
+    ],
+    NOVA: [
+        { id: 'questionTimer', label: 'Question Timer (Sec)', type: 'number', default: 15 },
+        { id: 'meterGoal', label: 'Targets Before Question', type: 'number', default: 5 },
+        { id: 'pointsToWin', label: 'Question Points to Win', type: 'number', default: 5 },
+        { id: 'roundTimer', label: 'Match Safety Timer (Sec)', type: 'number', default: 99 }
     ],
     W2: [
-        { id: 'basePoints', label: 'Base Points (All Modes)', type: 'number', default: 10, min: 0, max: 1000, step: 1 },
-        { id: 'deduction', label: 'Deduction (Quiz/Egg/Boat)', type: 'number', default: 2, min: 0, max: 1000, step: 1 },
-        { id: 'quizTimer', label: 'Day 1 & 3: Round Timer (Sec)', type: 'number', default: 15, min: 1, max: 600, step: 1 },
-        { id: 'balloonGoal', label: 'Day 2: Air/Clicks Needed to Pop', type: 'number', default: 100, min: 1, max: 5000, step: 1 },
-        { id: 'boatSpeed', label: 'Day 4: Boat Movement Speed', type: 'number', default: 8, min: 1, max: 100, step: 1 },
-        { id: 'hazardRate', label: 'Day 4: Hazard Spawn Rate (%)', type: 'number', default: 5, min: 0, max: 100, step: 1 },
-        { id: 'boatTimer', label: 'Day 4: River Round Timer (Sec)', type: 'number', default: 60, min: 1, max: 1800, step: 1 }
+        { id: 'basePoints', label: 'Base Points', type: 'number', default: 10 },
+        { id: 'deduction', label: 'Deduction', type: 'number', default: 2 },
+        { id: 'quizTimer', label: 'Round Timer (Sec)', type: 'number', default: 15 }
     ],
     DEFAULT: [
-        { id: 'basePoints', label: 'Base Points', type: 'number', default: 10, min: 0, max: 1000, step: 1 },
-        { id: 'deduction', label: 'Deduction', type: 'number', default: 2, min: 0, max: 1000, step: 1 },
-        { id: 'roundTimer', label: 'Round Timer (Sec)', type: 'number', default: 15, min: 1, max: 600, step: 1 }
+        { id: 'basePoints', label: 'Base Points', type: 'number', default: 10 },
+        { id: 'deduction', label: 'Deduction', type: 'number', default: 2 },
+        { id: 'roundTimer', label: 'Round Timer (Sec)', type: 'number', default: 15 }
     ]
 };
 
+function settingsYearId() {
+    const value = Number(window.currentSchoolYearId || (typeof currentSchoolYearId !== 'undefined' ? currentSchoolYearId : 0) || 0);
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
 function getModuleFromPath(path) {
-    if (!path) return 'W1';
-    const match = String(path).match(/_([Ww]\d+)(?:_|\.html)/);
+    const value = String(path || '');
+    if (/Science_Carnival_Shooter|science[-_ ]?carnival|nova/i.test(value)) return 'NOVA';
+    const match = value.match(/_([Ww]\d+)(?:_|\.html)/);
     return match ? match[1].toUpperCase() : 'DEFAULT';
 }
 
-function clampSettingValue(field, rawValue) {
-    let value = Number.parseFloat(rawValue);
-    if (!Number.isFinite(value)) value = field.default;
-    if (Number.isFinite(field.min)) value = Math.max(field.min, value);
-    if (Number.isFinite(field.max)) value = Math.min(field.max, value);
-    return value;
+function settingsModuleLabel(module) {
+    if (module === 'NOVA') return 'Science Carnival Shooter';
+    if (module === 'W1') return 'Picture Challenge';
+    return module;
 }
 
 function renderSettingsForm(activePath) {
@@ -47,42 +52,38 @@ function renderSettingsForm(activePath) {
     if (!container) return;
 
     const schema = SETTINGS_SCHEMA[module] || SETTINGS_SCHEMA.DEFAULT;
-    if (title) title.innerText = module === 'W1' ? 'Picture Challenge • Gameplay Rules' : `${module} Game Rules`;
+    if (title) title.innerText = `${settingsModuleLabel(module)} Settings`;
 
-    container.innerHTML = schema.map((field, index) => `
-        <div class="${module === 'W1' && index >= 2 && field.id !== 'roundTimer' ? 'sense-advanced-field hidden' : ''}">
-            <label class="block text-sm font-bold text-slate-600 mb-1">${escapeHtml(field.label)}</label>
-            <input
-                type="number"
-                id="setting-${escapeAttr(field.id)}"
-                step="${escapeAttr(field.step ?? 'any')}"
-                min="${escapeAttr(field.min ?? 0)}"
-                ${Number.isFinite(field.max) ? `max="${escapeAttr(field.max)}"` : ''}
-                class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-orange-500 outline-none font-bold text-base transition-colors"
-            >
+    container.innerHTML = schema.map(field => `
+        <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">${escapeHtml(field.label)}</label>
+            <input type="number" id="setting-${escapeAttr(field.id)}" step="any" min="0" class="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-bold text-base transition-colors bg-white">
         </div>
-    `).join('') + (module === 'W1' ? '<button type="button" onclick="toggleSenseAdvanced()" class="sm:col-span-2 text-left text-sm font-bold text-orange-700">▸ Show / hide advanced gameplay rules</button>' : '');
+    `).join('');
 
     loadGameConfig(module, schema);
 }
 
 async function loadGameConfig(module, schema) {
+    const yearId = settingsYearId();
     let moduleSettings = {};
+    if (!yearId) {
+        schema.forEach(field => {
+            const input = document.getElementById(`setting-${field.id}`);
+            if (input) input.value = field.default;
+        });
+        return;
+    }
+
     try {
-        const yearId = Number(window.currentSchoolYearId);
-        if (!Number.isSafeInteger(yearId) || yearId <= 0) {
-            throw new Error('Select a school year first.');
-        }
         const db = requireSupabase();
-        const { data, error } = await db
-            .from('game_settings')
+        const { data, error } = await db.from('game_settings')
             .select('settings_json')
             .eq('school_year_id', yearId)
             .eq('game_module', module)
             .maybeSingle();
         if (error) throw error;
         moduleSettings = data?.settings_json || {};
-        window.siklabLoadedGameSettings = { module, settings: moduleSettings };
     } catch (error) {
         console.error('[settings load]', error);
         showErrorToast(error.message || 'Could not load game settings.');
@@ -90,32 +91,27 @@ async function loadGameConfig(module, schema) {
 
     schema.forEach(field => {
         const input = document.getElementById(`setting-${field.id}`);
-        if (!input) return;
-        const sourceValue = moduleSettings[field.id] !== undefined
-            ? moduleSettings[field.id]
-            : field.default;
-        input.value = clampSettingValue(field, sourceValue);
+        if (input) input.value = moduleSettings[field.id] !== undefined ? moduleSettings[field.id] : field.default;
     });
 }
 
 async function saveGameConfig() {
+    const yearId = settingsYearId();
+    if (!yearId) return showErrorToast('Select a school year first.');
+
     const activePath = document.getElementById('setting-game')?.value || '';
     const module = getModuleFromPath(activePath);
     const schema = SETTINGS_SCHEMA[module] || SETTINGS_SCHEMA.DEFAULT;
-    const cached = window.siklabLoadedGameSettings;
-    const settings = cached?.module === module ? { ...cached.settings } : {};
+    const settings = {};
 
-    for (const field of schema) {
+    schema.forEach(field => {
         const input = document.getElementById(`setting-${field.id}`);
-        const value = clampSettingValue(field, input?.value);
-        settings[field.id] = value;
-        if (input) input.value = value;
-    }
+        const value = Number.parseFloat(input?.value);
+        settings[field.id] = Number.isFinite(value) ? value : field.default;
+    });
 
     try {
         const db = requireSupabase();
-        const yearId = Number(window.currentSchoolYearId);
-        if (!Number.isSafeInteger(yearId) || yearId <= 0) throw new Error('Select a school year first.');
         const { error } = await db.from('game_settings').upsert({
             school_year_id: yearId,
             game_module: module,
@@ -123,14 +119,9 @@ async function saveGameConfig() {
             updated_at: new Date().toISOString()
         }, { onConflict: 'school_year_id,game_module' });
         if (error) throw error;
-        if (typeof loadContentManagement === 'function') loadContentManagement();
-        showToast(`${module} configuration saved for ${window.currentSchoolYearLabel || 'the selected school year'}!`);
+        showToast(`${settingsModuleLabel(module)} settings saved.`);
     } catch (error) {
         console.error('[settings save]', error);
         showErrorToast(error.message || 'Could not save game settings.');
     }
-}
-
-function toggleSenseAdvanced() {
-    document.querySelectorAll('.sense-advanced-field').forEach(el => el.classList.toggle('hidden'));
 }

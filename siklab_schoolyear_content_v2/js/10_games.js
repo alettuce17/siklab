@@ -69,6 +69,7 @@ function filterGamesByQuarter() { // Legacy name retained for compatibility: no 
     if (typeof updateGameModeUI === 'function') updateGameModeUI();
     if (typeof loadGame1Topics === 'function') loadGame1Topics();
     else if (typeof loadSenseQuestionSets === 'function') loadSenseQuestionSets();
+    if (typeof loadNovaTopics === 'function') loadNovaTopics();
 }
 
 function updateGameModeUI(sourceId) {
@@ -91,11 +92,12 @@ function updateGameModeUI(sourceId) {
         if (typeof renderSettingsForm === 'function') renderSettingsForm(activePath);
         if (typeof showGame1TopicQuickLaunch === 'function') showGame1TopicQuickLaunch(activePath);
         else if (typeof showSenseQuickLaunch === 'function') showSenseQuickLaunch(activePath);
+        if (typeof showNovaQuickLaunch === 'function') showNovaQuickLaunch(activePath);
     });
 }
 
 function launchGame() {
-    applyMiddleware('LAUNCH_GAME', null, () => {
+    applyMiddleware('LAUNCH_GAME', null, async () => {
         const p1 = localStorage.getItem('siklab_active_p1');
         const p2 = localStorage.getItem('siklab_active_p2');
         if (!p1 || !p2) {
@@ -110,24 +112,41 @@ function launchGame() {
         const gameIframe = document.getElementById('game-iframe');
         if (!overlay || !gameIframe) return showErrorToast('Game iframe not found.');
 
-        let launchUrl = select.value;
-        if (getModuleFromPath(select.value) === 'W1') {
-            const topicId = typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null;
-            const yearId = Number(window.currentSchoolYearId || 0);
-            if (!topicId) return showErrorToast('Choose a Game 1 topic before launching Picture Challenge.');
-            if (typeof saveGame1LaunchTopic === 'function') saveGame1LaunchTopic();
+        const module = getModuleFromPath(select.value);
 
-            const separator = launchUrl.includes('?') ? '&' : '?';
-            launchUrl += `${separator}topic_id=${encodeURIComponent(topicId)}${yearId ? `&school_year_id=${encodeURIComponent(yearId)}` : ''}`;
+        try {
+            if (module === 'NOVA') {
+                if (typeof launchNovaIntoIframe !== 'function') throw new Error('Science Carnival integration script is missing.');
+                const payload = await launchNovaIntoIframe(gameIframe, select.value);
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex', 'flex-col');
+                showToast(`Science Carnival launched: ${payload.topic.name} • ${payload.difficulty}`);
+                return;
+            }
+
+            let launchUrl = select.value;
+            if (module === 'W1') {
+                const topicId = typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null;
+                const yearId = Number(window.currentSchoolYearId || 0);
+                if (!topicId) return showErrorToast('Choose a Game 1 topic before launching Picture Challenge.');
+                if (typeof saveGame1LaunchTopic === 'function') saveGame1LaunchTopic();
+                const separator = launchUrl.includes('?') ? '&' : '?';
+                launchUrl += `${separator}topic_id=${encodeURIComponent(topicId)}${yearId ? `&school_year_id=${encodeURIComponent(yearId)}` : ''}`;
+            }
+
+            gameIframe.onload = null;
+            gameIframe.src = launchUrl;
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex', 'flex-col');
+            const topicName = module === 'W1' && typeof game1TopicName === 'function'
+                ? game1TopicName(typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null)
+                : '';
+            showToast(topicName ? `Picture Challenge launched: ${topicName}` : 'Game launched!');
+        } catch (error) {
+            console.error('[launch game]', error);
+            gameIframe.onload = null;
+            showErrorToast(error.message || 'Could not launch game.');
         }
-
-        gameIframe.src = launchUrl;
-        overlay.classList.remove('hidden');
-        overlay.classList.add('flex', 'flex-col');
-        const topicName = getModuleFromPath(select.value) === 'W1' && typeof game1TopicName === 'function'
-            ? game1TopicName(typeof getLaunchGame1TopicId === 'function' ? getLaunchGame1TopicId() : null)
-            : '';
-        showToast(topicName ? `Picture Challenge launched: ${topicName}` : 'Game launched!');
     });
 }
 
