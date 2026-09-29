@@ -1,5 +1,5 @@
 /* =========================================================
- * SCIENCE CARNIVAL SHOOTER (NOVA) INTEGRATION V3
+ * SCIENCE CARNIVAL SHOOTER (NOVA) INTEGRATION V4
  * - Topic CRUD per school year
  * - Topic-scoped Question Bank
  * - Target category configuration
@@ -154,6 +154,8 @@ async function loadNovaTopics(options = {}) {
         updateNovaTopicSummary();
         renderNovaTargetEditor();
         if (typeof novaAiSyncTopic === 'function') novaAiSyncTopic();
+        if (typeof novaTargetsAiSyncTopic === 'function') novaTargetsAiSyncTopic();
+        if (typeof novaTargetAiRefreshLessons === 'function') novaTargetAiRefreshLessons();
     } catch (error) {
         console.error('[Nova topics]', error);
         buildNovaTopicOptions('');
@@ -178,6 +180,7 @@ async function selectNovaTopic(value, sourceId = 'nova-topic-select') {
     updateNovaTopicSummary();
     renderNovaTargetEditor();
     if (typeof novaAiSyncTopic === 'function') novaAiSyncTopic();
+    if (typeof novaTargetsAiSyncTopic === 'function') novaTargetsAiSyncTopic();
     if (typeof cancelEdit === 'function') cancelEdit();
     if (document.getElementById('cq-module')?.value === 'NOVA' && typeof loadCustomQuestions === 'function') {
         await loadCustomQuestions();
@@ -447,7 +450,9 @@ function onQuestionModuleChanged(module) {
     } else if (isNova) {
         loadNovaTopics().then(() => {
             if (typeof novaAiSyncTopic === 'function') novaAiSyncTopic();
+            if (typeof novaTargetsAiSyncTopic === 'function') novaTargetsAiSyncTopic();
             if (typeof novaAiRefreshLessons === 'function') novaAiRefreshLessons();
+            if (typeof novaTargetAiRefreshLessons === 'function') novaTargetAiRefreshLessons();
             return loadCustomQuestions();
         });
     } else if (typeof loadCustomQuestions === 'function') {

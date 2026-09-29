@@ -808,6 +808,55 @@
                             <button type="button" onclick="saveNovaTargetConfig()" class="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-black"><i class="fa-solid fa-floppy-disk mr-1"></i>Save Targets</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-3">Use 2–4 categories. Enter targets as <strong>emoji + label</strong>, separated by commas. Example: <code>🐕 Dog, 🐟 Fish, 🐦 Bird</code>.</p>
+
+                        <div class="rounded-xl border border-violet-200 bg-white p-3 mb-3">
+                            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                                        <div>
+                                            <p class="font-black text-slate-800 text-sm">AI Target Builder</p>
+                                            <p id="nova-target-ai-selected-topic" class="text-[11px] font-bold text-violet-700">Select or create a Science Carnival topic first.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" id="nova-target-ai-generate-btn" onclick="novaTargetAiGenerate()" class="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm disabled:opacity-50">
+                                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Targets with AI
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                                <label class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Source</span>
+                                    <select id="nova-target-ai-source" onchange="novaTargetAiChangeSource()" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                        <option value="topic">Selected / Typed Topic</option>
+                                        <option value="lesson">Existing SikLab Lesson</option>
+                                        <option value="pdf">Upload PDF</option>
+                                    </select>
+                                </label>
+                                <label id="nova-target-ai-topic-wrap" class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Topic</span>
+                                    <input id="nova-target-ai-topic" oninput="novaTargetAiMarkTopicEdited()" maxlength="160" placeholder="Uses selected topic by default" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                </label>
+                                <label id="nova-target-ai-lesson-wrap" class="hidden block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Saved Lesson</span>
+                                    <select id="nova-target-ai-lesson" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                        <option value="">Select an existing lesson</option>
+                                    </select>
+                                </label>
+                                <label id="nova-target-ai-pdf-wrap" class="hidden block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Reference PDF</span>
+                                    <input id="nova-target-ai-pdf" type="file" accept=".pdf,application/pdf" class="w-full text-[11px] font-bold text-slate-600 file:mr-1 file:px-2 file:py-1.5 file:rounded-md file:border-0 file:bg-violet-100 file:text-violet-700 file:font-black">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Optional Focus</span>
+                                    <input id="nova-target-ai-focus" maxlength="160" placeholder="e.g. animal habitats only" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs outline-none focus:border-violet-500">
+                                </label>
+                            </div>
+                            <p id="nova-target-ai-status" class="text-[11px] font-bold text-slate-600 mt-2" role="status" aria-live="polite">AI fills the category fields as a draft. Review them before clicking Save Targets.</p>
+                            <div id="nova-target-ai-preview" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mt-2"></div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 1<input id="nova-cat-name-0" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-0" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 2<input id="nova-cat-name-1" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-1" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 3<input id="nova-cat-name-2" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-2" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 4<input id="nova-cat-name-3" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-3" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div>
                         </div>
@@ -1671,7 +1720,8 @@
     <script src="js/14_content_management.js"></script>
     <script src="js/15_sense_ai.js?v=game1-topics-v1"></script>
     <script src="js/16_game1_topics.js?v=game1-topics-v1"></script>
-    <script src="js/17_nova_integration.js?v=nova-integration-v3"></script>
-    <script src="js/18_nova_ai.js?v=nova-ai-v3"></script>
+    <script src="js/17_nova_integration.js?v=nova-integration-v4"></script>
+    <script src="js/18_nova_ai.js?v=nova-ai-v4"></script>
+    <script src="js/19_nova_targets_ai.js?v=nova-target-ai-v1"></script>
 </body>
 </html>
