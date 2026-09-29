@@ -1332,8 +1332,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
       </label>
     </div>
 
-    <button class="btn-start" onclick="startFromMenu()">Start Game!</button>
-    <div class="start-audio-note">Tutorial is optional. If enabled, you can still press <strong>Skip Tutorial</strong> anytime and the match will continue.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;">
+      <button class="btn-start" onclick="startFromMenu()">Start Game!</button>
+      <button type="button" onclick="testNovaVoice()" style="padding:12px 18px;border-radius:16px;border:2px solid rgba(255,255,255,.24);background:rgba(255,255,255,.10);color:white;font-weight:900;cursor:pointer;">🔊 Test Ms. Nova Voice</button>
+    </div>
+    <div class="start-audio-note"><strong>Voice is ON by default.</strong> Use <em>Test Ms. Nova Voice</em> before starting if you want to confirm the PC speakers and browser speech are working. Tutorial is optional; if enabled, you can still press <strong>Skip Tutorial</strong> anytime.</div>
   </div>
 
 
@@ -3369,6 +3372,18 @@ function onStartVoiceOptionChanged(){
   updateStartOptionStates();
 }
 
+function testNovaVoice(){
+  unlockGameAudio();
+  const voice = document.getElementById('start-voice-checkbox');
+  if (voice) voice.checked = true;
+  NovaVoice.setMuted(false);
+  updateStartOptionStates();
+  NovaVoice.stop();
+  setTimeout(() => {
+    NovaVoice.say("Hello scientists! I am Ms. Nova. My voice is working. Turn on the tutorial if you want me to guide you before the game.");
+  }, 80);
+}
+
 function startFromMenu(){
   if (SIKLAB_EMBEDDED_MODE && !SIKLAB_CONFIG_READY) {
     console.warn('[SikLab Nova] Waiting for dashboard configuration.');
@@ -3384,7 +3399,10 @@ function startFromMenu(){
 
   if (runTutorial) {
     document.getElementById('start-overlay').style.display='none';
-    startTutorial();
+    // Keep this first line directly connected to the Start button click so
+    // browsers are less likely to suppress speech in an embedded game.
+    NovaVoice.say("Welcome scientists! I am Ms. Nova. Let's practice the controls before the match begins.");
+    setTimeout(() => startTutorial(), 180);
   } else {
     startCountdown();
   }
