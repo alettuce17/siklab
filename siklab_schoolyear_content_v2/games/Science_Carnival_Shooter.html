@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Science Carnival Shooter</title>
-<meta name="siklab-build" content="science-carnival-v5-keyboard-fix-1">
+<meta name="siklab-build" content="science-carnival-v5-center-voice-fix-1">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -151,7 +151,7 @@ body.hide-keyboard-hints .controls-grid,
 body.hide-keyboard-hints .ls-joy-hint{display:none !important;}
 
 /* ── EMOJI TARGETS ── */
-.emoji-target{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:default;transition:opacity .35s ease;}
+.emoji-target{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:default;transition:opacity .35s ease;transform:translateX(-50%);transform-origin:top center;}
 @keyframes blink-warn{0%,100%{opacity:1}50%{opacity:0.12}}
 .emoji-target.blinking{animation:blink-warn .55s ease-in-out infinite;}
 .emoji-target .eface{
@@ -3257,7 +3257,7 @@ function spawnEmoji(player){
   el.className='emoji-target';
   el.innerHTML=`<span class="eface">${item.emoji}</span><span class="e-label">${item.label}</span>`;
   el.style.top=(y-22)+'px';
-  el.style.left=(startX-22)+'px';
+  el.style.left=startX+'px';
   el.style.opacity='0';   // start invisible — fade in
   halfEl.appendChild(el);
 
@@ -3330,7 +3330,7 @@ function gameLoop(ts){
     const now=performance.now();
     emojiObjs[p].forEach(obj=>{
       obj.x+=obj.dir*obj.speed*dt;
-      obj.el.style.left=(obj.x-22)+'px';
+      obj.el.style.left=obj.x+'px';
 
       // Off-screen — remove immediately
       if((obj.dir<0&&obj.x<-100)||(obj.dir>0&&obj.x>W+100)){
@@ -3725,8 +3725,8 @@ function spawnTutTarget(player, cat, emoji, label) {
   const el = document.createElement('div');
   el.className = 'emoji-target tut-target';
   el.innerHTML = `<span class="eface">${emoji}</span><span class="e-label">${label}</span>`;
-  el.style.top = (y-18)+'px';
-  el.style.left = (x-18)+'px';
+  el.style.top = (y-22)+'px';
+  el.style.left = x+'px';
   halfEl.appendChild(el);
 
   const obj = { el, emoji, cat, x, y, dir:0, speed:0, dead:false, tutTarget:true };
@@ -3805,7 +3805,7 @@ function renderTutDots() {
   }
 }
 
-function setTutContent(stepLabel, title, desc, task, showKeys, arrowAnchor) {
+function setTutContent(stepLabel, title, desc, task, showKeys, arrowAnchor, voiceOnEnd) {
   document.getElementById('tut-step-label').textContent = stepLabel;
   document.getElementById('tut-title').textContent = title;
   document.getElementById('tut-desc').textContent = desc;
@@ -3820,7 +3820,7 @@ function setTutContent(stepLabel, title, desc, task, showKeys, arrowAnchor) {
   });
   // ── Ms. Nova speaks the tutorial step description ──
   // Small delay so speech starts after visual transition
-  setTimeout(() => { NovaVoice.say(desc); }, 300);
+  setTimeout(() => { NovaVoice.say(desc, { interrupt: false, onEnd: voiceOnEnd }); }, 300);
 }
 
 // ── STEP DEFINITIONS ──
@@ -3835,13 +3835,23 @@ function tutGoStep(n) {
 
     // ── STEP 0: Welcome ──────────────────────────────
     case 0:
-      setTutContent(
-        'Welcome!', '🎪 Tutorial',
-        `Before the game starts, let's practice the controls together. Both players will be guided step by step!`,
-        '⏳ Get ready…',
-        false, ['center-mid','bottom']
-      );
-      setTimeout(()=>{ if(tutStep===0) tutGoStep(1); }, 2500);
+      {
+        let advanced = false;
+        const advanceWelcome = () => {
+          if (advanced || tutStep !== 0) return;
+          advanced = true;
+          tutGoStep(1);
+        };
+        setTutContent(
+          'Welcome!', '🎪 Tutorial',
+          `Before the game starts, let's practice the controls together. Both players will be guided step by step!`,
+          '⏳ Get ready…',
+          false, ['center-mid','bottom'],
+          advanceWelcome
+        );
+        // Safety only: normally speech onend advances the tutorial.
+        setTimeout(advanceWelcome, 12000);
+      }
       break;
 
     // ── STEP 1: P1 Move UP ───────────────────────────
@@ -3924,14 +3934,24 @@ function tutGoStep(n) {
 
     // ── STEP 6: Done ─────────────────────────────────
     case 6:
-      setTutContent(
-        'Ready!', `🌟 You're Ready!`,
-        'Amazing! You know how to move, shoot, and answer questions. Now the real game begins — fill your meter, answer correctly, and be the first to 5 stars!',
-        '🚀 Get ready… game starting!',
-        false, ['center-mid','bottom']
-      );
-      document.getElementById('tut-ring').style.display='none';
-      setTimeout(()=>finishTutorial(), 2200);
+      {
+        let finished = false;
+        const finishAfterVoice = () => {
+          if (finished || tutStep !== 6) return;
+          finished = true;
+          finishTutorial();
+        };
+        setTutContent(
+          'Ready!', `🌟 You're Ready!`,
+          'Amazing! You know how to move, shoot, and answer questions. Now the real game begins — fill your meter, answer correctly, and be the first to 5 stars!',
+          '🚀 Get ready… game starting!',
+          false, ['center-mid','bottom'],
+          finishAfterVoice
+        );
+        document.getElementById('tut-ring').style.display='none';
+        // Safety only: normally speech onend starts the real match.
+        setTimeout(finishAfterVoice, 16000);
+      }
       break;
   }
 }
@@ -4403,6 +4423,8 @@ const NovaVoice = (() => {
   let _queue   = [];          // texts waiting to be spoken
   let _cache   = {};          // text → base64 blob URL  (avoids re-fetching identical lines)
   let _currentAudio = null;   // the <audio> element currently playing
+  let _currentUtterance = null;
+  let _speechToken = 0;
 
   // ── helpers ──
   function _clean(text) {
@@ -4434,26 +4456,39 @@ const NovaVoice = (() => {
     else     iEl.textContent = _muted ? '🔇' : '🔊';
   }
 
-  // ── fallback: browser TTS if EL fails ──
-  function _browserFallback(text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+  // ── fallback: browser TTS with reliable completion tracking ──
+  function _browserFallback(text, onDone) {
+    if (!window.speechSynthesis) { if (onDone) onDone(); return; }
+    const token = ++_speechToken;
     const utt = new SpeechSynthesisUtterance(text);
+    _currentUtterance = utt;
     utt.pitch = 1.1; utt.rate = 1.0; utt.volume = 0.9;
     const voices = window.speechSynthesis.getVoices();
     const pick = voices.find(v => v.lang.startsWith('en') && /female|samantha|karen|zira|aria/i.test(v.name))
               || voices.find(v => v.lang.startsWith('en'))
               || voices[0];
     if (pick) utt.voice = pick;
+
+    let completed = false;
+    const finish = () => {
+      if (completed || token !== _speechToken) return;
+      completed = true;
+      _currentUtterance = null;
+      if (onDone) onDone();
+    };
+    utt.onend = finish;
+    utt.onerror = finish;
     window.speechSynthesis.speak(utt);
   }
 
-  // ── core: fetch from ElevenLabs and play ──
-  async function _fetchAndPlay(text) {
-    // Secure integrated build: do not call paid voice APIs from browser code.
+  // ── secure browser voice playback ──
+  async function _fetchAndPlay(entry) {
     _showSpinner(false);
-    _browserFallback(text);
-    _busy = false;
+    _browserFallback(entry.text, () => {
+      try { if (typeof entry.onEnd === 'function') entry.onEnd(); } catch(e) { console.warn('[NovaVoice] onEnd error:', e); }
+      _busy = false;
+      _drainQueue();
+    });
   }
 
   function _playUrl(url) {
@@ -4480,6 +4515,8 @@ const NovaVoice = (() => {
       _currentAudio.src = '';
       _currentAudio = null;
     }
+    _speechToken++;
+    _currentUtterance = null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
   }
 
@@ -4492,19 +4529,28 @@ const NovaVoice = (() => {
 
   // ── public API ──
   return {
-    say(text) {
+    say(text, options = {}) {
       if (_muted) return;
       const clean = _clean(text);
       if (!clean) return;
-      // If already speaking, replace queue with this new line
-      // (game context changes fast; old lines become stale)
-      _queue = [clean];
-      if (!_busy) _drainQueue();
-      else {
-        // Stop current and play new one immediately
+      const entry = { text: clean, onEnd: options.onEnd };
+      const interrupt = options.interrupt !== false;
+
+      if (!_busy) {
+        _queue = [entry];
+        _drainQueue();
+        return;
+      }
+
+      if (interrupt) {
+        // Contextual game lines may replace stale speech.
+        _queue = [entry];
         _stopCurrent();
         _busy = false;
         _drainQueue();
+      } else {
+        // Tutorial lines finish naturally instead of cutting one another off.
+        _queue.push(entry);
       }
     },
 
