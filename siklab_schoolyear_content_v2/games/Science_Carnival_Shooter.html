@@ -930,6 +930,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
 .splash-hint{font-size:10px;color:rgba(255,255,255,.18);letter-spacing:1.5px;}
 @keyframes splash-fade-out{to{opacity:0;pointer-events:none;}}
 .splash-hiding{animation:splash-fade-out .5s ease forwards;}
+
+
+/* ── V5 START OPTIONS / AUDIO ── */
+.start-options-card{
+  width:min(430px,88vw);display:flex;flex-direction:column;gap:8px;
+  padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 28px rgba(0,0,0,.14);
+}
+.start-option-row{
+  display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
+  padding:7px 8px;border-radius:10px;transition:background .16s ease;
+}
+.start-option-row:hover{background:rgba(255,255,255,.055)}
+.start-option-row input{width:18px;height:18px;accent-color:#f5c842;cursor:pointer;flex:0 0 auto;}
+.start-option-copy{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;}
+.start-option-title{font-size:11px;font-weight:900;color:#fff;letter-spacing:.1px;}
+.start-option-sub{font-size:9px;line-height:1.35;color:rgba(255,255,255,.48);font-weight:650;}
+.start-option-state{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.42);}
+.start-option-row:has(input:checked) .start-option-state{color:#7ef7a0;}
+.start-audio-note{font-size:9px;color:rgba(255,255,255,.4);text-align:center;line-height:1.45;max-width:420px;}
+
 </style>
 </head>
 <body>
@@ -1291,7 +1312,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
     </div>
     <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;max-width:320px;line-height:1.7;">Fill your <strong style="color:var(--gold)">Question Meter</strong> by shooting 5 correct targets → Answer a question → Score a point!<br><strong style="color:var(--green)">First to 5 question points wins! 🏆</strong></div>
     <div id="start-diff-badge" style="font-size:13px;font-weight:800;padding:6px 18px;border-radius:20px;background:rgba(245,200,66,.15);border:2px solid rgba(245,200,66,.4);color:var(--gold);">🟡 Medium Difficulty</div>
-    <button class="btn-start" onclick="startCountdown()">Start Game!</button>
+
+    <div class="start-options-card">
+      <label class="start-option-row" for="start-tutorial-checkbox">
+        <input id="start-tutorial-checkbox" type="checkbox" onchange="updateStartOptionStates()">
+        <span class="start-option-copy">
+          <span class="start-option-title">🎓 Run Ms. Nova Tutorial</span>
+          <span class="start-option-sub">Practice movement, shooting, and answer buttons before this match. Off by default.</span>
+        </span>
+        <span class="start-option-state" id="start-tutorial-state">Off</span>
+      </label>
+      <label class="start-option-row" for="start-voice-checkbox">
+        <input id="start-voice-checkbox" type="checkbox" checked onchange="onStartVoiceOptionChanged()">
+        <span class="start-option-copy">
+          <span class="start-option-title">🔊 Ms. Nova Voice</span>
+          <span class="start-option-sub">Read tutorial instructions and in-game guidance aloud.</span>
+        </span>
+        <span class="start-option-state" id="start-voice-state">On</span>
+      </label>
+    </div>
+
+    <button class="btn-start" onclick="startFromMenu()">Start Game!</button>
+    <div class="start-audio-note">Tutorial is optional. If enabled, you can still press <strong>Skip Tutorial</strong> anytime and the match will continue.</div>
   </div>
 
 
@@ -3302,6 +3344,53 @@ function tickTimer(){
 }
 
 /* ════════════════════════════════════════════════════
+   V5 START MENU OPTIONS
+   ════════════════════════════════════════════════════ */
+let tutorialContinueToMatch = false;
+
+function updateStartOptionStates(){
+  const tut = document.getElementById('start-tutorial-checkbox');
+  const voice = document.getElementById('start-voice-checkbox');
+  const tutState = document.getElementById('start-tutorial-state');
+  const voiceState = document.getElementById('start-voice-state');
+  if (tutState) tutState.textContent = tut && tut.checked ? 'On' : 'Off';
+  if (voiceState) voiceState.textContent = voice && voice.checked ? 'On' : 'Off';
+}
+
+function resetTutorialChoice(){
+  const tut = document.getElementById('start-tutorial-checkbox');
+  if (tut) tut.checked = false;
+  updateStartOptionStates();
+}
+
+function onStartVoiceOptionChanged(){
+  const voice = document.getElementById('start-voice-checkbox');
+  NovaVoice.setMuted(!(voice && voice.checked));
+  updateStartOptionStates();
+}
+
+function startFromMenu(){
+  if (SIKLAB_EMBEDDED_MODE && !SIKLAB_CONFIG_READY) {
+    console.warn('[SikLab Nova] Waiting for dashboard configuration.');
+    return;
+  }
+
+  unlockGameAudio();
+  const voice = document.getElementById('start-voice-checkbox');
+  NovaVoice.setMuted(!(voice && voice.checked));
+
+  const runTutorial = !!document.getElementById('start-tutorial-checkbox')?.checked;
+  tutorialContinueToMatch = runTutorial;
+
+  if (runTutorial) {
+    document.getElementById('start-overlay').style.display='none';
+    startTutorial();
+  } else {
+    startCountdown();
+  }
+}
+
+/* ════════════════════════════════════════════════════
    COUNTDOWN
    ════════════════════════════════════════════════════ */
 function startCountdown(){
@@ -3398,7 +3487,9 @@ function endGame(){
 
 function resetGame(){
   document.getElementById('end-overlay').style.display='none';
-  startCountdown();
+  resetTutorialChoice();
+  document.getElementById('start-overlay').style.display='flex';
+  playMusic('music-menu', 0.45);
 }
 
 function goToSetup(){
@@ -3497,13 +3588,10 @@ function finishLesson(){
     rafId=requestAnimationFrame(gameLoop);gameTimer=setInterval(tickTimer,1000);
     return;
   }
-  // First time: run interactive tutorial. Subsequent times: go to start screen.
-  if(!gameStartedOnce){
-    startTutorial();
-  } else {
-    document.getElementById('start-overlay').style.display='flex';
-    playMusic('music-menu', 0.45); // ← menu music when returning to start screen
-  }
+  // V5: tutorial is always an explicit choice on the start screen.
+  resetTutorialChoice();
+  document.getElementById('start-overlay').style.display='flex';
+  playMusic('music-menu', 0.45);
 }
 function openLesson(){
   if(gameActive){gameActive=false;cancelAnimationFrame(rafId);clearInterval(gameTimer);clearTimeout(spawnTimers[0]);clearTimeout(spawnTimers[1]);lessonReturnToGame=true;}
@@ -4120,9 +4208,20 @@ function finishTutorial() {
   document.getElementById('question-overlay-1').style.display='none';
   document.getElementById('question-overlay-2').style.display='none';
   document.getElementById('tut-ring').style.display='none';
-  // Go to start screen
+  NovaVoice.stop();
+
+  // V5: when tutorial was requested from the start menu, continue directly
+  // into the countdown. Skip Tutorial follows the same path.
+  if (tutorialContinueToMatch) {
+    tutorialContinueToMatch = false;
+    resetTutorialChoice();
+    stopAllMusic();
+    setTimeout(() => startCountdown(), 220);
+    return;
+  }
+
   document.getElementById('start-overlay').style.display='flex';
-  playMusic('music-menu', 0.45); // ← menu background music
+  playMusic('music-menu', 0.45);
 }
 
 // ── Patch tryShoot to hook tutorial ──
@@ -4269,6 +4368,9 @@ const NovaVoice = (() => {
     if (btn)  btn.classList.toggle('muted', muted);
     if (iEl)  iEl.textContent  = icon;
     if (lEl)  lEl.textContent  = label;
+    const startVoice = document.getElementById('start-voice-checkbox');
+    if (startVoice) startVoice.checked = !muted;
+    if (typeof updateStartOptionStates === 'function') updateStartOptionStates();
   }
 
   function _showSpinner(on) {
@@ -4361,20 +4463,35 @@ const NovaVoice = (() => {
 
     get muted() { return _muted; },
 
-    toggleMute() {
-      _muted = !_muted;
+    setMuted(muted, persist = true) {
+      _muted = !!muted;
       if (_muted) { this.stop(); _updateBtn('🔇', 'Voice Off', true); }
-      else         _updateBtn('🔊', 'Ms. Nova', false);
-      try { localStorage.setItem('nova_voice_muted', _muted ? '1' : '0'); } catch(e){}
+      else {
+        _updateBtn('🔊', 'Ms. Nova', false);
+        if (window.speechSynthesis) window.speechSynthesis.resume();
+      }
+      if (persist) {
+        try { localStorage.setItem('nova_voice_muted', _muted ? '1' : '0'); } catch(e){}
+      }
+    },
+
+    toggleMute() {
+      this.setMuted(!_muted);
+    },
+
+    unlock() {
+      try {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.resume();
+          window.speechSynthesis.getVoices();
+        }
+      } catch(e){}
     },
 
     loadPrefs() {
-      try {
-        if (localStorage.getItem('nova_voice_muted') === '1') {
-          _muted = true;
-          _updateBtn('🔇', 'Voice Off', true);
-        }
-      } catch(e){}
+      let muted = false;
+      try { muted = localStorage.getItem('nova_voice_muted') === '1'; } catch(e){}
+      this.setMuted(muted, false);
     },
   };
 })();
@@ -4385,6 +4502,8 @@ function toggleNovaVoice() { NovaVoice.toggleMute(); }
    SPLASH SCREEN
    ════════════════════════════════════════════════════ */
 function dismissSplash() {
+  unlockGameAudio();
+  NovaVoice.unlock();
   const splash = document.getElementById('splash-screen');
   splash.classList.add('splash-hiding');
   playMusic('music-menu', 0.45);
@@ -4397,9 +4516,92 @@ function dismissSplash() {
 const _musicMenu     = () => document.getElementById('music-menu');
 const _musicTutorial = () => document.getElementById('music-tutorial');
 
+// V5 built-in fallback audio. The original game references MP3 files next to the
+// HTML. When those files are unavailable, this small Web Audio synth keeps the
+// game from becoming completely silent.
+let _audioCtx = null;
+let _fallbackMusicTimer = null;
+let _fallbackMusicTrack = null;
+let _fallbackStep = 0;
+
+function unlockGameAudio(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC && !_audioCtx) _audioCtx = new AC();
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch(e) {}
+  try { NovaVoice.unlock(); } catch(e) {}
+}
+
+function _synthTone(freq=440, duration=.12, volume=.08, type='sine', delay=0){
+  try {
+    unlockGameAudio();
+    if (!_audioCtx) return;
+    const t = _audioCtx.currentTime + Math.max(0, delay);
+    const osc = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.001, volume), t + .015);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
+    osc.connect(gain); gain.connect(_audioCtx.destination);
+    osc.start(t); osc.stop(t + duration + .03);
+  } catch(e) {}
+}
+
+function _fallbackPattern(trackId){
+  const patterns = {
+    'music-menu':[262,330,392,330,294,349,440,349],
+    'music-tutorial':[392,440,523,440,349,392,494,392],
+    'music-battle-1':[220,330,247,370,262,392,294,440],
+    'music-battle-2':[294,440,330,494,349,523,392,587]
+  };
+  return patterns[trackId] || patterns['music-menu'];
+}
+
+function startFallbackMusic(trackId, volume=.16){
+  if (_fallbackMusicTimer && _fallbackMusicTrack === trackId) return;
+  stopFallbackMusic();
+  _fallbackMusicTrack = trackId;
+  _fallbackStep = 0;
+  const pattern = _fallbackPattern(trackId);
+  const beat = trackId.startsWith('music-battle') ? 220 : (trackId === 'music-tutorial' ? 330 : 390);
+  const playStep = () => {
+    if (_fallbackMusicTrack !== trackId) return;
+    const f = pattern[_fallbackStep++ % pattern.length];
+    _synthTone(f, .12, Math.min(.055, volume*.16), trackId.startsWith('music-battle') ? 'square' : 'triangle');
+    if (_fallbackStep % 2 === 1) _synthTone(f/2, .08, Math.min(.03, volume*.1), 'sine', .04);
+  };
+  playStep();
+  _fallbackMusicTimer = setInterval(playStep, beat);
+}
+
+function stopFallbackMusic(){
+  if (_fallbackMusicTimer) clearInterval(_fallbackMusicTimer);
+  _fallbackMusicTimer = null;
+  _fallbackMusicTrack = null;
+  _fallbackStep = 0;
+}
+
+function _fallbackSFX(id, volume=.7){
+  const v = Math.min(.14, Math.max(.04, volume*.12));
+  if (id === 'sfx-countdown') {
+    _synthTone(660,.12,v,'square');
+    _synthTone(660,.12,v,'square',.22);
+    _synthTone(880,.22,v,'square',.44);
+  } else if (id === 'sfx-5correct') {
+    _synthTone(523,.10,v,'triangle');
+    _synthTone(659,.10,v,'triangle',.11);
+    _synthTone(784,.20,v,'triangle',.22);
+  } else {
+    _synthTone(520,.12,v,'triangle');
+  }
+}
+
 function playMusic(trackId, volume) {
+  unlockGameAudio();
   const audio = document.getElementById(trackId);
-  if (!audio) return;
   // Stop all other tracks first
   ['music-menu','music-tutorial','music-battle-1','music-battle-2'].forEach(id => {
     if (id !== trackId) {
@@ -4407,9 +4609,20 @@ function playMusic(trackId, volume) {
       if (other) { other.pause(); other.currentTime = 0; }
     }
   });
+
+  if (!audio) { startFallbackMusic(trackId, volume); return; }
   audio.volume = volume !== undefined ? volume : 0.45;
   audio.currentTime = 0;
-  audio.play().catch(() => {});
+  audio.onplaying = () => stopFallbackMusic();
+  audio.onerror = () => startFallbackMusic(trackId, audio.volume);
+  const promise = audio.play();
+  if (promise && promise.catch) promise.catch(() => startFallbackMusic(trackId, audio.volume));
+  // Missing relative MP3 files can report their failure asynchronously.
+  setTimeout(() => {
+    if (audio.paused && (audio.networkState === HTMLMediaElement.NETWORK_NO_SOURCE || !audio.currentSrc)) {
+      startFallbackMusic(trackId, audio.volume);
+    }
+  }, 350);
 }
 
 function stopAllMusic() {
@@ -4417,6 +4630,7 @@ function stopAllMusic() {
     const audio = document.getElementById(id);
     if (audio) { audio.pause(); audio.currentTime = 0; }
   });
+  stopFallbackMusic();
   // Remove alternating battle track listeners
   const b1 = document.getElementById('music-battle-1');
   const b2 = document.getElementById('music-battle-2');
@@ -4425,51 +4639,67 @@ function stopAllMusic() {
 }
 
 function playSFX(id, volume) {
+  unlockGameAudio();
   const audio = document.getElementById(id);
-  if (!audio) return;
+  if (!audio) { _fallbackSFX(id, volume); return; }
   audio.currentTime = 0;
   audio.volume = volume !== undefined ? volume : 0.7;
-  audio.play().catch(() => {});
+  audio.onerror = () => _fallbackSFX(id, audio.volume);
+  const promise = audio.play();
+  if (promise && promise.catch) promise.catch(() => _fallbackSFX(id, audio.volume));
 }
 
 function playBattleMusic() {
+  unlockGameAudio();
   const b1 = document.getElementById('music-battle-1');
   const b2 = document.getElementById('music-battle-2');
-  if (!b1 || !b2) return;
+  if (!b1 || !b2) { startFallbackMusic('music-battle-1', .5); return; }
 
   // Stop all other music first
   ['music-menu','music-tutorial'].forEach(id => {
     const other = document.getElementById(id);
     if (other) { other.pause(); other.currentTime = 0; }
   });
+  stopFallbackMusic();
+
+  const fallback = () => startFallbackMusic('music-battle-1', .5);
+  b1.onerror = fallback;
+  b2.onerror = fallback;
 
   // Wire up alternating: when track 1 ends → play track 2, and vice versa
   b1.onended = () => {
     b1.currentTime = 0;
     b2.currentTime = 0;
     b2.volume = 0.5;
-    b2.play().catch(() => {});
+    const p = b2.play();
+    if (p && p.catch) p.catch(fallback);
   };
   b2.onended = () => {
     b2.currentTime = 0;
     b1.currentTime = 0;
     b1.volume = 0.5;
-    b1.play().catch(() => {});
+    const p = b1.play();
+    if (p && p.catch) p.catch(fallback);
   };
 
-  // Start with track 1
   b1.volume = 0.5;
   b1.currentTime = 0;
   b2.pause(); b2.currentTime = 0;
-  b1.play().catch(() => {});
+  const p = b1.play();
+  if (p && p.catch) p.catch(fallback);
+  setTimeout(() => {
+    if (b1.paused && (b1.networkState === HTMLMediaElement.NETWORK_NO_SOURCE || !b1.currentSrc)) fallback();
+  }, 350);
 }
 
 /* ════════════════════════════════════════════════════
    BOOT
    ════════════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded',()=>{
-  // Load Ms. Nova voice preferences
+  // Load Ms. Nova voice preferences and start-menu switches.
   NovaVoice.loadPrefs();
+  resetTutorialChoice();
+  updateStartOptionStates();
 
   // Load saved API key
   const savedKey=localStorage.getItem('siklab_gemini_key');
