@@ -435,6 +435,7 @@ function qbSetPanel(panel = qbActivePanel) {
 function setNovaQuestionFormMode() {
     const module = document.getElementById('cq-module')?.value || 'W1';
     const isNova = module === 'NOVA';
+    const isTrueFalse = isNova && document.getElementById('cq-nova-question-type')?.value === 'tf';
     const isGame1 = module === 'W1';
     const isTug = module === 'TUG';
 
@@ -442,12 +443,13 @@ function setNovaQuestionFormMode() {
     document.getElementById('cq-nova-topic-wrap')?.classList.toggle('hidden', !isNova);
     document.getElementById('cq-tug-topic-wrap')?.classList.toggle('hidden', !isTug);
     document.getElementById('cq-difficulty-wrap')?.classList.toggle('hidden', !isNova);
+    document.getElementById('cq-nova-question-type-wrap')?.classList.toggle('hidden', !isNova);
     document.getElementById('cq-image-section')?.classList.toggle('hidden', !isGame1);
     document.getElementById('cq-answer-wrap')?.classList.toggle('hidden', !(isGame1 || isNova || isTug));
 
     const optionWrap = document.getElementById('cq-options-wrap');
     const option5 = document.getElementById('cq-option-field-4');
-    if (optionWrap) optionWrap.classList.toggle('hidden', !(isGame1 || isNova || isTug));
+    if (optionWrap) optionWrap.classList.toggle('hidden', isTrueFalse || !(isGame1 || isNova || isTug));
     if (option5) option5.classList.remove('hidden');
 
     const labels = ['A • Red','B • Green','C • White','D • Blue','E • Yellow'];
@@ -463,13 +465,15 @@ function setNovaQuestionFormMode() {
         ? 'Science Carnival uses A–E while a question is open. Red A returns to Shoot/Grab during the shooting phase.'
         : 'Picture Challenge uses five controller colors: A red, B green, C white, D blue, E yellow.';
     const answerLabel = document.getElementById('cq-answer-label');
-    if (answerLabel) answerLabel.textContent = 'Correct color / letter (A–E)';
+    if (answerLabel) answerLabel.textContent = isTrueFalse ? 'Correct answer (A = True, B = False)' : 'Correct color / letter (A–E)';
 
     const answer = document.getElementById('cq-answer');
     if (answer) {
-        const answerLabels = ['A • Red','B • Green','C • White','D • Blue','E • Yellow'];
+        const answerLabels = isTrueFalse ? ['A • Red — True','B • Green — False'] : ['A • Red','B • Green','C • White','D • Blue','E • Yellow'];
         answer.replaceChildren(...answerLabels.map((text, i) => new Option(text, String(i))));
     }
+    const prompt = document.getElementById('cq-prompt');
+    if (prompt) prompt.placeholder = isTrueFalse ? 'e.g. Plants need sunlight to grow.' : 'e.g. Which part of the plant absorbs water?';
 }
 
 // Overrides Game 1's earlier handler because this file is loaded after js/16_game1_topics.js.
@@ -530,7 +534,7 @@ async function getNovaLaunchPayload() {
             .eq('game_module', 'NOVA')
             .eq('topic_id', topicId)
             .eq('review_status', 'approved')
-            .eq('question_type', 'mc')
+            .in('question_type', ['mc', 'tf'])
             .eq('difficulty', difficulty)
             .order('question_id', { ascending: true }),
         db.from('game_settings')
@@ -543,7 +547,8 @@ async function getNovaLaunchPayload() {
     if (questionError) throw questionError;
     if (settingError) throw settingError;
 
-    const validQuestions = (questions || []).filter(q => Array.isArray(q.answer_options) && q.answer_options.length === 5 && Number(q.correct_ans) >= 0 && Number(q.correct_ans) <= 4);
+    const validQuestions = (questions || []).filter(q => q.question_type === 'mc' && Array.isArray(q.answer_options) && q.answer_options.length === 5 && Number(q.correct_ans) >= 0 && Number(q.correct_ans) <= 4);
+    const validTrueFalse = (questions || []).filter(q => q.question_type === 'tf' && String(q.prompt || '').trim() && [0, 1].includes(Number(q.correct_ans)));
     if (!validQuestions.length) throw new Error(`No approved ${difficulty} questions are saved in “${topic.topic_name}”.`);
 
     const gameConfig = topic.game_config && typeof topic.game_config === 'object' ? topic.game_config : {};
@@ -558,6 +563,7 @@ async function getNovaLaunchPayload() {
         topic: { id: Number(topic.topic_id), name: topic.topic_name, description: topic.description || '' },
         difficulty,
         questions: validQuestions,
+        trueFalseQuestions: validTrueFalse,
         gameConfig,
         settings: Object.assign({ questionTimer: 15, meterGoal: 5, pointsToWin: 5, roundTimer: 99 }, settingRow?.settings_json || {})
     };
@@ -574,7 +580,7 @@ async function launchNovaIntoIframe(gameIframe, gamePath) {
             }
             gameIframe.onload = null;
         };
-        gameIframe.src = `${gamePath}${gamePath.includes('?') ? '&' : '?'}v=category-controls-v4`;
+        gameIframe.src = `${gamePath}${gamePath.includes('?') ? '&' : '?'}v=powerups-tf-sort-v5`;
         return payload;
     } catch (error) {
         gameIframe.onload = null;

@@ -165,8 +165,9 @@ function renderQuestionsList() {
                     <p class="font-bold text-slate-800 text-sm">${escapeHtml(q.prompt)}</p>
                     <div class="flex gap-2 mt-1 flex-wrap">
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded inline-block ${colors[q.ans] || 'text-slate-600 bg-slate-100'}">
-                            ${escapeHtml(`${buttonNames[q.ans] || 'Answer'}: ${(q.options || [])[q.ans] || ''}`)}
+                            ${q.questionType === 'tf' ? escapeHtml(`${buttonNames[q.ans] || 'Answer'}: ${q.ans === 0 ? 'True' : 'False'}`) : escapeHtml(`${buttonNames[q.ans] || 'Answer'}: ${(q.options || [])[q.ans] || ''}`)}
                         </span>
+                        ${isNova ? `<span class="text-[10px] font-black px-2 py-0.5 rounded bg-violet-100 text-violet-800">${q.questionType === 'tf' ? 'True or False' : 'Five-choice'}</span>` : ''}
                         ${isTug && q.options.length !== 5 ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Add answer E before playing</span>` : ''}
                         ${isNova || isTug ? `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-violet-50 text-violet-700">${escapeHtml(q.difficulty)}</span>` : ''}
                         <span class="text-[10px] font-bold text-slate-500">${escapeHtml(questionTopicDisplay(q, module))}</span>
@@ -190,6 +191,11 @@ function editCustomQuestion(index) {
 
     document.getElementById('cq-edit-id').value = q.id || '';
     document.getElementById('cq-prompt').value = q.prompt || '';
+    if (module === 'NOVA') {
+        const type = document.getElementById('cq-nova-question-type');
+        if (type) type.value = q.questionType === 'tf' ? 'tf' : 'mc';
+        if (typeof setNovaQuestionFormMode === 'function') setNovaQuestionFormMode();
+    }
     document.getElementById('cq-answer').value = String(q.ans);
     for (let n = 0; n < 5; n++) {
         const el = document.getElementById(`cq-option-${n}`);
@@ -233,6 +239,9 @@ function editCustomQuestion(index) {
 }
 
 function cancelEdit() {
+    const novaType = document.getElementById('cq-nova-question-type');
+    if (novaType) novaType.value = 'mc';
+    if (typeof setNovaQuestionFormMode === 'function') setNovaQuestionFormMode();
     ['cq-edit-id','cq-prompt','cq-existing-image','cq-explanation'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
@@ -268,7 +277,8 @@ async function addCustomQuestion(event) {
         const existingImage = document.getElementById('cq-existing-image')?.value || '';
         const fileInput = document.getElementById('cq-image-file');
         const rawOptions = Array.from({ length: 5 }, (_, n) => document.getElementById(`cq-option-${n}`)?.value.trim().slice(0, 80) || '');
-        const neededChoices = ['TUG','NOVA','W1'].includes(module) ? 5 : 0;
+        const questionType = module === 'NOVA' && document.getElementById('cq-nova-question-type')?.value === 'tf' ? 'tf' : 'mc';
+        const neededChoices = questionType === 'tf' ? 0 : ['TUG','NOVA','W1'].includes(module) ? 5 : 0;
         const options = neededChoices ? rawOptions.slice(0, neededChoices) : [];
         const topic = selectedTopicForModule(module);
 
@@ -281,6 +291,7 @@ async function addCustomQuestion(event) {
             }
             if (!Number.isInteger(ans) || ans < 0 || ans >= neededChoices) return showErrorToast('Choose a valid correct answer.');
         }
+        if (questionType === 'tf' && ![0,1].includes(ans)) return showErrorToast('Choose True or False as the correct answer.');
 
         let finalImageUrl = module === 'W1' ? existingImage : '';
         let uploaded = null;
@@ -306,7 +317,7 @@ async function addCustomQuestion(event) {
                 explanation: document.getElementById('cq-explanation')?.value.trim().slice(0, 500) || null,
                 review_status: 'approved',
                 difficulty: module === 'NOVA' ? (document.getElementById('cq-difficulty')?.value || 'medium') : 'medium',
-                question_type: 'mc'
+                question_type: questionType
             };
 
             const oldQuestion = editId ? customQuestions.find(q => Number(q.id) === Number(editId)) : null;

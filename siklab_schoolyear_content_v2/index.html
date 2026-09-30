@@ -669,6 +669,7 @@
                                     </label>
                                     <div class="self-end"><p id="launch-nova-topic-count" class="text-[11px] text-violet-100/90 font-bold">Choose a category before launching</p></div>
                                 </div>
+                                <p class="text-[11px] text-violet-100/90 mt-2">Rounds rotate through five-choice, saved True or False, and category sorting.</p>
                                 <div class="flex gap-2 mt-2">
                                     <button type="button" onclick="openNovaQuestionBank()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Manage Categories & Questions</button>
                                     <button type="button" onclick="openSenseSettings()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Game Settings</button>
@@ -1107,6 +1108,14 @@
                                 <select id="cq-difficulty" class="w-full px-4 py-2 rounded-xl border-2 border-violet-200 outline-none focus:border-violet-500 font-bold bg-white">
                                     <option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
                                 </select>
+                            </div>
+                            <div id="cq-nova-question-type-wrap" class="hidden">
+                                <label for="cq-nova-question-type" class="block text-sm font-bold text-slate-600 mb-1">Challenge type</label>
+                                <select id="cq-nova-question-type" onchange="setNovaQuestionFormMode()" class="w-full px-4 py-2 rounded-xl border-2 border-violet-200 outline-none focus:border-violet-500 font-bold bg-white">
+                                    <option value="mc">Five-choice question</option>
+                                    <option value="tf">True or False</option>
+                                </select>
+                                <p class="text-xs text-slate-500 mt-1">Sorting uses the target categories configured above. True or False uses A (red) for True and B (green) for False. Add True or False here; AI drafts five-choice questions.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-600 mb-1">Question / Prompt</label>
@@ -1762,7 +1771,7 @@
 
     <script src="security.js"></script>
 
-    <script src="content_manager.js?v=five-buttons-v2"></script>
+    <script src="content_manager.js?v=powerups-tf-sort-v5"></script>
     <script src="settings_manager.js"></script>
 
     <script src="js/00_state.js"></script>
@@ -1783,7 +1792,7 @@
     <script src="js/14_reference_upload.js?v=pptx-v1"></script>
     <script src="js/15_sense_ai.js?v=five-buttons-v2"></script>
     <script src="js/16_game1_topics.js?v=topic-first-v3"></script>
-    <script src="js/17_nova_integration.js?v=category-controls-v4"></script>
+    <script src="js/17_nova_integration.js?v=powerups-tf-sort-v5"></script>
     <script src="js/22_tug_topics.js?v=topic-first-v3"></script>
     <script src="js/20_tug_integration.js?v=five-buttons-v2"></script>
     <script src="js/21_tug_ai.js?v=question-bank-ai-fix-v5"></script>
