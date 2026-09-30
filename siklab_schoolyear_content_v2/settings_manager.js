@@ -15,6 +15,11 @@ const SETTINGS_SCHEMA = {
         { id: 'pointsToWin', label: 'Question Points to Win', type: 'number', default: 5 },
         { id: 'roundTimer', label: 'Match Safety Timer (Sec)', type: 'number', default: 99 }
     ],
+    TUG: [
+        { id: 'pulls', label: 'Pulls to Win (1–15)', type: 'number', default: 5 },
+        { id: 'timeLimit', label: 'Question Timer (5–180 Sec)', type: 'number', default: 20 },
+        { id: 'delay', label: 'Time Between Rounds (0.5–8 Sec)', type: 'number', default: 2 }
+    ],
     W2: [
         { id: 'basePoints', label: 'Base Points', type: 'number', default: 10 },
         { id: 'deduction', label: 'Deduction', type: 'number', default: 2 },
@@ -34,12 +39,14 @@ function settingsYearId() {
 
 function getModuleFromPath(path) {
     const value = String(path || '');
+    if (/tug[-_ ]?of[-_ ]?(war|knowledge)|tug[-_ ]?war/i.test(value)) return 'TUG';
     if (/Science_Carnival_Shooter|science[-_ ]?carnival|nova/i.test(value)) return 'NOVA';
     const match = value.match(/_([Ww]\d+)(?:_|\.html)/);
     return match ? match[1].toUpperCase() : 'DEFAULT';
 }
 
 function settingsModuleLabel(module) {
+    if (module === 'TUG') return 'Tug of Knowledge';
     if (module === 'NOVA') return 'Science Carnival Shooter';
     if (module === 'W1') return 'Picture Challenge';
     return module;

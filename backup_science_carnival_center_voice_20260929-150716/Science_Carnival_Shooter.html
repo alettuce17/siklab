@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Science Carnival Shooter</title>
+<meta name="siklab-build" content="science-carnival-v5-keyboard-fix-1">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -144,6 +145,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
 }
 .half-top .controls-hint{bottom:6px;left:50%;transform:translateX(-50%);}
 .half-bottom .controls-hint{top:6px;left:50%;transform:translateX(-50%);}
+/* V5.1: teacher can hide keyboard-only hints without disabling keyboard input */
+body.hide-keyboard-hints .controls-hint,
+body.hide-keyboard-hints .controls-grid,
+body.hide-keyboard-hints .ls-joy-hint{display:none !important;}
 
 /* ── EMOJI TARGETS ── */
 .emoji-target{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:default;transition:opacity .35s ease;}
@@ -1330,13 +1335,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-fam
         </span>
         <span class="start-option-state" id="start-voice-state">On</span>
       </label>
+      <label class="start-option-row" for="start-keyboard-hints-checkbox">
+        <input id="start-keyboard-hints-checkbox" type="checkbox" checked onchange="onKeyboardHintsOptionChanged()">
+        <span class="start-option-copy">
+          <span class="start-option-title">⌨️ Show Keyboard Hints</span>
+          <span class="start-option-sub">Show WASD, arrow-key, and keyboard answer labels. Turn this off when using the ESP32 controllers.</span>
+        </span>
+        <span class="start-option-state" id="start-keyboard-hints-state">On</span>
+      </label>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;">
-      <button class="btn-start" onclick="startFromMenu()">Start Game!</button>
-      <button type="button" onclick="testNovaVoice()" style="padding:12px 18px;border-radius:16px;border:2px solid rgba(255,255,255,.24);background:rgba(255,255,255,.10);color:white;font-weight:900;cursor:pointer;">🔊 Test Ms. Nova Voice</button>
-    </div>
-    <div class="start-audio-note"><strong>Voice is ON by default.</strong> Use <em>Test Ms. Nova Voice</em> before starting if you want to confirm the PC speakers and browser speech are working. Tutorial is optional; if enabled, you can still press <strong>Skip Tutorial</strong> anytime.</div>
+    <button class="btn-start" onclick="startFromMenu()">Start Game!</button>
+    <div class="start-audio-note">Tutorial is optional. If enabled, you can still press <strong>Skip Tutorial</strong> anytime and the match will continue.</div>
   </div>
 
 
@@ -2402,19 +2412,30 @@ function handleActionDown(player,btnId){BTNS[player][btnId]=true;BTNS_PRESSED_TH
 function handleActionUp(player,btnId){BTNS[player][btnId]=false;}
 function resetPressedThisFrame(){for(let i=0;i<5;i++){BTNS_PRESSED_THIS_FRAME.p1[i]=false;BTNS_PRESSED_THIS_FRAME.p2[i]=false;}}
 
+// V5.1 keyboard fix: e.key becomes uppercase when Shift/Caps Lock is active.
+// Normalize WASD from either e.code or e.key so movement always works.
+function siklabKeyboardKey(e){
+  const codeMap={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d'};
+  if(codeMap[e.code]) return codeMap[e.code];
+  const raw=String(e.key||'');
+  if(/^[wasd]$/i.test(raw)) return raw.toLowerCase();
+  return raw;
+}
+
 window.addEventListener('keydown',e=>{
   // Don't intercept keypresses while the teacher is typing in any text input
   if(e.target && (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
-  if(KEYS.hasOwnProperty(e.key)){
-    KEYS[e.key]=true; e.preventDefault();
+  const key=siklabKeyboardKey(e);
+  if(KEYS.hasOwnProperty(key)){
+    KEYS[key]=true; e.preventDefault();
     // If start screen is showing, shoot keys (1 or 7) start the game
     const startEl=document.getElementById('start-overlay');
     if(startEl&&startEl.style.display!=='none'){
-      if(e.key==='1'||e.key==='7'){ startCountdown(); return; }
+      if(key==='1'||key==='7'){ startCountdown(); return; }
     }
     if(gameActive){
       const map={'1':['p1',0],'2':['p1',1],'3':['p1',2],'4':['p1',3],'5':['p1',4],'7':['p2',0],'8':['p2',1],'9':['p2',2],'0':['p2',3],'-':['p2',4]};
-      if(map[e.key]&&!BTNS[map[e.key][0]][map[e.key][1]]) handleActionDown(map[e.key][0],map[e.key][1]);
+      if(map[key]&&!BTNS[map[key][0]][map[key][1]]) handleActionDown(map[key][0],map[key][1]);
     }
   }
   // Lesson navigation — swallow input, poll loop drives nav
@@ -2422,12 +2443,16 @@ window.addEventListener('keydown',e=>{
   if(lo&&lo.style.display!=='none') return;
 });
 window.addEventListener('keyup',e=>{
-  if(KEYS.hasOwnProperty(e.key)){
-    KEYS[e.key]=false;
+  const key=siklabKeyboardKey(e);
+  if(KEYS.hasOwnProperty(key)){
+    KEYS[key]=false;
     const map={'1':['p1',0],'2':['p1',1],'3':['p1',2],'4':['p1',3],'5':['p1',4],'7':['p2',0],'8':['p2',1],'9':['p2',2],'0':['p2',3],'-':['p2',4]};
-    if(map[e.key]) handleActionUp(map[e.key][0],map[e.key][1]);
+    if(map[key]) handleActionUp(map[key][0],map[key][1]);
   }
 });
+
+// Keep the iframe/window focused after a click so keyboard movement is captured.
+document.addEventListener('pointerdown',()=>{ try{ window.focus(); }catch(_){} });
 // ============================================================
 // ESP32 INPUT
 // Single approved path:
@@ -3354,10 +3379,13 @@ let tutorialContinueToMatch = false;
 function updateStartOptionStates(){
   const tut = document.getElementById('start-tutorial-checkbox');
   const voice = document.getElementById('start-voice-checkbox');
+  const hints = document.getElementById('start-keyboard-hints-checkbox');
   const tutState = document.getElementById('start-tutorial-state');
   const voiceState = document.getElementById('start-voice-state');
+  const hintsState = document.getElementById('start-keyboard-hints-state');
   if (tutState) tutState.textContent = tut && tut.checked ? 'On' : 'Off';
   if (voiceState) voiceState.textContent = voice && voice.checked ? 'On' : 'Off';
+  if (hintsState) hintsState.textContent = hints && hints.checked ? 'On' : 'Off';
 }
 
 function resetTutorialChoice(){
@@ -3372,16 +3400,26 @@ function onStartVoiceOptionChanged(){
   updateStartOptionStates();
 }
 
-function testNovaVoice(){
-  unlockGameAudio();
-  const voice = document.getElementById('start-voice-checkbox');
-  if (voice) voice.checked = true;
-  NovaVoice.setMuted(false);
+function applyKeyboardHintsVisibility(){
+  const hints = document.getElementById('start-keyboard-hints-checkbox');
+  const show = !hints || hints.checked;
+  document.body.classList.toggle('hide-keyboard-hints', !show);
+  try{ localStorage.setItem('siklab_nova_keyboard_hints', show ? '1' : '0'); }catch(_){}
   updateStartOptionStates();
-  NovaVoice.stop();
-  setTimeout(() => {
-    NovaVoice.say("Hello scientists! I am Ms. Nova. My voice is working. Turn on the tutorial if you want me to guide you before the game.");
-  }, 80);
+}
+
+function onKeyboardHintsOptionChanged(){
+  applyKeyboardHintsVisibility();
+}
+
+function restoreKeyboardHintsPreference(){
+  const hints = document.getElementById('start-keyboard-hints-checkbox');
+  if(!hints) return;
+  let saved=null;
+  try{ saved=localStorage.getItem('siklab_nova_keyboard_hints'); }catch(_){}
+  if(saved==='0') hints.checked=false;
+  if(saved==='1') hints.checked=true;
+  applyKeyboardHintsVisibility();
 }
 
 function startFromMenu(){
@@ -3399,10 +3437,7 @@ function startFromMenu(){
 
   if (runTutorial) {
     document.getElementById('start-overlay').style.display='none';
-    // Keep this first line directly connected to the Start button click so
-    // browsers are less likely to suppress speech in an embedded game.
-    NovaVoice.say("Welcome scientists! I am Ms. Nova. Let's practice the controls before the match begins.");
-    setTimeout(() => startTutorial(), 180);
+    startTutorial();
   } else {
     startCountdown();
   }
@@ -4717,6 +4752,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Load Ms. Nova voice preferences and start-menu switches.
   NovaVoice.loadPrefs();
   resetTutorialChoice();
+  restoreKeyboardHintsPreference();
   updateStartOptionStates();
 
   // Load saved API key

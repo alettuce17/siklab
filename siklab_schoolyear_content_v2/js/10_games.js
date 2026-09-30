@@ -26,6 +26,13 @@ async function loadGames() {
         showErrorToast(error.message || 'Could not load game modules.');
     }
 
+    // The bundled game is available immediately, including on databases that
+    // have not been given a custom_game_module row yet.
+    if (!allGames.some(game => getModuleFromPath(game.path) === 'TUG')) {
+        allGames.push({ id: null, quarter: 1, name: 'Tug of Knowledge',
+            path: 'games/tug-of-war/index.html', is_editable: false });
+    }
+
     filterGamesByQuarter();
     renderCustomGamesList();
 }
@@ -93,6 +100,7 @@ function updateGameModeUI(sourceId) {
         if (typeof showGame1TopicQuickLaunch === 'function') showGame1TopicQuickLaunch(activePath);
         else if (typeof showSenseQuickLaunch === 'function') showSenseQuickLaunch(activePath);
         if (typeof showNovaQuickLaunch === 'function') showNovaQuickLaunch(activePath);
+        if (typeof showTugQuickLaunch === 'function') showTugQuickLaunch(activePath);
     });
 }
 
@@ -115,6 +123,14 @@ function launchGame() {
         const module = getModuleFromPath(select.value);
 
         try {
+            if (module === 'TUG') {
+                if (typeof launchTugIntoIframe !== 'function') throw new Error('Tug of Knowledge integration script is missing.');
+                const payload = await launchTugIntoIframe(gameIframe, select.value);
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex', 'flex-col');
+                showToast(`Tug of Knowledge launched with ${payload.questions.length} questions.`);
+                return;
+            }
             if (module === 'NOVA') {
                 if (typeof launchNovaIntoIframe !== 'function') throw new Error('Science Carnival integration script is missing.');
                 const payload = await launchNovaIntoIframe(gameIframe, select.value);

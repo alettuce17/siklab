@@ -1,5 +1,6 @@
 [build]
-  publish = "."
+  command = "node scripts/build_web.mjs"
+  publish = "web-dist"
 
 [[headers]]
   for = "/*"

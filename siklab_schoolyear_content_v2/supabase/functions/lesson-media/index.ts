@@ -48,7 +48,7 @@ function wikimediaImageUrl(raw: unknown): string | null {
 }
 
 // Commons often returns SVGs, video, and unrelated files for long AI-written
-// image prompts. Prefer the main subject and ask the search index for bitmaps.
+// image prompts. Prefer the main subject, then filter results by MIME below.
 function pictureSearchTerms(input: string): string[] {
   const noise = new Set([
     'a','an','the','of','for','in','on','at','to','with','and','or','from','by','is','are',
@@ -124,9 +124,9 @@ Deno.serve(async req => {
       const images: Array<Record<string,string>> = []
       const diagnostics = { searched: [] as string[], files: 0, unsupportedType: 0, unverifiedLicense: 0, invalidUrl: 0 }
       for (const term of terms) {
-        // MediaWiki Search supports filetype:bitmap; this avoids wasting almost
-        // all results on SVGs, videos, PDFs and other non-photo file formats.
-        const search = `${term} filetype:bitmap`
+        // Avoid restrictive search syntax; the MIME and license checks below
+        // select suitable files from the broader Commons results.
+        const search = term
         diagnostics.searched.push(search)
         const params = new URLSearchParams({
           action: 'query', generator: 'search', gsrsearch: search,

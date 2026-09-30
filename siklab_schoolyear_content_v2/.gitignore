@@ -83,4 +83,7 @@ __pycache__/
 # SikLab local/private config
 # ------------------------------------------------------------
 config.local.js
-js/config.local.js
+js/config.local.js/SikLab_Controller_App.exe
+/controller-app/*.exe
+/web-dist/
+/SikLab_Controller_App.exe

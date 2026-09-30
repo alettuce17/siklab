@@ -902,10 +902,11 @@ void loop() {
   int l = !digitalRead(pinLeft), r = !digitalRead(pinRight);
   int b1 = !digitalRead(pinB1), b2 = !digitalRead(pinB2);
   int b3 = !digitalRead(pinB3), b4 = !digitalRead(pinB4), b5 = !digitalRead(pinB5);
+  int audioButton = -1;
   for (int i=0; i<5; i++) {
     int current = digitalRead(buttonPins[i]);
     digitalWrite(ledPins[i], current == LOW ? HIGH : LOW);
-    if (current == LOW && lastButtonStates[i] == HIGH && dfPlayerReady) myDFPlayer.play(i+1);
+    if (current == LOW && lastButtonStates[i] == HIGH && dfPlayerReady) audioButton = i;
     lastButtonStates[i] = current;
   }
   String state = String(u)+String(d)+String(l)+String(r)+
@@ -922,5 +923,8 @@ void loop() {
       lastSendTime = millis();
     }
   }
+  // DFPlayer serial commands can block briefly. Transmit the input first so
+  // shooting/answer presses do not wait for the local button sound to start.
+  if (audioButton >= 0) myDFPlayer.play(audioButton + 1);
   delay(1);
 }

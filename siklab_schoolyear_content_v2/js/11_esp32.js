@@ -65,6 +65,9 @@ function setControllerOffline(player) {
     if (!normalized) return;
 
     window.siklabControllerLastSeen[normalized] = 0;
+    // Release held joystick/buttons in the game as soon as the bridge knows
+    // the device is offline. The game also has its own packet timeout.
+    forwardControllerStateToGame(normalized, '000000000');
 
     if (typeof updateTopControllerBadge === 'function') {
         updateTopControllerBadge(
@@ -114,8 +117,17 @@ function handleControllerStateBroadcast(message) {
         return;
     }
 
-    updateControllerRuntimeStatus(player, payload.device_id || null, payload.at || null);
     forwardControllerStateToGame(player, state, payload.device_id || null, payload.at || null);
+    // Keep every input packet, but do not redraw the dashboard status badge
+    // dozens of times per second while the joystick is moving.
+    const now = Date.now();
+    if (!window.siklabControllerStatusPaintAt) window.siklabControllerStatusPaintAt = {};
+    if (now - (window.siklabControllerStatusPaintAt[player] || 0) >= 500) {
+        window.siklabControllerStatusPaintAt[player] = now;
+        updateControllerRuntimeStatus(player, payload.device_id || null, payload.at || null);
+    } else {
+        window.siklabControllerLastSeen[player] = now;
+    }
 }
 
 /* =========================================================

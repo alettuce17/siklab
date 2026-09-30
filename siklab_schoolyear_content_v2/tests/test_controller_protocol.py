@@ -89,7 +89,13 @@ class SikLabProtocolTests(unittest.IsolatedAsyncioTestCase):
         if app.discovery_socket is None:
             self.skipTest('UDP port 8766 unavailable in this environment')
         probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        probe.connect(('8.8.8.8', 9))  # only route selection, no Internet packets sent
+        try:
+            probe.connect(('8.8.8.8', 9))  # only route selection, no Internet packets sent
+        except OSError:
+            probe.close()
+            app.running = False
+            app._stop_discovery()
+            self.skipTest('No routable LAN interface in this environment')
         own_lan_ip = probe.getsockname()[0]
         probe.close()
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

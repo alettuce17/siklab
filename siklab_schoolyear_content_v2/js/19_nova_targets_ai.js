@@ -1,6 +1,6 @@
 /* =========================================================
  * SCIENCE CARNIVAL SHOOTER — AI TARGET CATEGORY BUILDER V1
- * Sources: selected topic, saved SikLab lesson, PDF (<=5 MB)
+ * Sources: selected topic, saved SikLab lesson, PDF or PPTX (<=5 MB)
  * Output: 2–4 shooter categories with emoji + label targets.
  * AI only fills an editable draft. Teacher must click Save Targets.
  * ========================================================= */
@@ -44,8 +44,10 @@ function novaTargetAiChangeSource() {
     const source = novaTargetAiEl('nova-target-ai-source')?.value || 'topic';
     novaTargetAiEl('nova-target-ai-topic-wrap')?.classList.toggle('hidden', source !== 'topic');
     novaTargetAiEl('nova-target-ai-lesson-wrap')?.classList.toggle('hidden', source !== 'lesson');
-    novaTargetAiEl('nova-target-ai-pdf-wrap')?.classList.toggle('hidden', source !== 'pdf');
-    const labels = { topic: 'selected/typed topic', lesson: 'saved SikLab lesson', pdf: 'uploaded PDF' };
+    novaTargetAiEl('nova-target-ai-pdf-wrap')?.classList.toggle('hidden', source !== 'pdf' && source !== 'pptx');
+    const picker = novaTargetAiEl('nova-target-ai-pdf');
+    if (picker) picker.accept = source === 'pptx' ? '.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation' : '.pdf,application/pdf';
+    const labels = { topic: 'selected/typed topic', lesson: 'saved SikLab lesson', pdf: 'uploaded PDF', pptx: 'uploaded PowerPoint' };
     novaTargetAiStatus(`Source: ${labels[source] || source}. AI fills a draft only; review it, then click Save Targets.`);
     if (source === 'lesson') novaTargetAiRefreshLessons();
 }
@@ -84,21 +86,7 @@ async function novaTargetAiRefreshLessons() {
     }
 }
 
-async function novaTargetAiPdfBase64(file) {
-    if (typeof novaAiPdfBase64 === 'function') return novaAiPdfBase64(file);
-    if (!file) throw new Error('Choose a PDF first.');
-    if (file.size > 5 * 1024 * 1024) throw new Error('Choose a PDF no larger than 5 MB.');
-    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') throw new Error('Please choose a PDF file.');
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    if (String.fromCharCode(...bytes.subarray(0, 5)) !== '%PDF-') throw new Error('This file is not a valid PDF.');
-    let binary = '';
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    return btoa(binary);
-}
+async function novaTargetAiPdfBase64(file, source = 'pdf') { return siklabReferenceBase64(file, source); }
 
 function novaTargetAiNormalizeCategory(raw) {
     const name = String(raw?.name || raw?.category || raw?.category_name || '').trim().replace(/\s+/g, ' ').slice(0, 32);
@@ -193,9 +181,9 @@ async function novaTargetAiGenerate() {
         }
         novaTargetAiStatus('Gemini is building clear shooter categories and emoji targets…', 'busy');
 
-        if (source === 'pdf') {
+        if (source === 'pdf' || source === 'pptx') {
             const file = novaTargetAiEl('nova-target-ai-pdf')?.files?.[0];
-            body.pdf_base64 = await novaTargetAiPdfBase64(file);
+            body[source === 'pptx' ? 'pptx_base64' : 'pdf_base64'] = await novaTargetAiPdfBase64(file, source);
             body.filename = file.name.slice(0, 140);
         } else if (source === 'lesson') {
             body.lesson_module_id = Number(novaTargetAiEl('nova-target-ai-lesson')?.value || 0);

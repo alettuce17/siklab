@@ -600,14 +600,20 @@ class SikLabControllerApp:
                 if str(data.get('device_id') or '').strip().upper() != device_id:
                     continue
                 at = self._now_iso()
+                now = time.time()
                 with self.controller_lock:
+                    previous = self.controllers.get(player) or {}
+                    last_status_ui = previous.get('last_status_ui', 0)
+                    refresh_status_ui = now - last_status_ui >= 0.5
                     self.controllers[player] = {
                         'socket': websocket,
                         'device_id': device_id,
-                        'last_seen': time.time(),
-                        'at': at
+                        'last_seen': now,
+                        'at': at,
+                        'last_status_ui': now if refresh_status_ui else last_status_ui,
                     }
-                self._post_controller_status(player, True, device_id)
+                if refresh_status_ui:
+                    self._post_controller_status(player, True, device_id)
 
                 await self._broadcast_to_browsers({
                     'type': 'controller_state',
