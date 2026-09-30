@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SikLab: Teacher Dashboard</title>
+    
+    <!-- UI: Local Tailwind CSS -->
+    <script src="assets/tailwind.js"></script>
+    
+    <!-- UI: Local FontAwesome -->
+    <link rel="stylesheet" href="assets/fontawesome/css/all.min.css">
+
+    <!-- Supabase JS (Cloud Backend / Realtime / Auth) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- NEW: SheetJS for Excel Parsing -->
+    <script src="assets/xlsx.full.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css?v=game-chrome-v6">
+    <style>
+        body { font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; }
+        *:focus { outline: none !important; box-shadow: none !important; }
+        button, a, select, input, textarea { -webkit-tap-highlight-color: transparent !important; }
+    
+        /* =========================================================
+           SIKLAB SCIENCE AUTH SCREEN
+           ========================================================= */
+        .auth-science-grid {
+            background-image:
+                linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+            background-size: 36px 36px;
+        }
+
+        .science-orbit {
+            animation: scienceOrbit 14s linear infinite;
+        }
+
+        .science-orbit-reverse {
+            animation: scienceOrbitReverse 18s linear infinite;
+        }
+
+        @keyframes scienceOrbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes scienceOrbitReverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        .science-float {
+            animation: scienceFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes scienceFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .auth-input:focus {
+            border-color: #f97316 !important;
+            background: #fff7ed;
+        }
+
+        @media (max-width: 768px) {
+            .auth-science-panel {
+                display: none !important;
+            }
+        }
+
+    </style>
+
+    <!-- Picture Challenge: fix suggested photos inside a 206px scrolling box. -->
+    <style id="siklab-gallery-hard-limit">
+      /* The separate viewport is the scroll container in Fix 7. */
+      #sense-drafts .sense-image-viewport,
+      #picture-manager-overlay .sense-image-viewport {
+        display: block !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 206px !important;
+        max-height: 206px !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+      }
+      #sense-drafts .sense-image-viewport[hidden],
+      #picture-manager-overlay .sense-image-viewport[hidden] {
+        display: none !important;
+      }
+
+      /* Image tiles grow INSIDE the viewport; they don't stretch the question. */
+      #sense-drafts .sense-image-viewport .sense-img-grid,
+      #picture-manager-overlay .sense-image-viewport .sense-img-grid {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        align-content: start !important;
+      }
+
+      /* Support an older cached picker without the separate viewport. */
+      #sense-drafts .sense-img-grid,
+      #picture-manager-overlay #picture-manager-results {
+        height: 206px !important;
+        max-height: 206px !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        align-content: start !important;
+      }
+      /* More-specific override when the grid sits INSIDE the viewport. */
+      #sense-drafts .sense-image-viewport .sense-img-grid,
+      #picture-manager-overlay .sense-image-viewport .sense-img-grid {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      #sense-drafts .sense-draft > .grid > *,
+      #picture-manager-overlay .sense-image-viewport {
+        min-width: 0 !important;
+      }
+      #sense-drafts .sense-image-viewport::-webkit-scrollbar,
+      #picture-manager-overlay .sense-image-viewport::-webkit-scrollbar { width: 7px; }
+      #sense-drafts .sense-image-viewport::-webkit-scrollbar-thumb,
+      #picture-manager-overlay .sense-image-viewport::-webkit-scrollbar-thumb {
+        background: #fdba74;
+        border-radius: 10px;
+      }
+    </style>
+
+</head>
+<body class="text-slate-800 antialiased h-screen overflow-hidden flex flex-col bg-slate-50" onload="initializeApp()">
+
+    <div id="loader-screen" class="fixed inset-0 z-50 bg-stone-900 flex flex-col items-center justify-center transition-opacity duration-300">
+        <i class="fa-solid fa-fire fa-fade text-6xl text-orange-500 mb-4 drop-shadow-[0_0_15px_rgba(234,88,12,0.8)]"></i>
+        <p class="text-orange-200 font-bold tracking-widest">IGNITING SESSION...</p>
+    </div>
+
+    <div id="toast" class="fixed top-4 right-4 z-[110] transform transition-transform translate-x-full opacity-0 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-3 transition-all duration-300">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">Success!</span>
+    </div>
+    <div id="error-toast" class="fixed top-4 right-4 z-[110] transform transition-transform translate-x-full opacity-0 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-3 transition-all duration-300">
+        <i class="fa-solid fa-triangle-exclamation"></i> <span id="error-toast-msg">Error!</span>
+    </div>
+
+    <!-- =========================================================
+         TEACHER AUTHENTICATION
+         SCIENCE SPLIT-SCREEN DESIGN
+         ========================================================= -->
+    <div id="auth-screen"
+         class="absolute inset-0 z-40 bg-stone-950 flex items-center justify-center transition-opacity duration-500 hidden opacity-0 p-4 md:p-8 overflow-y-auto">
+
+        <div class="w-full max-w-6xl min-h-[640px] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex relative">
+
+            <!-- LEFT: SCIENCE WELCOME PANEL -->
+            <section class="auth-science-panel hidden md:flex md:w-[47%] auth-science-grid bg-gradient-to-br from-stone-950 via-stone-900 to-orange-950 relative overflow-hidden text-white p-12 flex-col justify-between">
+
+                <div class="absolute -top-24 -right-24 w-72 h-72 bg-orange-600/30 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-28 -left-24 w-80 h-80 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <!-- Atom Decoration -->
+                <div class="absolute top-16 right-14 w-40 h-40 opacity-50 pointer-events-none">
+                    <div class="science-orbit absolute inset-0 rounded-full border border-orange-400/50">
+                        <span class="absolute -top-2 left-1/2 w-4 h-4 bg-orange-500 rounded-full shadow-[0_0_18px_#f97316]"></span>
+                    </div>
+
+                    <div class="science-orbit-reverse absolute inset-6 rounded-full border border-red-400/40">
+                        <span class="absolute top-1/2 -right-2 w-3 h-3 bg-red-500 rounded-full shadow-[0_0_15px_#ef4444]"></span>
+                    </div>
+
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shadow-[0_0_30px_rgba(249,115,22,.7)]">
+                            <i class="fa-solid fa-atom text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BRAND / WELCOME -->
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-16">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg transform rotate-3">
+                            <i class="fa-solid fa-fire-flame-curved text-2xl transform -rotate-3"></i>
+                        </div>
+
+                        <div>
+                            <h2 class="font-black text-2xl tracking-tight">SikLab</h2>
+                            <p class="text-[10px] uppercase font-bold tracking-[0.25em] text-orange-300">
+                                Science Learning Laboratory
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="max-w-sm">
+                        <span class="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 text-orange-300 text-xs font-black px-4 py-2 rounded-full uppercase tracking-widest">
+                            <i class="fa-solid fa-microscope"></i>
+                            Teacher Laboratory
+                        </span>
+
+                        <h1 class="text-5xl font-black leading-[1.08] mt-6 tracking-tight">
+                            Welcome to
+                            <span class="text-orange-500">SikLab.</span>
+                        </h1>
+
+                        <p class="text-stone-300 text-base leading-relaxed mt-5">
+                            Build lessons, manage your class, and turn science
+                            into an interactive learning experience.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SCIENCE DECORATIONS -->
+                <div class="relative z-10">
+                    <div class="flex items-end gap-4 mb-8">
+                        <div class="science-float w-20 h-20 bg-orange-500/10 border border-orange-400/20 rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-flask text-orange-400 text-3xl"></i>
+                        </div>
+
+                        <div class="science-float w-16 h-16 bg-red-500/10 border border-red-400/20 rounded-2xl flex items-center justify-center"
+                             style="animation-delay:.8s;">
+                            <i class="fa-solid fa-microscope text-red-400 text-2xl"></i>
+                        </div>
+
+                        <div class="science-float w-14 h-14 bg-amber-500/10 border border-amber-400/20 rounded-2xl flex items-center justify-center"
+                             style="animation-delay:1.5s;">
+                            <i class="fa-solid fa-atom text-amber-400 text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-5 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold text-stone-300">
+                                Secure Teacher Portal
+                            </p>
+                            <p class="text-[10px] text-stone-500">
+                                Authorized educators only
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT: AUTH FORMS -->
+            <section class="w-full md:w-[53%] flex items-center justify-center bg-white px-8 py-12 md:px-16 relative">
+
+                <div class="absolute -top-20 -right-20 w-48 h-48 bg-orange-50 rounded-full pointer-events-none"></div>
+
+                <div class="w-full max-w-md relative z-10">
+
+                    <!-- Mobile Logo -->
+                    <div class="md:hidden text-center mb-8">
+                        <div class="bg-gradient-to-br from-orange-500 to-red-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg transform rotate-3">
+                            <i class="fa-solid fa-fire-flame-curved text-3xl transform -rotate-3"></i>
+                        </div>
+                        <h1 class="text-3xl font-black text-slate-800">SikLab</h1>
+                        <p class="text-xs text-orange-500 font-black uppercase tracking-widest mt-1">Teacher Laboratory</p>
+                    </div>
+
+                    <!-- Heading -->
+                    <div class="mb-8">
+                        <div class="flex items-center gap-2 text-orange-600 font-black uppercase tracking-[0.2em] text-xs mb-3">
+                            <span class="w-8 h-[2px] bg-orange-500"></span>
+                            Teacher Access
+                        </div>
+
+                        <h2 id="auth-main-heading" class="text-4xl font-black text-slate-800 tracking-tight">
+                            Welcome Back
+                        </h2>
+
+                        <p id="auth-title" class="text-slate-400 font-medium mt-2">
+                            Sign in to continue to your science dashboard.
+                        </p>
+                    </div>
+
+                    <!-- EMAIL + PASSWORD LOGIN -->
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+
+                        <div class="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex gap-3 items-start">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-slate-700 text-sm">Teacher account</p>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    Sign in with your email and password. New accounts verify their email once before the first login.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Email Address
+                            </label>
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </div>
+                                <input type="email"
+                                       id="login-email"
+                                       required
+                                       autocomplete="email"
+                                       inputmode="email"
+                                       placeholder="teacher@school.edu"
+                                       class="auth-input w-full pl-16 pr-4 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <input type="password"
+                                       id="login-password"
+                                       required
+                                       autocomplete="current-password"
+                                       placeholder="Enter your password"
+                                       class="auth-input w-full pl-16 pr-12 py-4 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('login-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="login-btn"
+                                type="submit"
+                                class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-base flex items-center justify-center gap-3 mt-2">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Sign In
+                        </button>
+
+                        <div class="relative py-1">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                            <div class="relative flex justify-center"><span class="bg-white px-3 text-xs font-bold text-slate-400 uppercase tracking-widest">New Teacher?</span></div>
+                        </div>
+
+                        <button type="button"
+                                onclick="showRegisterForm()"
+                                class="w-full border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-black py-3.5 rounded-xl transition-all">
+                            <i class="fa-solid fa-user-plus mr-2"></i>
+                            Create Teacher Account
+                        </button>
+                    </form>
+
+                    <!-- REGISTRATION -->
+                    <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 flex gap-3 items-start">
+                            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <p class="font-black text-slate-700 text-sm">Create your SikLab account</p>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    After registration, SikLab will email you a confirmation link. You only need to verify the email once.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Full Name</label>
+                            <input type="text"
+                                   id="register-name"
+                                   required
+                                   autocomplete="name"
+                                   placeholder="e.g. Maria Santos"
+                                   class="auth-input w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Email Address</label>
+                            <input type="email"
+                                   id="register-email"
+                                   required
+                                   autocomplete="email"
+                                   inputmode="email"
+                                   placeholder="teacher@school.edu"
+                                   class="auth-input w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Password</label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="register-password"
+                                       required
+                                       minlength="8"
+                                       autocomplete="new-password"
+                                       placeholder="At least 8 characters"
+                                       class="auth-input w-full px-4 pr-12 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('register-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-widest">Confirm Password</label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="register-confirm-password"
+                                       required
+                                       minlength="8"
+                                       autocomplete="new-password"
+                                       placeholder="Repeat your password"
+                                       class="auth-input w-full px-4 pr-12 py-3.5 rounded-xl border-2 border-slate-200 transition-all font-semibold text-slate-700 bg-slate-50">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility('register-confirm-password', this)"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                                        aria-label="Show or hide password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Use at least 8 characters. Your password is handled by Supabase Auth and is never stored in SikLab JavaScript.
+                        </p>
+
+                        <button id="register-btn"
+                                type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-user-plus"></i>
+                            Create Account
+                        </button>
+
+                        <button type="button"
+                                onclick="showLoginForm()"
+                                class="w-full border-2 border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition-all">
+                            <i class="fa-solid fa-arrow-left mr-2"></i>
+                            Back to Sign In
+                        </button>
+                    </form>
+
+                    <!-- EMAIL CONFIRMATION NOTICE -->
+                    <div id="confirmation-panel" class="space-y-5 hidden">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                            <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md mb-4">
+                                <i class="fa-solid fa-envelope-circle-check text-2xl"></i>
+                            </div>
+                            <h3 class="font-black text-emerald-900 text-xl">Check your email</h3>
+                            <p class="text-sm text-emerald-800 mt-2 leading-relaxed">
+                                We sent an account confirmation link to
+                                <strong id="confirmation-email-display" class="break-all">your email</strong>.
+                                Open that email and click <strong>Confirm Account</strong>, then return to SikLab and sign in with your password.
+                            </p>
+                        </div>
+
+                        <button id="resend-confirmation-btn"
+                                type="button"
+                                onclick="resendConfirmationEmail()"
+                                class="w-full border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-black py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-paper-plane mr-2"></i>
+                            Resend Confirmation Email
+                        </button>
+
+                        <button type="button"
+                                onclick="showLoginForm()"
+                                class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-3.5 rounded-xl transition-all">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i>
+                            Go to Sign In
+                        </button>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-8 pt-5 border-t border-slate-100 flex justify-center items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <i class="fa-solid fa-shield-halved text-emerald-500"></i>
+                        SikLab Secure Teacher Environment
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="dashboard-layout" class="hidden flex h-full w-full opacity-0 transition-opacity duration-500">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-24 lg:w-72 bg-stone-900 text-stone-100 flex flex-col shadow-2xl z-20 flex-shrink-0 transition-all duration-300 h-full">
+            <div class="h-20 flex items-center justify-center lg:justify-start lg:px-8 border-b border-stone-800 bg-stone-950 flex-shrink-0">
+                <i class="fa-solid fa-fire text-3xl text-orange-500"></i>
+                <span class="hidden lg:block ml-3 text-2xl font-black text-white tracking-wide">SikLab</span>
+            </div>
+            
+            <div class="py-6 flex flex-col gap-2 px-3 flex-grow overflow-y-auto hide-scroll">
+                <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl bg-orange-600 text-white font-bold transition-all shadow-md"><i class="fa-solid fa-chart-pie text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Overview</span></button>
+                <button onclick="switchTab('students')" id="nav-students" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-users text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Students</span></button>
+                <button onclick="switchTab('wheel')" id="nav-wheel" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all relative"><i class="fa-solid fa-dharmachakra text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Spin & Groups</span></button>
+                <button onclick="switchTab('content')" id="nav-content" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-pen-to-square text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Question Bank</span></button>
+                
+                <button onclick="switchTab('lesson-builder')" id="nav-lesson-builder" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all border border-orange-500/30">
+                    <i class="fa-solid fa-book-open-reader text-xl w-8 text-center text-orange-400"></i><span class="hidden lg:block ml-2 text-orange-100">Lesson Builder</span>
+                </button>
+
+                <button onclick="switchTab('curriculum')" id="nav-curriculum" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all">
+                    <i class="fa-solid fa-boxes-stacked text-xl w-8 text-center text-emerald-400"></i><span class="hidden lg:block ml-2">Curriculum Manager</span>
+                </button>
+
+                <button onclick="switchTab('student-preview')" id="nav-student-preview" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all">
+                    <i class="fa-solid fa-child-reaching text-xl w-8 text-center text-sky-400"></i><span class="hidden lg:block ml-2">Student Preview</span>
+                </button>
+
+                <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all mt-4"><i class="fa-solid fa-clock-rotate-left text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Match History</span></button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all"><i class="fa-solid fa-gear text-xl w-8 text-center"></i><span class="hidden lg:block ml-2">Game Management</span></button>
+
+                <button onclick="switchTab('device-setup'); initializeDeviceSetup();" id="nav-device-setup" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all border border-orange-500/20">
+                    <i class="fa-solid fa-microchip text-xl w-8 text-center text-orange-400"></i>
+                    <span class="hidden lg:block ml-2">ESP Player Setup</span>
+                </button>
+                
+                <!-- ADMIN & REPORTS TAB -->
+                <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn w-full flex items-center p-3 lg:px-5 lg:py-4 rounded-xl hover:bg-stone-800 hover:text-white text-orange-200 font-bold transition-all mt-4 border-t border-stone-700/50 pt-5">
+                    <i class="fa-solid fa-chart-line text-xl w-8 text-center text-emerald-400"></i><span class="hidden lg:block ml-2">Admin & Analytics</span>
+                </button>
+            </div>
+            
+            <div class="mt-auto px-3 pb-4">
+                <button onclick="handleLogout()" class="w-full flex items-center p-3 lg:px-5 lg:py-3 rounded-xl hover:bg-red-600 hover:text-white text-stone-400 font-bold transition-all group"><i class="fa-solid fa-right-from-bracket text-xl w-8 text-center group-hover:text-white transition-colors"></i><span class="hidden lg:block ml-2">Secure Logout</span></button>
+            </div>
+            
+            <div class="p-4 border-t border-stone-800 flex items-center justify-center lg:justify-start flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold uppercase" id="avatar-initial">T</div>
+                <div class="hidden lg:block ml-3"><p class="text-sm font-bold text-white leading-tight truncate w-40" id="teacher-display-name">Teacher</p><p class="text-xs text-orange-300">Administrator</p></div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-grow flex flex-col h-full bg-orange-50/50 relative overflow-y-auto hide-scroll">
+            
+            <header class="h-20 bg-white border-b border-orange-200 flex items-center px-8 shadow-sm justify-between sticky top-0 z-10 flex-shrink-0">
+                <div><h2 class="text-2xl font-black text-slate-800" id="header-title">Dashboard Overview</h2><p class="text-sm font-bold text-slate-400" id="header-subtitle">Welcome back to SikLab.</p></div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1 bg-white border-2 border-orange-200 rounded-full pl-4 pr-1 py-1 shadow-sm hover:border-orange-400 transition-colors">
+                        <select id="school-year-filter" onchange="changeSchoolYear(this.value)" class="school-year-select bg-transparent text-slate-700 font-bold py-1 pr-6 text-sm outline-none cursor-pointer">
+                            <option value="">Loading...</option>
+                        </select>
+                        <button onclick="openAddYearModal()" class="bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-full w-8 h-8 flex items-center justify-center transition-colors" title="Add New Year/Section"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    
+                    <!-- DUAL CONTROLLER LIVE TRACKERS -->
+                    <div class="flex items-center gap-2">
+                        <div id="ui-status-p1" class="bg-slate-100 text-slate-500 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 border border-slate-200 transition-colors shadow-sm">
+                            <i class="fa-solid fa-gamepad"></i> P1: OFF
+                        </div>
+                        <div id="ui-status-p2" class="bg-slate-100 text-slate-500 px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 border border-slate-200 transition-colors shadow-sm">
+                            <i class="fa-solid fa-gamepad"></i> P2: OFF
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- VIEW: OVERVIEW -->
+            <div id="view-overview" class="view-section p-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-user-graduate"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Total Students</p><h3 class="text-3xl font-black text-slate-800" id="stat-students">0</h3></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-gamepad"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Active Game</p><h3 class="text-xl font-black text-slate-800 mt-1" id="stat-game">Eco-Patrol</h3></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex items-center gap-5"><div class="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-bolt"></i></div><div><p class="text-sm font-bold text-slate-400 uppercase">Cloud Status</p><h3 id="stat-cloud-status" class="text-2xl font-black text-emerald-500 mt-1">Connecting...</h3></div></div>
+                </div>
+
+                <div id="live-match-setup-box" class="bg-white p-6 rounded-3xl shadow-sm border-2 border-dashed border-orange-300 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-users-viewfinder text-orange-500"></i> Live Match Setup
+                        </h3>
+                        <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                            <button id="toggle-indiv" onclick="setMatchType('individual')" class="px-5 py-1.5 text-sm font-bold rounded-lg bg-white text-orange-600 shadow-sm transition-all">Individuals</button>
+                            <button id="toggle-group" onclick="setMatchType('group')" class="px-5 py-1.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Stored Groups</button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-8 items-center">
+                        <div class="flex-1 w-full text-center">
+                            <p class="text-xs font-black text-blue-500 uppercase tracking-widest mb-3">Player 1 (Blue Slot)</p>
+                            <div id="p1-display-card" onclick="openSelectorModal(1)" class="group cursor-pointer bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 flex flex-col items-center transition-all hover:border-blue-400 hover:bg-blue-100/50 active:scale-95 h-full min-h-[180px] justify-center">
+                                <div id="p1-avatar" class="w-16 h-16 rounded-full bg-white shadow-sm border-2 border-blue-100 flex items-center justify-center text-blue-400 text-2xl mb-3 transition-transform group-hover:scale-110"><i class="fa-solid fa-user-plus"></i></div>
+                                <h4 id="p1-display-name" class="font-black text-blue-900 text-lg">Select Participant</h4>
+                                <p id="p1-display-sub" class="text-xs font-bold text-blue-400 uppercase mt-1">Click to browse</p>
+                            </div>
+                        </div>
+
+                        <div class="text-3xl font-black text-slate-300 italic animate-pulse">VS</div>
+
+                        <div class="flex-1 w-full text-center">
+                            <p class="text-xs font-black text-red-500 uppercase tracking-widest mb-3">Player 2 (Red Slot)</p>
+                            <div id="p2-display-card" onclick="openSelectorModal(2)" class="group cursor-pointer bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex flex-col items-center transition-all hover:border-red-400 hover:bg-red-100/50 active:scale-95 h-full min-h-[180px] justify-center">
+                                <div id="p2-avatar" class="w-16 h-16 rounded-full bg-white shadow-sm border-2 border-red-100 flex items-center justify-center text-red-400 text-2xl mb-3 transition-transform group-hover:scale-110"><i class="fa-solid fa-user-plus"></i></div>
+                                <h4 id="p2-display-name" class="font-black text-red-900 text-lg">Select Participant</h4>
+                                <p id="p2-display-sub" class="text-xs font-bold text-red-400 uppercase mt-1">Click to browse</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full lg:w-auto self-stretch flex items-center">
+                            <button onclick="saveMatchSetup()" class="w-full lg:w-auto bg-stone-800 hover:bg-stone-900 text-white font-black px-10 py-6 rounded-2xl shadow-xl transition-all hover:shadow-orange-500/20 active:scale-95 flex items-center justify-center gap-3 h-fit">
+                                <i class="fa-solid fa-lock-open text-xl"></i> ASSIGN MATCH
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden mt-8">
+                    <div class="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4"><i class="fa-solid fa-rocket text-[200px]"></i></div>
+                    <div class="relative z-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem] gap-6 items-end">
+                        <div class="min-w-0 w-full">
+                            <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-sm border border-white/30">System Initialization</span>
+                            <h2 class="text-4xl font-black mt-4 mb-6">Start the Class Session!</h2>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="w-full">
+                                    <label class="block text-xs font-bold text-orange-200 uppercase tracking-widest mb-1">Select Game Module</label>
+                                    <div class="relative">
+                                        <select id="launch-game" onchange="updateGameModeUI('launch-game')" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-bold outline-none focus:border-yellow-400 transition-colors cursor-pointer appearance-none">
+                                            <!-- Dynamically populated -->
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-orange-300 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="min-w-0 w-full flex flex-col gap-2">
+                            <div id="game1-topic-quick-launch" class="rounded-xl bg-orange-900/40 border border-orange-300/30 p-3">
+                                <label for="launch-game1-topic" class="block text-xs font-bold text-orange-100 mb-1">PICTURE CHALLENGE • TOPIC</label>
+                                <select id="launch-game1-topic" onchange="saveGame1LaunchTopic()" class="w-full p-2 rounded-lg bg-white text-slate-800 font-bold text-sm">
+                                    <option value="">Choose a topic…</option>
+                                </select>
+                                <p id="launch-game1-topic-count" class="text-[11px] text-orange-100/90 font-bold mt-1">Choose a topic before launching</p>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="button" onclick="openGame1QuestionBank()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Manage Topics & Questions</button>
+                                    <button type="button" onclick="openSenseSettings()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Game Settings</button>
+                                </div>
+                            </div>
+
+                            <div id="nova-topic-quick-launch" class="hidden rounded-xl bg-violet-950/50 border border-violet-200/30 p-3">
+                                <label for="launch-nova-topic" class="block text-xs font-bold text-violet-100 mb-1">SCIENCE CARNIVAL • TOPIC</label>
+                                <select id="launch-nova-topic" onchange="saveNovaLaunchTopic()" class="w-full p-2 rounded-lg bg-white text-slate-800 font-bold text-sm">
+                                    <option value="">Choose a topic…</option>
+                                </select>
+                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                    <label class="text-[10px] font-black text-violet-100">DIFFICULTY
+                                        <select id="launch-nova-difficulty" onchange="saveNovaLaunchTopic()" class="mt-1 w-full p-2 rounded-lg bg-white text-slate-800 font-bold text-xs">
+                                            <option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
+                                        </select>
+                                    </label>
+                                    <div class="self-end"><p id="launch-nova-topic-count" class="text-[11px] text-violet-100/90 font-bold">Choose a topic before launching</p></div>
+                                </div>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="button" onclick="openNovaQuestionBank()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Manage Topic & Questions</button>
+                                    <button type="button" onclick="openSenseSettings()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Game Settings</button>
+                                </div>
+                            </div>
+                            <div id="tug-quick-launch" class="hidden rounded-xl bg-orange-950/40 border border-orange-200/30 p-3">
+                                <label for="launch-tug-topic" class="block text-xs font-black text-orange-100 mb-1">TUG OF KNOWLEDGE • TOPIC</label>
+                                <select id="launch-tug-topic" onchange="saveTugLaunchTopic()" class="w-full p-2 rounded-lg bg-white text-slate-800 font-bold text-sm"><option value="">Choose a topic…</option></select>
+                                <p id="tug-question-count" class="text-[11px] text-orange-100/90 font-bold mt-1">Loading school-year questions…</p>
+                                <div class="flex gap-2 mt-2">
+                                    <button type="button" onclick="openTugQuestionBank()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Questions & AI</button>
+                                    <button type="button" onclick="openTugSettings()" class="flex-1 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 py-2">Game Settings</button>
+                                </div>
+                            </div>
+                            <button onclick="launchGame()" class="w-full md:w-auto bg-white text-orange-700 hover:bg-orange-50 font-black text-xl px-10 py-6 rounded-2xl shadow-2xl transition-transform hover:scale-105 flex flex-col items-center justify-center gap-2 group">
+                                <i class="fa-solid fa-power-off text-3xl group-hover:text-red-600 transition-colors"></i> 
+                                <span>LAUNCH</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: STUDENTS (UPDATED FOR LRN & EXCEL BULK UPLOAD) -->
+            <div id="view-students" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="flex gap-8 h-full">
+                    <div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-orange-200 flex flex-col h-fit sticky top-0">
+                        <h3 id="form-student-title" class="text-xl font-black text-slate-800 mb-4 border-b border-orange-100 pb-4"><i class="fa-solid fa-user-plus text-orange-500 mr-2"></i> Enroll Student</h3>
+                        <form onsubmit="addStudent(event)" class="space-y-4">
+                            <input type="hidden" id="edit-student-id" value="">
+                            
+                            <!-- LRN Input Field -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">LRN (Student ID) <span class="text-[10px] text-slate-400">*Optional</span></label>
+                                <input type="text" id="new-student-lrn" inputmode="numeric" maxlength="12" minlength="12" pattern="[0-9]{12}" placeholder="e.g. 109876543210" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors">
+                            </div>
+                            
+                            <div><label class="block text-sm font-bold text-slate-600 mb-1">First Name</label><input type="text" id="new-student-first" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-1">Last Name</label><input type="text" id="new-student-last" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></div>
+                            
+                            <!-- Editable Section Field -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Grade & Section</label>
+                                <input type="text" id="new-student-sec" value="Matapat" required class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors">
+                            </div>
+                            
+                            <div class="flex gap-2 mt-4">
+                                <button type="button" onclick="cancelStudentEdit()" id="btn-cancel-student" class="hidden w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>
+                                <button type="submit" id="btn-save-student" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">Add to Class Roster</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="w-full lg:w-[63%] bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
+                            <h3 class="font-black text-slate-800"><i class="fa-solid fa-list-ul text-orange-400 mr-2"></i> Class Roster</h3>
+                            
+                            <div class="flex items-center gap-3">
+                                <!-- Bulk Excel Upload Button -->
+                                <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
+                                <button onclick="document.getElementById('excel-upload').click()" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors shadow-sm flex items-center">
+                                    <i class="fa-solid fa-file-excel mr-1"></i> Upload Excel
+                                </button>
+                                
+                                <span class="bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1 rounded-full border border-orange-200" id="roster-count">0 Students</span>
+                            </div>
+                        </div>
+                        <div class="flex-grow overflow-y-auto p-4" id="student-list-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SPIN WHEEL -->
+            <div id="view-wheel" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="flex gap-8 h-full">
+                    <div class="w-1/2 bg-white p-8 rounded-3xl shadow-sm border border-orange-200 flex flex-col items-center justify-center relative overflow-hidden">
+                        <div class="absolute top-4 left-4 bg-yellow-100 text-yellow-800 px-4 py-1 rounded-full font-bold text-sm border border-yellow-300"><i class="fa-solid fa-star"></i> Random Selector</div>
+                        <div class="relative mt-8"><div class="wheel-indicator w-8 h-10 bg-stone-800 absolute -right-4 top-1/2 transform -translate-y-1/2 z-10 shadow-lg border-2 border-white"></div><canvas id="spinCanvas" width="400" height="400" class="rounded-full shadow-2xl border-8 border-stone-800 transition-transform"></canvas><div class="absolute inset-0 m-auto w-16 h-16 bg-stone-800 rounded-full border-4 border-white shadow-inner flex items-center justify-center"><div class="w-4 h-4 bg-orange-500 rounded-full shadow-[0_0_10px_#ea580c]"></div></div></div>
+                        <div class="mt-10 flex flex-col items-center w-full"><h3 id="wheel-winner" class="text-3xl font-black text-orange-600 mb-6 h-10 empty:hidden"></h3><button onclick="handleSpinWheel()" id="btn-spin" class="bg-gradient-to-b from-orange-400 to-red-600 text-white font-black text-2xl py-4 px-16 rounded-full shadow-[0_8px_0_#991b1b] hover:translate-y-1 active:translate-y-2 w-3/4 max-w-sm border-4 border-orange-200 transition-all">SPIN!</button></div>
+                    </div>
+                    <div class="w-1/2 flex flex-col gap-6">
+                        <div class="bg-gradient-to-br from-orange-600 to-red-700 p-8 rounded-3xl shadow-lg text-white">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-2xl font-black"><i class="fa-solid fa-users-rays"></i> Random Grouping</h3>
+                                <select id="active-group-set" onchange="changeGroupSet()" class="bg-orange-900/50 border border-orange-400 text-orange-100 text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer focus:border-yellow-400 transition-colors">
+                                </select>
+                            </div>
+                            <p class="text-orange-200 mb-6">Instantly divide your class evenly into a specific number of teams.</p>
+                            <div class="flex items-end gap-4">
+                                <div class="flex-grow"><label class="block text-sm font-bold text-orange-200 mb-1">Total Number of Groups</label><input type="number" id="num-groups" value="4" min="2" max="10" class="w-full px-4 py-3 rounded-xl bg-orange-900/50 border-2 border-orange-400 text-white font-black text-xl text-center outline-none focus:border-yellow-400 transition-colors"></div>
+                                <button onclick="handleGenerateGroups()" class="bg-white text-orange-700 hover:bg-orange-50 font-black px-8 py-3 rounded-xl shadow-lg h-[56px] transition-transform hover:scale-105">SAVE GROUPS</button>
+                            </div>
+                        </div>
+                        <div class="flex-grow bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden flex flex-col">
+                            <div class="bg-orange-50 p-4 border-b border-orange-100 flex justify-between items-center">
+                                <h3 class="font-black text-slate-700 text-center">Stored Teams</h3>
+                                <span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded">Available in Match Setup</span>
+                            </div>
+                            <div id="groups-container" class="p-6 overflow-y-auto flex-grow grid grid-cols-2 gap-4 place-content-start"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: CONTENT -->
+            <div id="view-content" class="view-section hidden p-4 md:p-6 h-full overflow-y-auto">
+
+                <div class="qb-toolbar sticky top-0 z-30 rounded-2xl border border-orange-200 bg-white p-2.5 mb-3 shadow-sm flex flex-wrap items-end gap-2.5">
+                    <div class="w-full sm:w-[320px]">
+                            <label for="cq-module" class="block text-[10px] uppercase tracking-wider font-black text-orange-700 mb-1">Game</label>
+                            <select id="cq-module" onchange="onQuestionModuleChanged(this.value)" class="w-full px-3 py-2 rounded-xl border-2 border-orange-200 outline-none focus:border-orange-500 font-black text-slate-800 bg-white cursor-pointer">
+                                <option value="W1">Game 1: Picture Challenge</option>
+                                <option value="NOVA">Game 2: Science Carnival Shooter</option>
+                                <option value="TUG">Game 3: Tug of Knowledge</option>
+                                <option value="W2">Week 2: Science Showdown</option>
+                                <option value="W3">Week 3: Process Skills Lab</option>
+                                <option value="W4">Week 4: Material Testers</option>
+                                <option value="W5">Week 5: Eco-Patrol</option>
+                                <option value="W6">Week 6: Trash to Treasure</option>
+                                <option value="W7">Week 7: Maker's Workshop</option>
+                                <option value="W8">Week 8: Element Foundry</option>
+                            </select>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <nav class="qb-tabs flex gap-1.5 overflow-x-auto" aria-label="Question Bank sections">
+                            <button type="button" data-qb-tab="questions" aria-pressed="true" onclick="qbSetPanel('questions')" class="qb-tab is-active"><i class="fa-solid fa-list-check mr-1.5"></i>Questions</button>
+                            <button type="button" data-qb-tab="ai" aria-pressed="false" onclick="qbSetPanel('ai')" class="qb-tab"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Generate with AI</button>
+                            <button type="button" data-qb-tab="settings" aria-pressed="false" onclick="qbSetPanel('settings')" class="qb-tab"><i class="fa-solid fa-sliders mr-1.5"></i>Game Settings</button>
+                        </nav>
+                    </div>
+                </div>
+
+                <div id="qb-workspace" class="qb-workspace has-topic-bank">
+                    <aside id="qb-topic-rail" class="qb-topic-rail bg-white border border-orange-200 rounded-2xl shadow-sm p-3" aria-label="Question Bank topics">
+                        <div class="flex items-center justify-between gap-2 mb-2"><div><h2 class="font-black text-slate-800">Topics</h2><p id="qb-topic-total" class="text-xs text-slate-500">Choose one to view its questions</p></div><button type="button" onclick="qbToggleCreateTopic()" class="px-2.5 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-black" aria-label="Add topic">+ Add</button></div>
+                        <label for="qb-topic-search" class="sr-only">Search topics</label><input id="qb-topic-search" type="search" oninput="qbUpdateTopicShortcut()" placeholder="Search topics…" class="w-full rounded-lg border border-orange-200 px-3 py-2 text-sm mb-2 focus:outline-none focus:border-orange-500">
+                        <div id="qb-create-topic" class="hidden rounded-xl bg-orange-50 border border-orange-200 p-2 mb-2 space-y-2"><label class="sr-only" for="qb-new-topic-name">Topic name</label><input id="qb-new-topic-name" maxlength="80" placeholder="Topic name" class="w-full rounded-lg border px-2 py-2 text-sm"><label class="sr-only" for="qb-new-topic-description">Description</label><input id="qb-new-topic-description" maxlength="220" placeholder="Description (optional)" class="w-full rounded-lg border px-2 py-2 text-sm"><div class="flex gap-2"><button type="button" onclick="qbSaveTopic()" class="rounded-lg bg-orange-600 text-white px-3 py-1.5 text-xs font-bold"><span id="qb-save-topic-label">Save topic</span></button><button type="button" onclick="qbToggleCreateTopic(false)" class="text-xs font-bold text-slate-600">Cancel</button></div></div>
+                        <div id="qb-topic-list" class="qb-topic-list" role="list"></div>
+                        <div id="qb-topic-actions" class="hidden mt-3 pt-3 border-t border-orange-100 flex flex-wrap gap-2"><button type="button" onclick="qbEditTopic()" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700"><i class="fa-solid fa-pen mr-1"></i>Edit topic</button><button type="button" onclick="qbDeleteTopic()" class="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-700"><i class="fa-solid fa-trash mr-1"></i>Delete topic</button></div>
+                    </aside>
+                    <main id="qb-main" class="min-w-0">
+
+                <section id="nova-topic-panel" class="hidden bg-white border border-violet-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="Science Carnival topic library">
+                    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-tents"></i></span>
+                                <div>
+                                    <h3 class="text-xl font-black text-slate-800">Shooter Target Settings</h3>
+                                    <p class="text-sm text-slate-500">Choose a topic from the sidebar, then configure its target categories here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden flex flex-wrap gap-2">
+                            <button type="button" onclick="renameNovaTopic()" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50"><i class="fa-solid fa-pen mr-1"></i>Rename</button>
+                            <button type="button" onclick="deleteNovaTopic()" class="px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-black hover:bg-red-50"><i class="fa-solid fa-trash mr-1"></i>Delete Empty Topic</button>
+                        </div>
+                    </div>
+
+                    <div class="hidden grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-3 mt-4">
+                        <div class="rounded-xl border border-violet-200 bg-violet-50/60 p-3">
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-violet-700 mb-1">Selected Topic</label>
+                            <select id="nova-topic-select" onchange="selectNovaTopic(this.value,this.id)" class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 bg-white font-black text-slate-800 outline-none focus:border-violet-500">
+                                <option value="">Choose a topic…</option>
+                            </select>
+                            <div class="flex items-center justify-between gap-3 mt-2">
+                                <div class="min-w-0">
+                                    <p id="nova-selected-topic-name" class="text-sm font-black text-slate-800 truncate">Choose a topic</p>
+                                    <p id="nova-selected-topic-count" class="text-xs font-bold text-slate-500">0 questions</p>
+                                </div>
+                                <span class="text-[10px] font-black text-violet-700 bg-white border border-violet-200 px-2 py-1 rounded-full">Science Carnival only</span>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">Create New Topic</label>
+                            <div class="flex gap-2">
+                                <input id="nova-new-topic-name" maxlength="80" placeholder="e.g. Living and Non-Living" class="flex-1 min-w-0 px-3 py-2.5 rounded-lg border-2 border-slate-200 bg-white font-bold outline-none focus:border-violet-500">
+                                <button type="button" onclick="createNovaTopic()" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-lg font-black whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>Add</button>
+                            </div>
+                            <input id="nova-new-topic-description" maxlength="220" placeholder="Optional short description" class="w-full mt-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm outline-none focus:border-violet-500">
+                        </div>
+                    </div>
+
+                    <details id="nova-target-editor" open class="mt-4 rounded-xl border border-violet-200 bg-violet-50/40 p-3">
+                        <summary class="cursor-pointer font-black text-slate-800">Shooter Target Categories <span id="nova-target-config-status" class="ml-2 text-xs font-bold text-slate-500">Choose a topic first.</span></summary>
+                        <div class="flex justify-end mt-3 mb-3">
+                            <button type="button" onclick="saveNovaTargetConfig()" class="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-black"><i class="fa-solid fa-floppy-disk mr-1"></i>Save Targets</button>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">Use 2–4 categories. Enter targets as <strong>emoji + label</strong>, separated by commas. Example: <code>🐕 Dog, 🐟 Fish, 🐦 Bird</code>.</p>
+
+                        <div class="rounded-xl border border-violet-200 bg-white p-3 mb-3">
+                            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                                        <div>
+                                            <p class="font-black text-slate-800 text-sm">AI Target Builder</p>
+                                            <p id="nova-target-ai-selected-topic" class="text-[11px] font-bold text-violet-700">Select or create a Science Carnival topic first.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" id="nova-target-ai-generate-btn" onclick="novaTargetAiGenerate()" class="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm disabled:opacity-50">
+                                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Targets with AI
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                                <label class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Source</span>
+                                    <select id="nova-target-ai-source" onchange="novaTargetAiChangeSource()" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                        <option value="topic">Selected / Typed Topic</option>
+                                        <option value="lesson">Existing SikLab Lesson</option>
+                                        <option value="pdf">Upload PDF</option><option value="pptx">Upload PowerPoint (.pptx)</option>
+                                    </select>
+                                </label>
+                                <label id="nova-target-ai-topic-wrap" class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Topic</span>
+                                    <input id="nova-target-ai-topic" oninput="novaTargetAiMarkTopicEdited()" maxlength="160" placeholder="Uses selected topic by default" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                </label>
+                                <label id="nova-target-ai-lesson-wrap" class="hidden block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Saved Lesson</span>
+                                    <select id="nova-target-ai-lesson" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs font-bold outline-none focus:border-violet-500">
+                                        <option value="">Select an existing lesson</option>
+                                    </select>
+                                </label>
+                                <label id="nova-target-ai-pdf-wrap" class="hidden block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Reference PDF or PPTX</span>
+                                    <input id="nova-target-ai-pdf" type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="w-full text-[11px] font-bold text-slate-600 file:mr-1 file:px-2 file:py-1.5 file:rounded-md file:border-0 file:bg-violet-100 file:text-violet-700 file:font-black">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-black uppercase tracking-wide text-slate-500 mb-1">Optional Focus</span>
+                                    <input id="nova-target-ai-focus" maxlength="160" placeholder="e.g. animal habitats only" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs outline-none focus:border-violet-500">
+                                </label>
+                            </div>
+                            <p id="nova-target-ai-status" class="text-[11px] font-bold text-slate-600 mt-2" role="status" aria-live="polite">AI fills the category fields as a draft. Review them before clicking Save Targets.</p>
+                            <div id="nova-target-ai-preview" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mt-2"></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 1<input id="nova-cat-name-0" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-0" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 2<input id="nova-cat-name-1" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-1" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 3<input id="nova-cat-name-2" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-2" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div><div class="bg-white rounded-xl border border-violet-100 p-3"><label class="text-xs font-black text-violet-700">Category 4<input id="nova-cat-name-3" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-slate-800" placeholder="e.g. Living"></label><label class="block text-xs font-bold text-slate-500 mt-2">Targets<input id="nova-cat-targets-3" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="🐕 Dog, 🌱 Plant, 🐟 Fish"></label></div>
+                        </div>
+                    </details>
+                </section>
+
+                <section id="nova-ai-panel" class="hidden bg-white border border-violet-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="Science Carnival AI question generator">
+                    <div class="flex flex-col xl:flex-row xl:items-start justify-between gap-3 mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                                <div>
+                                    <h3 class="text-xl font-black text-slate-800">Generate Science Carnival Questions with AI</h3>
+                                    <p class="text-sm text-slate-600">Generate five-choice Grade 3 Science questions from a topic, saved lesson, PDF, or PowerPoint. Nothing is saved until you review it.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-start xl:items-end gap-1">
+                            <span class="rounded-full bg-violet-50 text-violet-800 border border-violet-200 px-3 py-1 text-xs font-black">5 choices • A red · B green · C white · D blue · E yellow • A is Shoot/Grab during shooting</span>
+                            <span id="nova-ai-selected-topic" class="text-xs font-black text-violet-700">Select or create a Science Carnival topic first.</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <label class="block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Question source</span>
+                            <select id="nova-ai-source" onchange="novaAiChangeSource()" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-bold outline-none focus:border-violet-500">
+                                <option value="topic" selected>Type topic</option>
+                                <option value="lesson">Existing SikLab lesson</option>
+                                <option value="pdf">Upload PDF</option><option value="pptx">Upload PowerPoint (.pptx)</option>
+                            </select>
+                        </label>
+
+                        <label id="nova-ai-topic-wrap" class="block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Science topic</span>
+                            <input id="nova-ai-topic" oninput="novaAiMarkTopicEdited()" maxlength="160" placeholder="Uses selected topic by default" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-bold outline-none focus:border-violet-500">
+                        </label>
+
+                        <label id="nova-ai-lesson-wrap" class="hidden block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Saved lesson</span>
+                            <select id="nova-ai-lesson" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-bold outline-none focus:border-violet-500">
+                                <option value="">Loading lessons…</option>
+                            </select>
+                        </label>
+
+                        <label id="nova-ai-pdf-wrap" class="hidden block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Reference PDF or PPTX (up to 5 MB)</span>
+                            <input id="nova-ai-pdf" type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="w-full text-sm font-bold text-slate-600 file:mr-2 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-700 file:font-black">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Difficulty</span>
+                            <select id="nova-ai-difficulty" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-bold outline-none focus:border-violet-500">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Question count</span>
+                            <select id="nova-ai-count" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-bold outline-none focus:border-violet-500">
+                                <option value="5">5 questions</option>
+                                <option value="10" selected>10 questions</option>
+                                <option value="15">15 questions</option>
+                            </select>
+                        </label>
+
+                        <label class="block md:col-span-2 xl:col-span-2">
+                            <span class="block text-xs font-black text-slate-600 mb-1">Optional focus</span>
+                            <input id="nova-ai-focus" maxlength="160" placeholder="e.g. focus on plant-part functions; avoid vocabulary not taught yet" class="w-full px-3 py-2.5 rounded-xl border-2 border-violet-100 bg-white font-medium outline-none focus:border-violet-500">
+                        </label>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 mt-4">
+                        <button type="button" id="nova-ai-generate-btn" onclick="novaAiGenerateQuestions()" class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black shadow-sm disabled:opacity-50">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate editable draft
+                        </button>
+                        <span id="nova-ai-status" class="text-sm font-bold text-slate-600" role="status" aria-live="polite">AI drafts are not saved until you approve them.</span>
+                    </div>
+
+                    <div id="nova-ai-drafts" class="mt-4">
+                        <div class="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-5 text-center text-sm font-bold text-violet-400">AI drafts will appear here after generation.</div>
+                    </div>
+                </section>
+
+                <section id="game1-topic-panel" class="hidden bg-white border border-orange-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="Game 1 topic library">
+                    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span>
+                                <div>
+                                    <h3 class="text-xl font-black text-slate-800">Game 1 Topic Library</h3>
+                                    <p class="text-sm text-slate-500">Create separate topics, then keep each topic's questions in its own bank.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="renameGame1Topic()" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50"><i class="fa-solid fa-pen mr-1"></i>Rename</button>
+                            <button type="button" onclick="deleteGame1Topic()" class="px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-black hover:bg-red-50"><i class="fa-solid fa-trash mr-1"></i>Delete Empty Topic</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-3 mt-4">
+                        <div class="rounded-xl border border-orange-200 bg-orange-50/60 p-3">
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-orange-700 mb-1">Selected Topic</label>
+                            <select id="game1-topic-select" onchange="selectGame1Topic(this.value,this.id)" class="w-full px-4 py-3 rounded-xl border-2 border-orange-200 bg-white font-black text-slate-800 outline-none focus:border-orange-500">
+                                <option value="">Choose a topic…</option>
+                            </select>
+                            <div class="flex items-center justify-between gap-3 mt-2">
+                                <div class="min-w-0">
+                                    <p id="game1-selected-topic-name" class="text-sm font-black text-slate-800 truncate">Choose a topic</p>
+                                    <p id="game1-selected-topic-count" class="text-xs font-bold text-slate-500">0 questions</p>
+                                </div>
+                                <span class="text-[10px] font-black text-orange-700 bg-white border border-orange-200 px-2 py-1 rounded-full">Game 1 only</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">Create New Topic</label>
+                            <div class="flex gap-2">
+                                <input id="game1-new-topic-name" maxlength="80" placeholder="e.g. Parts of a Plant" class="flex-1 min-w-0 px-3 py-2.5 rounded-lg border-2 border-slate-200 bg-white font-bold outline-none focus:border-orange-500">
+                                <button type="button" onclick="createGame1Topic()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-black whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>Add</button>
+                            </div>
+                            <input id="game1-new-topic-description" maxlength="220" placeholder="Optional short description" class="w-full mt-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm outline-none focus:border-orange-500">
+                        </div>
+                    </div>
+                    <p class="mt-3 text-xs text-slate-500"><i class="fa-solid fa-circle-info text-orange-500 mr-1"></i>Existing questions without a topic appear under <strong>Unassigned Questions</strong>. New Game 1 questions must be saved inside a created topic.</p>
+                </section>
+
+                <section id="tug-topic-panel" class="hidden bg-white border border-orange-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="Tug topic library">
+                    <div class="flex flex-wrap justify-between gap-3 mb-4"><div><h3 class="text-xl font-black text-slate-800">Tug of Knowledge Topics</h3><p class="text-sm text-slate-500">Questions and matches use the topic selected for this school year.</p></div>
+                        <div class="flex gap-2"><button type="button" onclick="renameTugTopic()" class="px-3 py-2 rounded-lg border font-bold">Rename</button><button type="button" onclick="deleteTugTopic()" class="px-3 py-2 rounded-lg border border-red-200 text-red-600 font-bold">Delete Empty Topic</button></div></div>
+                    <div class="grid md:grid-cols-2 gap-4"><div><label for="tug-topic-select" class="block text-xs font-black mb-1">Selected Topic</label>
+                        <select id="tug-topic-select" onchange="selectTugTopic(this.value)" class="w-full px-4 py-3 rounded-xl border-2 border-orange-200 bg-white font-bold"><option value="">Choose a topic…</option></select>
+                        <p class="mt-2 font-bold text-slate-800" id="tug-selected-topic-name">Choose a topic</p><p id="tug-selected-topic-count" class="text-xs text-slate-500">0 approved questions</p></div>
+                        <div><label for="tug-new-topic-name" class="block text-xs font-black mb-1">Create New Topic</label><div class="flex gap-2"><input id="tug-new-topic-name" maxlength="80" placeholder="e.g. Parts of a Plant" class="flex-1 min-w-0 px-3 py-2 rounded-lg border"><button type="button" onclick="createTugTopic()" class="bg-orange-600 text-white px-4 py-2 rounded-lg font-black">Add</button></div><input id="tug-new-topic-description" maxlength="220" placeholder="Optional description" class="w-full mt-2 px-3 py-2 rounded-lg border"></div></div>
+                </section>
+                <section id="tug-ai-panel" class="hidden bg-white border border-orange-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="AI Tug of Knowledge Question Generator">
+                    <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+                        <div><h3 class="text-xl font-black text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-orange-500 mr-2"></i>Generate Tug of Knowledge Questions</h3>
+                            <p class="text-sm text-slate-600">Use a science topic, saved lesson, PDF, or PowerPoint. Review all five choices before saving to the selected school year.</p></div>
+                        <span class="rounded-full bg-orange-50 text-orange-800 px-3 py-1 text-xs font-black">5 choices • A red · B green · C white · D blue · E yellow</span>
+                    </div>
+                    <p id="tug-ai-selected-topic" class="mb-3 text-sm font-black text-orange-700">Create or choose a Tug topic first.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <label class="block"><span class="block text-xs font-black text-slate-600 mb-1">Question source</span><select id="tug-ai-source" onchange="tugAiChangeSource()" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"><option value="topic">Type topic</option><option value="lesson">Existing SikLab lesson</option><option value="pdf">Upload PDF</option><option value="pptx">Upload PowerPoint (.pptx)</option></select></label>
+                        <label id="tug-ai-topic-wrap" class="block"><span class="block text-xs font-black text-slate-600 mb-1">Science topic</span><input id="tug-ai-topic" maxlength="160" placeholder="e.g. Parts of a plant" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"></label>
+                        <label id="tug-ai-lesson-wrap" class="hidden block"><span class="block text-xs font-black text-slate-600 mb-1">Saved lesson</span><select id="tug-ai-lesson" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"><option value="">Select an existing lesson</option></select></label>
+                        <label id="tug-ai-file-wrap" class="hidden block"><span class="block text-xs font-black text-slate-600 mb-1">Reference file (up to 5 MB)</span><input id="tug-ai-file" type="file" accept=".pdf,.pptx" class="w-full text-xs font-bold text-slate-600 file:mr-2 file:px-2 file:py-2 file:rounded-lg file:border-0 file:bg-orange-100 file:text-orange-700"></label>
+                        <label class="block"><span class="block text-xs font-black text-slate-600 mb-1">Difficulty</span><select id="tug-ai-difficulty" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label>
+                        <label class="block"><span class="block text-xs font-black text-slate-600 mb-1">Question count</span><select id="tug-ai-count" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option></select></label>
+                        <label class="block md:col-span-2"><span class="block text-xs font-black text-slate-600 mb-1">Optional focus</span><input id="tug-ai-focus" maxlength="160" placeholder="e.g. plant parts and their functions" class="w-full px-3 py-2.5 rounded-xl border-2 border-orange-100 bg-white font-bold"></label>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-center mt-4"><button type="button" id="tug-ai-generate-btn" onclick="tugAiGenerate()" class="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black disabled:opacity-50">Generate editable draft</button><span id="tug-ai-status" class="text-sm font-bold text-slate-600" role="status" aria-live="polite">AI drafts stay unsaved until you review and approve them.</span></div>
+                    <div id="tug-ai-drafts" class="mt-4" aria-live="polite"></div>
+                </section>
+
+                <section id="game1-ai-panel" class="sense-panel hidden bg-white border border-orange-200 rounded-2xl p-4 mb-4 shadow-sm" aria-label="AI Picture Challenge Question Generator">
+                    <div class="flex flex-wrap gap-3 items-center justify-between mb-3"><div><h3 class="text-xl font-black text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-orange-500 mr-2"></i>Generate Picture Challenge Questions</h3><p class="text-sm text-slate-600">Generate a five-choice picture quiz from a PDF, PowerPoint, saved lesson, or topic. Review every image and answer before saving.</p></div><span class="rounded-full bg-orange-50 text-orange-800 px-3 py-1 text-xs font-black">Five answer choices • A red · B green · C white · D blue · E yellow</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <label class="sense-field"><span>Question source</span><select id="sense-source" onchange="senseChangeSource()"><option value="topic" selected>Type topic</option><option value="lesson">Existing SikLab lesson</option><option value="pdf">Upload PDF</option><option value="pptx">Upload PowerPoint (.pptx)</option></select></label>
+                        <label id="sense-lesson-wrap" class="sense-field hidden"><span>Saved lesson</span><select id="sense-lesson"><option value="">Loading lessons…</option></select></label>
+                        <label id="sense-pdf-wrap" class="sense-field hidden"><span>Reference PDF or PPTX (up to 5 MB)</span><input id="sense-pdf" type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"></label>
+                        <label id="sense-topic-wrap" class="sense-field"><span>Science topic</span><input id="sense-topic" type="text" maxlength="160" placeholder="e.g. Parts of a plant, apples, weather"></label>
+                        <label class="sense-field"><span>Picture search library</span><select id="sense-image-provider"><option value="commons">Wikimedia Commons — no key</option><option value="pexels">Pexels photos — free API key</option></select><small class="text-xs text-slate-500">For other websites, browse and upload a picture you have rights to use.</small></label>
+                        <label class="sense-field"><span>Question count</span><select id="sense-count"><option value="5">5 questions</option><option value="10">10 questions</option><option value="15">15 questions</option></select></label>
+                        <div class="sense-field"><span>Save AI questions to topic</span><div id="sense-bank-topic-name" class="w-full rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 font-black text-orange-800">Select a topic first</div><small class="text-xs text-slate-500">The selected Game 1 topic controls where approved AI questions are saved.</small></div>
+                        <label class="sense-field md:col-span-2"><span>Optional topic focus</span><input id="sense-focus" maxlength="160" placeholder="Optional: a narrower angle within the selected topic"></label>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-center mt-3"><button type="button" id="sense-generate-btn" onclick="senseGenerateQuestions()" class="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black">✦ Generate editable draft</button><span id="sense-status" class="text-sm text-slate-600" role="status" aria-live="polite">AI drafts are not saved until you approve them.</span></div>
+                    <div id="sense-drafts" class="mt-4 space-y-3" aria-live="polite"></div>
+                </section>
+                <div id="qb-questions-panel" class="min-w-0">
+                    <div id="qb-question-editor" class="hidden w-full bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-orange-200 flex flex-col mb-3">
+                        <h3 id="form-cq-title" class="text-lg font-black text-slate-800 mb-3 border-b border-orange-100 pb-3"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i> Add Question</h3>
+                        <p class="text-xs font-bold text-orange-700 mb-3">Topic: <span id="qb-editor-topic">Choose a topic</span></p>
+                        <form onsubmit="addCustomQuestion(event)" class="space-y-4">
+                            <input type="hidden" id="cq-edit-id" value="">
+                            <input type="hidden" id="cq-existing-image" value="">
+                            <div id="cq-topic-wrap">
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Game 1 Topic</label>
+                                <select id="cq-topic-id" onchange="selectGame1Topic(this.value,this.id)" class="w-full px-4 py-2 rounded-xl border-2 border-orange-200 outline-none focus:border-orange-500 font-bold bg-orange-50 cursor-pointer transition-colors">
+                                    <option value="">Choose a topic…</option>
+                                </select>
+                                <p class="text-xs text-slate-500 mt-1">New Picture Challenge questions are saved only to this topic.</p>
+                            </div>
+                            <div id="cq-nova-topic-wrap" class="hidden">
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Science Carnival Topic</label>
+                                <select id="cq-nova-topic-id" onchange="selectNovaTopic(this.value,this.id)" class="w-full px-4 py-2 rounded-xl border-2 border-violet-200 outline-none focus:border-violet-500 font-bold bg-violet-50 cursor-pointer transition-colors">
+                                    <option value="">Choose a topic…</option>
+                                </select>
+                                <p class="text-xs text-slate-500 mt-1">Science Carnival questions are isolated inside this topic.</p>
+                            </div>
+                            <div id="cq-tug-topic-wrap" class="hidden"><label for="cq-tug-topic-id" class="block text-sm font-bold text-slate-600 mb-1">Tug Topic</label><select id="cq-tug-topic-id" onchange="selectTugTopic(this.value)" class="w-full px-4 py-2 rounded-xl border-2 border-orange-200 bg-white font-bold"><option value="">Choose a topic…</option></select></div>
+                            <div id="cq-difficulty-wrap" class="hidden">
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Difficulty</label>
+                                <select id="cq-difficulty" class="w-full px-4 py-2 rounded-xl border-2 border-violet-200 outline-none focus:border-violet-500 font-bold bg-white">
+                                    <option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Question / Prompt</label>
+                                <textarea id="cq-prompt" required rows="2" placeholder="e.g. Which part of the plant absorbs water?" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></textarea>
+                            </div>
+                            <div id="cq-options-wrap" class="space-y-2 rounded-xl border border-orange-200 bg-orange-50/50 p-3">
+                                <label class="block text-sm font-bold text-slate-700">Answer options — one for each physical button</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <label id="cq-option-label-0" class="text-sm font-bold">A • Red<input id="cq-option-0" maxlength="55" class="w-full p-2 rounded-lg border" placeholder="e.g. Leaf"></label>
+                                    <label id="cq-option-label-1" class="text-sm font-bold">B • Green<input id="cq-option-1" maxlength="55" class="w-full p-2 rounded-lg border" placeholder="e.g. Root"></label>
+                                    <label id="cq-option-label-2" class="text-sm font-bold">C • White<input id="cq-option-2" maxlength="55" class="w-full p-2 rounded-lg border" placeholder="e.g. Stem"></label>
+                                    <label id="cq-option-label-3" class="text-sm font-bold">D • Blue<input id="cq-option-3" maxlength="55" class="w-full p-2 rounded-lg border" placeholder="e.g. Flower"></label>
+                                    <label id="cq-option-field-4" class="text-sm font-bold"><span id="cq-option-label-4">E • Yellow</span><input id="cq-option-4" maxlength="55" class="w-full p-2 rounded-lg border" placeholder="e.g. Fruit"></label>
+                                </div><p class="text-xs text-slate-600">Game 1 uses five labeled choices; existing older five-senses questions still work.</p>
+                            </div>
+                            <div id="cq-answer-wrap">
+                                <label id="cq-answer-label" class="block text-sm font-bold text-slate-600 mb-1">Correct color / letter (A–E)</label>
+                                <select id="cq-answer" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium cursor-pointer">
+                                    <option value="0">A • Red</option>
+                                    <option value="1">B • Green</option>
+                                    <option value="2">C • White</option>
+                                    <option value="3">D • Blue</option>
+                                    <option value="4">E • Yellow</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-1">Explanation (optional)</label><textarea id="cq-explanation" maxlength="500" rows="2" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 mb-3" placeholder="Explain why this answer is correct"></textarea>
+                                <div id="cq-image-section">
+                                    <label class="block text-sm font-bold text-slate-600 mb-1">Upload Image (Optional)</label>
+                                    <input type="file" id="cq-image-file" accept="image/*" class="w-full px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors bg-white cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                                    <p id="cq-image-help" class="text-xs text-orange-500 mt-2 font-bold hidden"></p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button type="button" onclick="cancelEdit()" id="btn-cancel-edit" class="hidden w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>
+                                <button type="submit" id="btn-save-cq" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">Save to Bank</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="qb-question-list-view" class="w-full bg-white rounded-2xl shadow-sm border border-orange-200 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-orange-100 bg-orange-50 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-black text-slate-800"><i class="fa-solid fa-database text-orange-400 mr-2"></i> <span id="question-bank-topic-label">Choose a topic</span></h3>
+                                <p class="text-xs font-bold text-orange-600 mt-1"><span id="question-bank-module-label">Picture Challenge Question Bank</span> • School Year: <span id="question-bank-year-label">—</span></p>
+                            </div>
+                            <div class="flex gap-2"><button type="button" id="qb-add-question" onclick="qbShowEditor()" class="bg-orange-600 text-white text-xs font-black px-3 py-2 rounded-lg">+ Add Question</button><button onclick="resetCustomQuestions()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-sm"><i class="fa-solid fa-rotate-right mr-1"></i>Reload</button></div>
+                        </div>
+                        <div class="flex-grow overflow-y-auto p-4" id="questions-list-container"></div>
+                    </div>
+                </div>
+                    </main>
+                </div>
+            </div>
+            
+            <!-- VIEW: LESSON BUILDER (LMS) -->
+            <div id="view-lesson-builder" class="view-section hidden p-0 h-full w-full bg-slate-100">
+                <iframe id="lesson-builder-frame" src="" class="w-full h-full border-none"></iframe>
+            </div>
+
+            <!-- VIEW: CURRICULUM MANAGER -->
+            <div id="view-curriculum" class="view-section hidden p-4 md:p-5 space-y-4 overflow-y-auto">
+                <!-- Compact selected-year header -->
+                <div class="bg-stone-800 rounded-2xl px-5 py-4 text-white border-b-4 border-emerald-500 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <p class="text-emerald-300 text-[10px] font-black uppercase tracking-[0.18em]">Selected School Year</p>
+                            <h2 id="content-current-year-label" class="text-2xl font-black leading-none">—</h2>
+                        </div>
+                        <p class="text-slate-300 text-xs mt-2 max-w-3xl leading-relaxed">Curriculum content belongs to a school year. Student roster, groups, progress, and match history stay separate.</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap shrink-0">
+                        <button onclick="openAddYearModal()" class="bg-orange-600 hover:bg-orange-500 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-calendar-plus mr-1.5"></i>Create Year</button>
+                        <button onclick="switchTab('lesson-builder')" class="bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-pen-ruler mr-1.5"></i>Lesson Builder</button>
+                        <button onclick="switchTab('student-preview')" class="bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 rounded-lg text-sm font-black transition-colors"><i class="fa-solid fa-eye mr-1.5"></i>Preview</button>
+                    </div>
+                </div>
+
+                <!-- Compact counters -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Lessons</p><div id="content-count-lessons" class="text-2xl font-black text-slate-800 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-book-open"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-emerald-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-emerald-500">Published</p><div id="content-count-published" class="text-2xl font-black text-emerald-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-blue-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-blue-500">Questions</p><div id="content-count-questions" class="text-2xl font-black text-blue-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-circle-question"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-purple-200 px-4 py-3 flex items-center justify-between gap-3">
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-purple-500">Settings</p><div id="content-count-settings" class="text-2xl font-black text-purple-700 leading-none mt-1">0</div></div>
+                        <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-sliders"></i></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(0,2.05fr)] gap-4 items-start">
+                    <!-- Compact copy curriculum panel -->
+                    <form onsubmit="copySchoolYearContent(event)" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3 h-fit">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 leading-tight"><i class="fa-solid fa-copy text-orange-500 mr-2"></i>Copy Curriculum</h3>
+                                <p class="text-xs text-slate-500 mt-1">Copy academic content between school years.</p>
+                            </div>
+                            <span class="shrink-0 text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 border border-orange-100 rounded-full px-2.5 py-1">Curriculum Only</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Source Year</label>
+                                <select id="copy-content-source" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"></select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Target Year</label>
+                                <select id="copy-content-target" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"></select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1">Copy Mode</label>
+                            <select id="copy-content-mode" onchange="updateCopyContentWarning()" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+                                <option value="merge">Merge — keep existing target content</option>
+                                <option value="replace">Replace — overwrite selected target content</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wider font-black text-slate-500 mb-1.5">Include</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 2xl:grid-cols-1 min-[1500px]:grid-cols-3 gap-2">
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-lessons" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Lessons</span></label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-questions" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Questions</span></label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:border-orange-200"><input id="copy-content-settings" type="checkbox" checked class="w-4 h-4 accent-orange-600"><span class="text-xs font-bold text-slate-700">Settings</span></label>
+                            </div>
+                        </div>
+
+                        <div id="copy-content-warning" class="rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-3 py-2.5 text-xs font-bold leading-relaxed"></div>
+
+                        <div class="rounded-lg bg-slate-900 text-slate-300 px-3 py-2.5 text-[11px] leading-relaxed">
+                            <i class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i><strong class="text-white">Never copied:</strong> roster, groups, progress, or match history.
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button id="copy-content-button" type="submit" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-black py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-copy mr-1.5"></i>Copy Curriculum</button>
+                            <button id="clear-content-button" type="button" onclick="clearSelectedSchoolYearContent()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-black py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-trash mr-1.5"></i>Clear Selected</button>
+                        </div>
+                    </form>
+
+                    <!-- Compact school-year content overview -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
+                        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 leading-tight">School Year Content Overview</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Switch years or preview student-visible content.</p>
+                            </div>
+                            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Students are never copied</div>
+                        </div>
+                        <div id="school-year-content-summary" class="divide-y divide-slate-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: STUDENT PORTAL PREVIEW -->
+            <div id="view-student-preview" class="view-section hidden p-0 h-full w-full bg-slate-100 flex flex-col">
+                <div class="bg-white border-b border-slate-200 px-5 py-3 flex justify-between items-center flex-shrink-0">
+                    <div><p class="font-black text-slate-800">Student Portal Preview</p><p class="text-xs text-slate-500">Teacher preview includes the selected school year. Draft lessons can be shown for review.</p></div>
+                    <div class="flex gap-2"><button onclick="refreshStudentPreview()" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-slate-700"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh</button><button onclick="openStudentPortalInNewTab()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold"><i class="fa-solid fa-arrow-up-right-from-square mr-2"></i>Open</button></div>
+                </div>
+                <iframe id="student-preview-frame" src="" class="w-full flex-grow border-none bg-sky-50"></iframe>
+            </div>
+
+            <!-- VIEW: HISTORY -->
+            <div id="view-history" class="view-section hidden p-8 h-full flex flex-col">
+                <div class="bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden flex flex-col h-full">
+                    <div class="bg-stone-800 p-6 border-b-4 border-orange-500 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-clock-rotate-left text-orange-400 mr-2"></i> Post-Game Match History</h2>
+                            <p class="text-slate-400 text-sm mt-1">Review recent game results, scores, and winners.</p>
+                        </div>
+                        <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"><i class="fa-solid fa-trash mr-2"></i>Clear Logs</button>
+                    </div>
+                    <div class="p-6 flex-grow overflow-y-auto bg-orange-50" id="history-list-container"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS -->
+            <div id="view-settings" class="view-section hidden p-8 max-w-4xl mx-auto w-full">
+                <div class="bg-white rounded-3xl shadow-sm border border-orange-200 overflow-hidden">
+                    <div class="bg-stone-800 p-6 border-b-4 border-orange-500">
+                        <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-gamepad text-orange-400 mr-2"></i> Game Management</h2>
+                    </div>
+                    <div class="p-4 md:p-6 space-y-5">
+                        
+                        <details class="bg-slate-50 p-4 rounded-2xl border border-slate-200"><summary class="font-bold text-slate-700 cursor-pointer">Advanced • Manage game files</summary><div class="pt-4">
+                            <h3 class="text-lg font-bold text-slate-700 mb-4" id="form-custom-game-title"><i class="fa-solid fa-folder-plus text-orange-500 mr-2"></i>Add Custom Game Module</h3>
+                            <form onsubmit="handleAddCustomGame(event)" class="flex flex-col gap-4">
+                                <input type="hidden" id="edit-custom-game-id" value="">
+                                <div class="flex gap-4 w-full">
+                                    <input id="new-game-quarter" type="hidden" value="1">
+                                    <div class="flex-1"><input type="text" id="new-game-name" placeholder="Game Name (e.g. Week 1: Space)" required class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium transition-colors"></div>
+                                </div>
+                                <div class="flex gap-4 w-full">
+                                    <div class="flex-1"><input type="text" id="new-game-path" placeholder="Path (e.g. /games/quarter2/SikLab_W1.html)" required class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-medium transition-colors"></div>
+                                    <button type="button" onclick="cancelEditCustomGame()" id="btn-cancel-cg" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-6 py-3 rounded-xl transition-colors">Cancel</button>
+                                    <button type="submit" id="btn-save-cg" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-colors whitespace-nowrap">Add Custom Game</button>
+                                </div>
+                            </form>
+                            
+                            <div id="custom-games-list" class="mt-6 space-y-2 max-h-48 overflow-y-auto pr-2">
+                                </div>
+                        </div></details>
+
+                        <div>
+                            <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Configure a game</label>
+                            <div class="relative">
+                                <select id="setting-game" onchange="updateGameModeUI('setting-game')" class="w-full appearance-none px-5 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 focus:border-orange-500 focus:bg-white outline-none font-bold text-slate-800 text-lg cursor-pointer">
+                                    <option value="">Loading games…</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-5 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-2">Only settings used by the selected game appear below. Select the game to launch on the Dashboard.</p>
+                        </div>
+
+                        <hr class="border-slate-200">
+                        
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-700 mb-4">
+                                <i class="fa-solid fa-star-half-stroke text-orange-500 mr-2"></i> 
+                                <span id="dynamic-settings-title">Dynamic Scoring Rules</span>
+                            </h3>
+                            <div id="dynamic-settings-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                            </div>
+                        </div>
+
+                        <div class="pt-6">
+                            <button onclick="saveGameConfig()" class="bg-stone-800 hover:bg-stone-900 text-white font-black px-8 py-3 rounded-xl shadow-md transition-colors w-full md:w-auto">Save Game Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- VIEW: ESP PLAYER SETUP -->
+            <div id="view-device-setup" class="view-section hidden p-8 w-full">
+                <div class="max-w-6xl mx-auto space-y-6">
+
+                    <!-- CLOUD SETUP HERO -->
+                    <div class="bg-gradient-to-r from-stone-900 to-orange-950 rounded-3xl p-7 text-white shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-orange-500/10"></div>
+
+                        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            <div>
+                                <span class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+                                    <i class="fa-solid fa-cloud"></i>
+                                    Supabase Cloud Controllers
+                                </span>
+
+                                <h2 class="text-3xl font-black mt-4">
+                                    Configure ESP Player Controllers
+                                </h2>
+
+                                <p class="text-stone-300 mt-2 max-w-2xl">
+                                    SikLab is hosted online. ESP Player devices only need an internet-connected
+                                    Wi-Fi network or mobile hotspot and a Player 1 / Player 2 assignment.
+                                    No laptop IP address or local SikLab server address is required.
+                                </p>
+                            </div>
+
+                            <div class="w-20 h-20 rounded-2xl bg-orange-500/10 border border-orange-400/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-microchip text-4xl text-orange-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CLOUD CONNECTION INFO -->
+                    <div class="bg-white rounded-3xl border border-orange-100 shadow-sm p-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+                                        Controller Backend
+                                    </p>
+                                    <h3 class="text-xl font-black text-slate-800 mt-1">
+                                        SikLab Online / Supabase
+                                    </h3>
+                                    <p class="text-sm text-slate-500 mt-1">
+                                        The cloud endpoint is configured in the ESP32 firmware. Teachers do not enter a server IP.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div id="device-cloud-status" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-500 border border-slate-200 font-black text-xs self-start md:self-auto">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                CHECKING CLOUD
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLLER CARDS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- PLAYER 1 -->
+                        <div class="bg-white rounded-3xl border-2 border-blue-100 shadow-sm overflow-hidden">
+                            <div class="bg-blue-50 p-5 border-b border-blue-100 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-black text-blue-500 uppercase tracking-widest">
+                                        Blue Controller
+                                    </p>
+                                    <h3 class="text-2xl font-black text-blue-900">
+                                        Player 1
+                                    </h3>
+                                </div>
+
+                                <span id="device-status-player1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                    OFFLINE
+                                </span>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="grid grid-cols-2 gap-3 mb-5">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Device</p>
+                                        <p id="device-id-player1" class="font-black text-slate-700 mt-1">Not connected</p>
+                                    </div>
+
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Last Seen</p>
+                                        <p id="device-last-seen-player1" class="font-black text-slate-700 mt-1">—</p>
+                                    </div>
+                                </div>
+
+                                <div id="qr-empty-player1" class="h-64 border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+                                    <i class="fa-solid fa-qrcode text-5xl text-blue-200 mb-4"></i>
+                                    <p class="font-black text-slate-700">
+                                        Setup QR not generated
+                                    </p>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-xs">
+                                        Connect your phone to the ESP controller's SikLab-Setup-XXXXXX Wi-Fi first,
+                                        then use this QR to open the controller as Player 1.
+                                    </p>
+                                </div>
+
+                                <div id="qr-result-player1" class="hidden">
+                                    <div class="flex justify-center bg-white border-2 border-blue-100 rounded-2xl p-4">
+                                        <img id="qr-image-player1" alt="Player 1 setup QR" class="w-56 h-56 object-contain">
+                                    </div>
+
+                                    <p id="qr-expires-player1" class="text-center text-xs text-slate-400 font-bold mt-3"></p>
+
+                                    <div class="flex gap-2 mt-4">
+                                        <input id="qr-link-player1" type="text" readonly class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+
+                                        <button onclick="copyDeviceSetupLink('player1')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 rounded-lg" title="Copy setup link">
+                                            <i class="fa-solid fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button id="btn-qr-player1" onclick="generateControllerQR('player1')" class="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 rounded-xl shadow-md transition-colors">
+                                    <i class="fa-solid fa-qrcode mr-2"></i>
+                                    Generate Player 1 Setup QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PLAYER 2 -->
+                        <div class="bg-white rounded-3xl border-2 border-red-100 shadow-sm overflow-hidden">
+                            <div class="bg-red-50 p-5 border-b border-red-100 flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-black text-red-500 uppercase tracking-widest">
+                                        Red Controller
+                                    </p>
+                                    <h3 class="text-2xl font-black text-red-900">
+                                        Player 2
+                                    </h3>
+                                </div>
+
+                                <span id="device-status-player2" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                    OFFLINE
+                                </span>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="grid grid-cols-2 gap-3 mb-5">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Device</p>
+                                        <p id="device-id-player2" class="font-black text-slate-700 mt-1">Not connected</p>
+                                    </div>
+
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-widest font-black text-slate-400">Last Seen</p>
+                                        <p id="device-last-seen-player2" class="font-black text-slate-700 mt-1">—</p>
+                                    </div>
+                                </div>
+
+                                <div id="qr-empty-player2" class="h-64 border-2 border-dashed border-red-200 bg-red-50/40 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+                                    <i class="fa-solid fa-qrcode text-5xl text-red-200 mb-4"></i>
+                                    <p class="font-black text-slate-700">
+                                        Setup QR not generated
+                                    </p>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-xs">
+                                        Connect your phone to the ESP controller's SikLab-Setup-XXXXXX Wi-Fi first,
+                                        then use this QR to open the controller as Player 2.
+                                    </p>
+                                </div>
+
+                                <div id="qr-result-player2" class="hidden">
+                                    <div class="flex justify-center bg-white border-2 border-red-100 rounded-2xl p-4">
+                                        <img id="qr-image-player2" alt="Player 2 setup QR" class="w-56 h-56 object-contain">
+                                    </div>
+
+                                    <p id="qr-expires-player2" class="text-center text-xs text-slate-400 font-bold mt-3"></p>
+
+                                    <div class="flex gap-2 mt-4">
+                                        <input id="qr-link-player2" type="text" readonly class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+
+                                        <button onclick="copyDeviceSetupLink('player2')" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 rounded-lg" title="Copy setup link">
+                                            <i class="fa-solid fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button id="btn-qr-player2" onclick="generateControllerQR('player2')" class="w-full mt-5 bg-red-600 hover:bg-red-700 text-white font-black py-3.5 rounded-xl shadow-md transition-colors">
+                                    <i class="fa-solid fa-qrcode mr-2"></i>
+                                    Generate Player 2 Setup QR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SETUP PROCESS -->
+                    <div class="bg-orange-50 border border-orange-200 rounded-3xl p-6">
+                        <h3 class="font-black text-orange-800 text-lg">
+                            <i class="fa-solid fa-list-check mr-2"></i>
+                            Controller Setup Process
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-5">
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">1</span>
+                                <p class="font-black text-slate-700">Setup Mode</p>
+                                <p class="text-xs text-slate-400 mt-1">Hold yellow E + joystick LEFT for 3 seconds.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">2</span>
+                                <p class="font-black text-slate-700">Connect</p>
+                                <p class="text-xs text-slate-400 mt-1">Join SikLab-Setup-XXXXXX. “No Internet” is expected.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">3</span>
+                                <p class="font-black text-slate-700">Assign</p>
+                                <p class="text-xs text-slate-400 mt-1">Generate or open the QR for Player 1 or Player 2.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">4</span>
+                                <p class="font-black text-slate-700">Wi-Fi</p>
+                                <p class="text-xs text-slate-400 mt-1">Enter the internet router or mobile-hotspot SSID and password.</p>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-4 border border-orange-100">
+                                <span class="w-8 h-8 rounded-full bg-orange-600 text-white font-black flex items-center justify-center mb-3">5</span>
+                                <p class="font-black text-slate-700">Cloud Ready</p>
+                                <p class="text-xs text-slate-400 mt-1">ESP restarts, connects to the internet, and appears online in SikLab.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IMPORTANT INFO -->
+                    <div class="bg-slate-900 rounded-3xl p-6 text-white">
+                        <div class="flex gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-circle-info"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="font-black text-lg">About 192.168.4.1</h3>
+                                <p class="text-sm text-slate-300 mt-1 leading-relaxed">
+                                    Both physical controllers can use <strong class="text-white">192.168.4.1</strong> during setup.
+                                    Each controller creates a separate Wi-Fi network named <strong class="text-orange-300">SikLab-Setup-XXXXXX</strong>.
+                                    After setup, the controller leaves that temporary network and communicates with SikLab through Supabase over the internet.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VIEW: ADMIN & REPORTS -->
+<div id="view-admin" class="view-section hidden p-8 flex flex-col space-y-8 overflow-y-auto" style="height: calc(100vh - 5rem);">
+                
+                <!-- School Year Manager -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-stone-800 p-6 border-b-4 border-emerald-500 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-white"><i class="fa-solid fa-calendar-days text-emerald-400 mr-2"></i> School Year Manager</h2>
+                            <p class="text-slate-400 text-sm mt-1">Manage global access and archived years.</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="overflow-hidden rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold text-sm uppercase tracking-wider">
+                                        <th class="p-4 border-b border-slate-200">School Year</th>
+                                        <th class="p-4 border-b border-slate-200">Status</th>
+                                        <th class="p-4 border-b border-slate-200 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-year-list">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Progress Report -->
+<div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-0">
+                    <div class="bg-emerald-50 p-6 border-b border-emerald-200 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-emerald-800"><i class="fa-solid fa-ranking-star text-yellow-500 mr-2"></i> Student Progress Report</h2>
+                            <p class="text-emerald-600 font-bold text-sm mt-1">Scores and completion data for <span id="report-sy-label"></span></p>
+                        </div>
+                        <button onclick="loadProgressReport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-colors"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh Data</button>
+                    </div>
+<div class="p-6 overflow-y-auto" style="max-height: 400px;">
+                        <div class="overflow-hidden rounded-xl border border-slate-200">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold text-sm uppercase tracking-wider">
+                                        <th class="p-4 border-b border-slate-200">Student Name</th>
+                                        <th class="p-4 border-b border-slate-200">Grade & Section</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Total Stars</th>
+                                        <th class="p-4 border-b border-slate-200 text-center">Modules Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-progress-list">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FULL SCREEN GAME OVERLAY (IFRAME SANDBOX) -->
+    <div id="siklab-game-overlay" class="fixed inset-0 z-[200] bg-black hidden transition-opacity duration-300">
+        <iframe id="game-iframe" src="" title="SikLab game" class="w-full h-full grow border-none bg-stone-800"></iframe>
+        <button type="button" onclick="closeGameOverlay()" class="siklab-game-exit" aria-label="Exit game" title="Exit game">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Exit game</span>
+        </button>
+    </div>
+
+    <!-- Modals -->
+    <div id="selector-modal" class="fixed inset-0 z-[100] bg-stone-900/80 backdrop-blur-md flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div id="selector-box" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden transform scale-90 transition-transform duration-300">
+            <div class="p-8 border-b-2 border-slate-100 bg-orange-50/30">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 id="selector-title" class="text-2xl font-black text-slate-800">Select Participant</h3>
+                        <p id="selector-subtitle" class="text-sm font-bold text-slate-400 uppercase tracking-widest">Choose a player or team</p>
+                    </div>
+                    <button onclick="closeSelectorModal()" class="w-10 h-10 rounded-full bg-white text-slate-400 hover:text-red-500 shadow-sm border border-slate-200 flex items-center justify-center transition-all"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                
+                <div class="relative group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
+                    <input type="text" id="selector-search" onkeyup="filterSelectorList(this.value)" placeholder="Search names or group numbers..." class="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-orange-500 outline-none font-bold text-slate-700 transition-all shadow-inner bg-white">
+                </div>
+            </div>
+
+            <div class="p-4 h-[400px] overflow-y-auto bg-white space-y-2" id="selector-list"></div>
+            
+            <div class="p-6 bg-slate-50 border-t-2 border-slate-100 text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter">Participants filtered for <span id="selector-sy-label"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-year-modal" class="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border-t-8 border-orange-500 transform scale-95 transition-transform duration-300 max-h-[92vh] overflow-y-auto" id="add-year-box">
+            <div class="p-7 border-b border-slate-100">
+                <h3 class="text-2xl font-black text-slate-800">Create New School Year</h3>
+                <p class="text-sm text-slate-500 mt-1">Create an empty curriculum or begin with a copy of an existing school year.</p>
+            </div>
+            <form onsubmit="handleAddYear(event)" class="p-7 space-y-6">
+                <div><label class="block text-sm font-bold text-slate-600 mb-2">School Year Name</label><input type="text" id="new-year-input" required placeholder="e.g. SY 2027-2028" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 outline-none font-bold transition-colors"></div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-3">Curriculum Setup</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 cursor-pointer hover:border-orange-300"><div class="flex items-start gap-3"><input type="radio" name="new-year-mode" value="empty" checked onchange="setNewYearSetupMode(this.value)" class="mt-1 w-5 h-5 accent-orange-600"><div><div class="font-black text-slate-800">Start Empty</div><div class="text-xs text-slate-500 mt-1">New roster and a blank curriculum.</div></div></div></label>
+                        <label class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 cursor-pointer hover:border-orange-300"><div class="flex items-start gap-3"><input type="radio" name="new-year-mode" value="copy" onchange="setNewYearSetupMode(this.value)" class="mt-1 w-5 h-5 accent-orange-600"><div><div class="font-black text-slate-800">Copy Existing Curriculum</div><div class="text-xs text-slate-500 mt-1">Reuse lessons, questions, and settings.</div></div></div></label>
+                    </div>
+                </div>
+
+                <div id="new-year-copy-options" class="hidden rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-4">
+                    <div><label class="block text-xs uppercase tracking-wider font-black text-blue-700 mb-2">Copy From</label><select id="new-year-copy-source" class="w-full px-4 py-3 rounded-xl border-2 border-blue-200 bg-white font-bold outline-none focus:border-blue-500"></select></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-lessons" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Lessons</span></label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-questions" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Questions</span></label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl bg-white border border-blue-100"><input id="new-year-copy-settings" type="checkbox" checked class="w-5 h-5 accent-blue-600"><span class="font-bold text-sm">Game Settings</span></label>
+                    </div>
+                    <p class="text-xs text-blue-700 font-bold"><i class="fa-solid fa-circle-info mr-1"></i>Student roster, groups, progress, and match history are never copied.</p>
+                </div>
+
+                <label class="flex items-start gap-3 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 cursor-pointer"><input id="new-year-set-active" type="checkbox" checked class="mt-1 w-5 h-5 accent-emerald-600"><div><div class="font-black text-emerald-800">Make this the active student school year</div><div class="text-xs text-emerald-700 mt-1">The public Student Portal will show published lessons from the active year.</div></div></label>
+
+                <div class="flex gap-3 pt-2"><button type="button" onclick="closeAddYearModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-colors">Cancel</button><button id="new-year-submit" type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-xl shadow-md transition-colors"><i class="fa-solid fa-calendar-plus mr-2"></i>Create School Year</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-group-modal" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border-t-8 border-orange-500 transform scale-95 transition-transform duration-300" id="edit-group-box">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-black text-slate-800" id="edit-group-title">Edit Group</h3>
+                <button onclick="closeEditGroupModal()" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-times text-2xl"></i></button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-slate-600 mb-1">Assign Specific Student</label>
+                <div class="flex gap-2">
+                    <select id="add-to-group-select" class="flex-grow px-4 py-2 rounded-xl border-2 border-slate-200 outline-none focus:border-orange-500 font-medium transition-colors"></select>
+                    <button onclick="addStudentToGroup()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl font-bold shadow-md transition-colors"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <label class="block text-sm font-bold text-slate-600 mb-1 mt-4">Current Members</label>
+            <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 max-h-60 overflow-y-auto" id="edit-group-members"></div>
+
+            <button onclick="closeEditGroupModal()" class="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 rounded-xl shadow-md transition-colors mt-6">Done</button>
+        </div>
+    </div>
+
+    <!-- Supabase must initialize before SikLab modules -->
+    <script src="js/supabase_client.js"></script>
+    <script src="js/storage_helpers.js"></script>
+
+    <script src="security.js"></script>
+
+    <script src="content_manager.js?v=five-buttons-v2"></script>
+    <script src="settings_manager.js"></script>
+
+    <script src="js/00_state.js"></script>
+    <script src="js/01_core.js"></script>
+    <script src="js/02_school_years.js"></script>
+    <script src="js/03_auth.js"></script>
+    <script src="js/04_navigation.js"></script>
+    <script src="js/05_students.js"></script>
+    <script src="js/06_match_setup.js"></script>
+    <script src="js/07_wheel.js"></script>
+    <script src="js/08_groups.js"></script>
+    <script src="js/09_history.js"></script>
+    <script src="js/10_games.js"></script>
+    <script src="js/11_esp32.js"></script>
+    <script src="js/12_admin.js"></script>
+    <script src="js/13_device_setup.js"></script>
+    <script src="js/14_content_management.js"></script>
+    <script src="js/14_reference_upload.js?v=pptx-v1"></script>
+    <script src="js/15_sense_ai.js?v=five-buttons-v2"></script>
+    <script src="js/16_game1_topics.js?v=topic-first-v3"></script>
+    <script src="js/17_nova_integration.js?v=topic-first-v3"></script>
+    <script src="js/22_tug_topics.js?v=topic-first-v3"></script>
+    <script src="js/20_tug_integration.js?v=five-buttons-v2"></script>
+    <script src="js/21_tug_ai.js?v=question-bank-ai-fix-v5"></script>
+    <script src="js/18_nova_ai.js?v=five-buttons-v2"></script>
+    <script src="js/19_nova_targets_ai.js?v=pptx-v1"></script>
+    <script src="js/23_qb_flow.js?v=topic-first-v3"></script>
+</body>
+</html>

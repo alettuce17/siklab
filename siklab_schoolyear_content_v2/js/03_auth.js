@@ -67,6 +67,7 @@ function showLoginForm() {
 function showRegisterForm() {
     hideAllAuthPanels();
     document.getElementById('register-form')?.classList.remove('hidden');
+    hideRegisterDeliveryError();
 
     setAuthHeading(
         'Create Teacher Account',
@@ -134,10 +135,39 @@ function togglePasswordVisibility(inputId, button) {
     }
 }
 
+function isAuthEmailDeliveryError(error) {
+    const code = String(error?.code || '').toLowerCase();
+    const message = String(error?.message || '').toLowerCase();
+    return code === 'email_address_not_authorized' ||
+        message.includes('error sending confirmation email') ||
+        message.includes('error sending email') ||
+        message.includes('email address not authorized');
+}
+
+function hideRegisterDeliveryError() {
+    document.getElementById('register-delivery-error')?.classList.add('hidden');
+}
+
+function showRegisterDeliveryError(error) {
+    const panel = document.getElementById('register-delivery-error');
+    const detail = document.getElementById('register-delivery-detail');
+    if (detail) {
+        detail.textContent = String(error?.code || '').toLowerCase() === 'email_address_not_authorized' ||
+            String(error?.message || '').toLowerCase().includes('email address not authorized')
+            ? 'This address is not allowed by the project’s default email sender. The project owner needs to configure Custom SMTP in Supabase Authentication settings.'
+            : 'Supabase could not send a confirmation email. The project owner should check Supabase Authentication logs, then repair the SMTP settings or confirmation email template.';
+    }
+    panel?.classList.remove('hidden');
+}
+
 function getFriendlyPasswordAuthError(error, fallback = 'Authentication failed.') {
     const message = String(error?.message || '').trim();
     const lower = message.toLowerCase();
     const status = Number(error?.status || error?.statusCode || 0);
+
+    if (isAuthEmailDeliveryError(error)) {
+        return 'Supabase could not send the confirmation email. Check the email setup in your Supabase project.';
+    }
 
     if (
         status === 429 ||
@@ -259,6 +289,7 @@ async function handleLogin(event) {
 
 async function handleRegister(event) {
     event.preventDefault();
+    hideRegisterDeliveryError();
 
     const fullName = String(
         document.getElementById('register-name')?.value || ''
@@ -344,6 +375,7 @@ async function handleRegister(event) {
         showToast('Account created. Check your email to confirm it.');
     } catch (error) {
         console.error('[SikLab register]', error);
+        if (isAuthEmailDeliveryError(error)) showRegisterDeliveryError(error);
         showErrorToast(
             getFriendlyPasswordAuthError(
                 error,
@@ -398,6 +430,12 @@ async function resendConfirmationEmail() {
         showToast('Confirmation email sent. Check your inbox.');
     } catch (error) {
         console.error('[SikLab resend confirmation]', error);
+        if (isAuthEmailDeliveryError(error)) {
+            showRegisterForm();
+            const registerEmail = document.getElementById('register-email');
+            if (registerEmail) registerEmail.value = email;
+            showRegisterDeliveryError(error);
+        }
         showErrorToast(
             getFriendlyPasswordAuthError(
                 error,
