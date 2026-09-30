@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#b84e22" />
+  <title>Tug of Knowledge | Two-Player Science Quiz</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/milktea-theme.css?v=game-chrome-v4" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <button class="brand" type="button" data-action="navigate" data-screen="home" aria-label="Home">
+        <span class="brand-icon">🧋</span><span><strong>TUG OF WAR NI ROGIE</strong><small>The sweetest science showdown</small></span>
+      </button>
+      <button class="mobile-nav-toggle" type="button" data-action="toggle-nav" aria-label="Toggle navigation">☰ Menu</button>
+      <nav id="site-nav" class="nav" aria-label="Main navigation">
+        <button data-action="navigate" data-screen="home">🏠 Home</button>
+        <button data-action="navigate" data-screen="selection">🎮 Play</button>
+        <button data-action="navigate" data-screen="questions">📚 Questions</button>
+        <button data-action="navigate" data-screen="players">👥 Players</button>
+        <button data-action="navigate" data-screen="settings">⚙️ Settings</button>
+        <button data-action="navigate" data-screen="presets">🎛️ Presets</button>
+        <button data-action="navigate" data-screen="history">🏆 History</button>
+        <button data-action="navigate" data-screen="stats">📊 Stats</button>
+        <button data-action="navigate" data-screen="backup">💾 Backup</button>
+      </nav>
+    </header>
+    <main id="screen" class="screen" tabindex="-1"></main>
+    <footer>Offline-ready • Saved in this browser • Controller: A red · B green · C white · D blue · E yellow · Keyboard P1: 1–5 / P2: 6–0</footer>
+  </div>
+  <div id="modal-root" aria-live="polite"></div>
+  <div id="toast-root" role="status" aria-live="polite"></div>
+  <!-- Classic scripts intentionally work when index.html is opened with file:// in Chrome. -->
+  <script src="js/storage.js"></script>
+  <script src="js/questions.js?v=five-buttons-v2"></script>
+  <script src="js/players.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/game.js?v=five-buttons-v2"></script>
+  <script src="js/app.js?v=game-chrome-v4"></script>
+  <script src="js/siklab.js?v=five-buttons-v2"></script>
+</body>
+</html>

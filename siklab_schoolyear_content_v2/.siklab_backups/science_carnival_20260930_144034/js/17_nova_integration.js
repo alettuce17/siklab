@@ -400,7 +400,6 @@ function openNovaQuestionBank() {
 
 let qbActivePanel = 'questions';
 function qbSetPanel(panel = qbActivePanel) {
-    const previousPanel = qbActivePanel;
     const module = document.getElementById('cq-module')?.value || 'W1';
     const supported = module === 'W1' || module === 'NOVA' || module === 'TUG';
     const hasSettings = module === 'NOVA';
@@ -408,30 +407,15 @@ function qbSetPanel(panel = qbActivePanel) {
         if (typeof showErrorToast === 'function') showErrorToast('Choose a topic from the list first.');
         panel = 'questions';
     }
-    qbActivePanel = (panel === 'ai' && supported) || (panel === 'settings' && hasSettings) || (panel === 'tf' && hasSettings) ? panel : 'questions';
-    if (previousPanel !== qbActivePanel && typeof cancelEdit === 'function' &&
-        document.getElementById('qb-question-editor') &&
-        !document.getElementById('qb-question-editor').classList.contains('hidden')) cancelEdit();
-
-    const questionsTabLabel = document.getElementById('qb-questions-tab-label');
-    if (questionsTabLabel) questionsTabLabel.textContent = hasSettings ? 'Five-choice' : 'Questions';
+    qbActivePanel = (panel === 'ai' && supported) || (panel === 'settings' && hasSettings) ? panel : 'questions';
 
     document.querySelectorAll('[data-qb-tab]').forEach(button => {
         const active = button.dataset.qbTab === qbActivePanel;
         button.classList.toggle('is-active', active);
-        button.classList.toggle('hidden', (!supported && button.dataset.qbTab !== 'questions') || (!hasSettings && ['settings', 'tf'].includes(button.dataset.qbTab)));
+        button.classList.toggle('hidden', (!supported && button.dataset.qbTab !== 'questions') || (!hasSettings && button.dataset.qbTab === 'settings'));
         button.setAttribute('aria-pressed', String(active));
     });
-    document.getElementById('qb-questions-panel')?.classList.toggle('hidden', !['questions', 'tf'].includes(qbActivePanel));
-    if (hasSettings && ['questions', 'tf'].includes(qbActivePanel)) {
-        if (typeof qbHideEditor === 'function') qbHideEditor();
-        const questionType = document.getElementById('cq-nova-question-type');
-        if (questionType) questionType.value = qbActivePanel === 'tf' ? 'tf' : 'mc';
-        if (typeof setNovaQuestionFormMode === 'function') setNovaQuestionFormMode();
-        if (typeof renderQuestionsList === 'function') renderQuestionsList();
-    }
-    const addButton = document.getElementById('qb-add-question');
-    if (addButton) addButton.textContent = qbActivePanel === 'tf' ? '+ Add True or False' : '+ Add Question';
+    document.getElementById('qb-questions-panel')?.classList.toggle('hidden', qbActivePanel !== 'questions');
     document.getElementById('qb-topic-rail')?.classList.toggle('hidden', !supported);
     document.getElementById('qb-workspace')?.classList.toggle('has-topic-bank', supported);
     if (typeof qbUpdateTopicShortcut === 'function') qbUpdateTopicShortcut();
@@ -459,8 +443,7 @@ function setNovaQuestionFormMode() {
     document.getElementById('cq-nova-topic-wrap')?.classList.toggle('hidden', !isNova);
     document.getElementById('cq-tug-topic-wrap')?.classList.toggle('hidden', !isTug);
     document.getElementById('cq-difficulty-wrap')?.classList.toggle('hidden', !isNova);
-    // Science Carnival's top-level tabs choose the type; no second type picker is needed in the form.
-    document.getElementById('cq-nova-question-type-wrap')?.classList.add('hidden');
+    document.getElementById('cq-nova-question-type-wrap')?.classList.toggle('hidden', !isNova);
     document.getElementById('cq-image-section')?.classList.toggle('hidden', !isGame1);
     document.getElementById('cq-answer-wrap')?.classList.toggle('hidden', !(isGame1 || isNova || isTug));
 

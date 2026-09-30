@@ -795,10 +795,9 @@
                     </div>
                     <div class="min-w-0 flex-1">
                         <nav class="qb-tabs flex gap-1.5 overflow-x-auto" aria-label="Question Bank sections">
-                            <button type="button" data-qb-tab="questions" aria-pressed="true" onclick="qbSetPanel('questions')" class="qb-tab is-active"><i class="fa-solid fa-list-check mr-1.5"></i><span id="qb-questions-tab-label">Questions</span></button>
-                            <button type="button" data-qb-tab="tf" aria-pressed="false" onclick="qbSetPanel('tf')" class="qb-tab hidden"><i class="fa-solid fa-check-double mr-1.5"></i>True or False</button>
-                            <button type="button" data-qb-tab="settings" aria-pressed="false" onclick="qbSetPanel('settings')" class="qb-tab hidden"><i class="fa-solid fa-boxes-stacked mr-1.5"></i>Sorting</button>
+                            <button type="button" data-qb-tab="questions" aria-pressed="true" onclick="qbSetPanel('questions')" class="qb-tab is-active"><i class="fa-solid fa-list-check mr-1.5"></i>Questions</button>
                             <button type="button" data-qb-tab="ai" aria-pressed="false" onclick="qbSetPanel('ai')" class="qb-tab"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Generate with AI</button>
+                            <button type="button" data-qb-tab="settings" aria-pressed="false" onclick="qbSetPanel('settings')" class="qb-tab"><i class="fa-solid fa-sliders mr-1.5"></i>Game Settings</button>
                         </nav>
                     </div>
                 </div>
@@ -819,8 +818,8 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-tents"></i></span>
                                 <div>
-                                    <h3 class="text-xl font-black text-slate-800">Sorting Categories and Items</h3>
-                                    <p class="text-sm text-slate-500">Choose a topic from the sidebar. Add, edit, or remove the categories and items that players sort. The same items appear as shooter targets.</p>
+                                    <h3 class="text-xl font-black text-slate-800">Shooter Target Settings</h3>
+                                    <p class="text-sm text-slate-500">Choose a topic from the sidebar, then configure its target categories here.</p>
                                 </div>
                             </div>
                         </div>
@@ -855,9 +854,9 @@
                     </div>
 
                     <details id="nova-target-editor" open class="mt-4 rounded-xl border border-violet-200 bg-violet-50/40 p-3">
-                        <summary class="cursor-pointer font-black text-slate-800">Sort It categories and items <span id="nova-target-config-status" class="ml-2 text-xs font-bold text-slate-500">Choose a topic first.</span></summary>
+                        <summary class="cursor-pointer font-black text-slate-800">Shooter Target Categories <span id="nova-target-config-status" class="ml-2 text-xs font-bold text-slate-500">Choose a topic first.</span></summary>
                         <div class="flex justify-end mt-3 mb-3">
-                            <button type="button" onclick="saveNovaTargetConfig()" class="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-black"><i class="fa-solid fa-floppy-disk mr-1"></i>Save Sorting Categories</button>
+                            <button type="button" onclick="saveNovaTargetConfig()" class="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-black"><i class="fa-solid fa-floppy-disk mr-1"></i>Save Targets</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-3">Use 2–4 categories. Enter targets as <strong>emoji + label</strong>, separated by commas. Example: <code>🐕 Dog, 🐟 Fish, 🐦 Bird</code>.</p>
 
@@ -905,7 +904,7 @@
                                     <input id="nova-target-ai-focus" maxlength="160" placeholder="e.g. animal habitats only" class="w-full px-3 py-2 rounded-lg border border-violet-100 bg-white text-xs outline-none focus:border-violet-500">
                                 </label>
                             </div>
-                                <p id="nova-target-ai-status" class="text-[11px] font-bold text-slate-600 mt-2" role="status" aria-live="polite">AI fills the category fields as a draft. Review them before clicking Save Sorting Categories.</p>
+                            <p id="nova-target-ai-status" class="text-[11px] font-bold text-slate-600 mt-2" role="status" aria-live="polite">AI fills the category fields as a draft. Review them before clicking Save Targets.</p>
                             <div id="nova-target-ai-preview" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mt-2"></div>
                         </div>
 
@@ -1772,7 +1771,7 @@
 
     <script src="security.js"></script>
 
-    <script src="content_manager.js?v=challenge-bank-v6"></script>
+    <script src="content_manager.js?v=powerups-tf-sort-v5"></script>
     <script src="settings_manager.js"></script>
 
     <script src="js/00_state.js"></script>
@@ -1793,7 +1792,7 @@
     <script src="js/14_reference_upload.js?v=pptx-v1"></script>
     <script src="js/15_sense_ai.js?v=five-buttons-v2"></script>
     <script src="js/16_game1_topics.js?v=topic-first-v3"></script>
-    <script src="js/17_nova_integration.js?v=challenge-bank-v6"></script>
+    <script src="js/17_nova_integration.js?v=powerups-tf-sort-v5"></script>
     <script src="js/22_tug_topics.js?v=topic-first-v3"></script>
     <script src="js/20_tug_integration.js?v=five-buttons-v2"></script>
     <script src="js/21_tug_ai.js?v=question-bank-ai-fix-v5"></script>

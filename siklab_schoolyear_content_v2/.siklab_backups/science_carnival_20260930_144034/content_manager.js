@@ -138,15 +138,9 @@ function renderQuestionsList() {
         return;
     }
 
-    const filteredQuestions = module === 'NOVA' && typeof qbActivePanel !== 'undefined'
-        ? customQuestions.map((question, index) => ({ question, index })).filter(({ question }) =>
-            (question.questionType === 'tf') === (qbActivePanel === 'tf'))
-        : customQuestions.map((question, index) => ({ question, index }));
-
-    if (!filteredQuestions.length) {
+    if (!customQuestions.length) {
         const topic = selectedTopicForModule(module);
-        const type = module === 'NOVA' ? (qbActivePanel === 'tf' ? 'True or False statements' : 'five-choice questions') : 'questions';
-        container.innerHTML = `<div class="text-center text-slate-400 mt-10"><p>No ${type} in <strong>${escapeHtml(topic?.topic_name || 'this topic')}</strong> yet.</p></div>`;
+        container.innerHTML = `<div class="text-center text-slate-400 mt-10"><p>No questions in <strong>${escapeHtml(topic?.topic_name || 'this topic')}</strong> yet.</p></div>`;
         return;
     }
 
@@ -161,7 +155,7 @@ function renderQuestionsList() {
             ? novaTopics.map(t => `<option value="${Number(t.topic_id)}">${escapeHtml(t.topic_name)}</option>`).join('')
             : '';
 
-    container.innerHTML = filteredQuestions.map(({ question: q, index: i }) => `
+    container.innerHTML = customQuestions.map((q, i) => `
         <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl mb-3 shadow-sm hover:shadow-md hover:border-orange-200 transition-all group">
             <div class="flex items-center gap-4 w-full min-w-0">
                 ${!isNova && q.img
@@ -246,7 +240,7 @@ function editCustomQuestion(index) {
 
 function cancelEdit() {
     const novaType = document.getElementById('cq-nova-question-type');
-    if (novaType) novaType.value = typeof qbActivePanel !== 'undefined' && qbActivePanel === 'tf' ? 'tf' : 'mc';
+    if (novaType) novaType.value = 'mc';
     if (typeof setNovaQuestionFormMode === 'function') setNovaQuestionFormMode();
     ['cq-edit-id','cq-prompt','cq-existing-image','cq-explanation'].forEach(id => {
         const el = document.getElementById(id);
@@ -421,7 +415,6 @@ function importQuestions(event) {
 
             const rows = imported.map(q => {
                 const opts = q.options || q.answer_options || q.choices || null;
-                const type = module === 'NOVA' && (q.questionType === 'tf' || q.question_type === 'tf') ? 'tf' : 'mc';
                 return {
                     school_year_id: yearId,
                     game_module: module,
@@ -430,19 +423,18 @@ function importQuestions(event) {
                     question_set: topic?.topic_name || q.question_set || 'General Questions',
                     prompt: String(q.prompt || q.text || q.q || '').trim(),
                     correct_ans: Number(q.ans ?? q.correct_ans ?? q.correct),
-                    answer_options: type === 'tf' ? null : neededChoices ? opts : null,
+                    answer_options: neededChoices ? opts : null,
                     explanation: q.explanation || null,
                     review_status: 'approved',
                     difficulty: module === 'NOVA' || module === 'TUG' ? String(q.difficulty || 'medium').toLowerCase() : 'medium',
-                    question_type: type,
+                    question_type: 'mc',
                     time_limit: module === 'TUG' ? 20 : Number(q.timeLimit ?? q.time_limit ?? (module === 'NOVA' ? 15 : 10)) || 10,
                     image_url: module === 'W1' ? (q.img || q.image_url || null) : null
                 };
             }).filter(q =>
                 q.prompt &&
                 Number.isInteger(q.correct_ans) &&
-                (q.question_type === 'tf' ? q.correct_ans === 0 || q.correct_ans === 1 : true) &&
-                (q.question_type === 'tf' || !neededChoices || (
+                (!neededChoices || (
                     q.correct_ans >= 0 && q.correct_ans < neededChoices &&
                     Array.isArray(q.answer_options) && q.answer_options.length === neededChoices
                 ))
